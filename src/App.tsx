@@ -17,7 +17,7 @@ function App() {
     }
   }, []);
 
-  // Базовые цены для мгновенного локального предпросмотра (до отправки на сервер)
+  // Базовые цены для мгновенного локального предпросмотра
   const [prices] = useState({
     canvas: { matte_white: 330, gloss_white: 350, black: 400 },
     profile: { standard: 60, shadow: 350, floating: 500 },
@@ -54,33 +54,29 @@ function App() {
 
   // --- ЭКРАН 2: КАЛЬКУЛЯТОР (МУЛЬТИ-КОМНАТНЫЙ) ---
   const CalculatorScreen = () => {
-    // Состояние: Массив комнат
+    // Состояние: Массив комнат (исправил нули на пустые строки по умолчанию для удобства)
     const [rooms, setRooms] = useState([
-      { id: Date.now(), name: 'Помещение 1', area: 15, perimeter: 16, corners: 4, canvasType: 'matte_white', profileType: 'standard', lightsCount: 6, cornice: 0 }
+      { id: Date.now(), name: 'Помещение 1', area: '15', perimeter: '16', corners: '4', canvasType: 'matte_white', profileType: 'standard', lightsCount: '6', cornice: '0' }
     ]);
     
-    // Состояние: Какая карточка сейчас открыта
     const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
 
-    // Функция добавления новой комнаты
     const addRoom = () => {
       const newRoom = {
         id: Date.now(),
         name: `Помещение ${rooms.length + 1}`,
-        area: 10, perimeter: 12, corners: 4, canvasType: 'matte_white', profileType: 'standard', lightsCount: 0, cornice: 0
+        area: '', perimeter: '', corners: '4', canvasType: 'matte_white', profileType: 'standard', lightsCount: '', cornice: ''
       };
       setRooms([...rooms, newRoom]);
-      setExpandedRoomId(newRoom.id); // Сразу открываем её
+      setExpandedRoomId(newRoom.id);
     };
 
-    // Функция обновления данных в конкретной комнате
     const updateRoom = (id, field, value) => {
       setRooms(rooms.map(room => room.id === id ? { ...room, [field]: value } : room));
     };
 
-    // Функция удаления комнаты
     const removeRoom = (id, e) => {
-      e.stopPropagation(); // Чтобы при клике на корзину не открывалась карточка
+      e.stopPropagation();
       if (rooms.length > 1) {
         setRooms(rooms.filter(room => room.id !== id));
       } else {
@@ -88,27 +84,25 @@ function App() {
       }
     };
 
-    // Считаем общую сумму (пока локально, для предпросмотра)
+    // Считаем общую сумму, корректно обрабатывая пустые строки как нули
     const localTotalSum = rooms.reduce((total, room) => {
       return total + 
-        (room.area * prices.canvas[room.canvasType]) + 
-        (room.perimeter * prices.profile[room.profileType]) + 
-        (room.lightsCount * prices.light) + 
-        (room.corners * prices.corner) +
-        (room.cornice * prices.cornice);
+        ((Number(room.area) || 0) * prices.canvas[room.canvasType]) + 
+        ((Number(room.perimeter) || 0) * prices.profile[room.profileType]) + 
+        ((Number(room.lightsCount) || 0) * prices.light) + 
+        ((Number(room.corners) || 0) * prices.corner) +
+        ((Number(room.cornice) || 0) * prices.cornice);
     }, 0);
 
     return (
       <div style={{ paddingBottom: '80px', animation: 'fadeIn 0.3s ease-in' }}>
         <h2 style={{ margin: '0 0 15px 0', color: '#1c1c1e' }}>📝 Ручной расчет</h2>
         
-        {/* РЕНДЕРИМ СПИСОК КОМНАТ */}
         {rooms.map((room) => {
           const isExpanded = expandedRoomId === room.id;
           
           return (
             <div key={room.id} style={styles.card}>
-              {/* ШАПКА КАРТОЧКИ (Кликабельная) */}
               <div 
                 onClick={() => setExpandedRoomId(isExpanded ? null : room.id)} 
                 style={{ padding: '16px', background: isExpanded ? '#f0f4f8' : 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'background 0.3s' }}
@@ -119,30 +113,29 @@ function App() {
                     type="text" 
                     value={room.name} 
                     onChange={(e) => updateRoom(room.id, 'name', e.target.value)}
-                    onClick={(e) => e.stopPropagation()} // Чтобы не сворачивалось при клике на текст
+                    onClick={(e) => e.stopPropagation()} 
                     style={{ fontSize: '16px', fontWeight: 'bold', border: 'none', background: 'transparent', color: '#1c1c1e', outline: 'none', width: '150px' }}
                   />
                 </div>
                 <button onClick={(e) => removeRoom(room.id, e)} style={{ background: 'none', border: 'none', color: '#ff3b30', fontSize: '18px', cursor: 'pointer' }}>🗑</button>
               </div>
 
-              {/* ТЕЛО КАРТОЧКИ (Открывается при клике) */}
               {isExpanded && (
                 <div style={{ padding: '16px', borderTop: '1px solid #e5e5ea', animation: 'fadeIn 0.2s ease-in' }}>
                   
                   <div style={styles.inputGroup}>
                     <span style={{ color: '#8e8e93', fontWeight: '500' }}>Площадь (м²)</span>
-                    <input type="number" value={room.area} onChange={(e) => updateRoom(room.id, 'area', parseFloat(e.target.value) || 0)} style={styles.numInput} />
+                    <input type="number" value={room.area} onChange={(e) => updateRoom(room.id, 'area', e.target.value)} style={styles.numInput} />
                   </div>
                   
                   <div style={styles.inputGroup}>
                     <span style={{ color: '#8e8e93', fontWeight: '500' }}>Периметр (м)</span>
-                    <input type="number" value={room.perimeter} onChange={(e) => updateRoom(room.id, 'perimeter', parseFloat(e.target.value) || 0)} style={styles.numInput} />
+                    <input type="number" value={room.perimeter} onChange={(e) => updateRoom(room.id, 'perimeter', e.target.value)} style={styles.numInput} />
                   </div>
 
                   <div style={styles.inputGroup}>
                     <span style={{ color: '#8e8e93', fontWeight: '500' }}>Углы (шт)</span>
-                    <input type="number" value={room.corners} onChange={(e) => updateRoom(room.id, 'corners', parseInt(e.target.value) || 0)} style={styles.numInput} />
+                    <input type="number" value={room.corners} onChange={(e) => updateRoom(room.id, 'corners', e.target.value)} style={styles.numInput} />
                   </div>
 
                   <div style={{ marginBottom: '12px' }}>
@@ -165,12 +158,12 @@ function App() {
 
                   <div style={styles.inputGroup}>
                     <span style={{ color: '#8e8e93', fontWeight: '500' }}>Светильники (шт)</span>
-                    <input type="number" value={room.lightsCount} onChange={(e) => updateRoom(room.id, 'lightsCount', parseInt(e.target.value) || 0)} style={styles.numInput} />
+                    <input type="number" value={room.lightsCount} onChange={(e) => updateRoom(room.id, 'lightsCount', e.target.value)} style={styles.numInput} />
                   </div>
 
                   <div style={styles.inputGroup}>
                     <span style={{ color: '#8e8e93', fontWeight: '500' }}>Скрытый карниз (м)</span>
-                    <input type="number" value={room.cornice} onChange={(e) => updateRoom(room.id, 'cornice', parseFloat(e.target.value) || 0)} style={styles.numInput} />
+                    <input type="number" value={room.cornice} onChange={(e) => updateRoom(room.id, 'cornice', e.target.value)} style={styles.numInput} />
                   </div>
 
                 </div>
@@ -179,12 +172,10 @@ function App() {
           )
         })}
 
-        {/* КНОПКА ДОБАВЛЕНИЯ КОМНАТЫ */}
         <button onClick={addRoom} style={{ width: '100%', padding: '14px', background: '#e5e5ea', color: '#007aff', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '20px' }}>
           ➕ Добавить помещение
         </button>
 
-        {/* ПЛАВАЮЩИЙ ПОДВАЛ С ЦЕНОЙ */}
         <div style={{ position: 'fixed', bottom: '75px', width: '100%', maxWidth: '440px', background: 'rgba(255,255,255,0.95)', padding: '15px 20px', borderRadius: '20px', boxShadow: '0 -4px 20px rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box', zIndex: 90 }}>
           <div>
             <p style={{ margin: 0, fontSize: '12px', color: '#8e8e93', fontWeight: 'bold' }}>ПРЕДВАРИТЕЛЬНО:</p>
