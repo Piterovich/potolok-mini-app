@@ -78,7 +78,7 @@ function App() {
       setStep('analyzing');
       
       try {
-        const response = await fetch('https://spa-molecules-cleared-tumor.trycloudflare.com/api/calculate', {
+        const response = await fetch('https://amendments-competitors-returned-nor.trycloudflare.com/api/calculate', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
