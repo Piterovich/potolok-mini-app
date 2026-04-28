@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 
 const T = {
-  ru: { calc: "Расчет", addRoom: "Добавить помещение", toBot: "В бот 🚀", area: "Площадь (м²)", perim: "Периметр (м)", corners: "Углы (шт)", geom: "📏 Геометрия", materials: "🎨 Полотно и Профиль", lighting: "💡 Освещение", dops: "🔧 Доп. работы", spots: "Точечные (шт)", chands: "Люстры (шт)", track: "Магн. трек (м)", cornice: "Скрытый карниз (м)", pipe: "Обход труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФИЛЬ", pre: "ПРЕДВАРИТЕЛЬНО:" },
-  uk: { calc: "Розрахунок", addRoom: "Додати приміщення", toBot: "В бот 🚀", area: "Площа (м²)", perim: "Периметр (м)", corners: "Кути (шт)", geom: "📏 Геометрія", materials: "🎨 Полотно та Профіль", lighting: "💡 Освітлення", dops: "🔧 Дод. роботи", spots: "Точкові (шт)", chands: "Люстри (шт)", track: "Магн. трек (м)", cornice: "Прихований карниз (м)", pipe: "Обхід труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФІЛЬ", pre: "ПОПЕРЕДНЬО:" }
+  ru: { calc: "Расчет", addRoom: "Добавить помещение", toBot: "В бот 🚀", area: "Площадь (м²)", perim: "Периметр (м)", corners: "Углы (шт)", geom: "📏 Геометрия", materials: "🎨 Полотно и Профиль", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", spots: "Точечные (шт)", chands: "Люстры (шт)", track: "Магн. трек (м)", corniceType: "Вид карниза", corniceLen: "Метраж (м)", pipe: "Обход труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФИЛЬ", pre: "ПРЕДВАРИТЕЛЬНО:" },
+  uk: { calc: "Розрахунок", addRoom: "Додати приміщення", toBot: "В бот 🚀", area: "Площа (м²)", perim: "Периметр (м)", corners: "Кути (шт)", geom: "📏 Геометрія", materials: "🎨 Полотно та Профіль", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", spots: "Точкові (шт)", chands: "Люстри (шт)", track: "Магн. трек (м)", corniceType: "Вид карнизу", corniceLen: "Метраж (м)", pipe: "Обхід труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФІЛЬ", pre: "ПОПЕРЕДНЬО:" }
 };
 
 function App() {
@@ -24,21 +24,28 @@ function App() {
 
   const options = {
     canvases: [
-      { id: 'matte_white', name: 'Белый Матовый (MSD Classic)' },
-      { id: 'msd_premium_320_м2', name: 'Белый Глянец (Premium)' },
+      { id: 'matte_white', name: 'Белый Матовый (MSD)' },
+      { id: 'msd_premium_320_м2', name: 'MSD Premium' },
       { id: 'black', name: 'Черный Матовый' }
     ],
     profiles: [
       { id: 'standard', name: 'Стандартный (ПВХ)' },
       { id: 'shadow', name: 'Теневой (6 мм)' },
-      { id: 'floating', name: 'Парящий (с подсветкой)' }
+      { id: 'floating', name: 'Парящий' }
+    ],
+    cornices: [
+      { id: 'none', name: 'Нет' },
+      { id: 'карниз_м', name: 'Стандартный скрытый' },
+      { id: 'карниз_q5_мп', name: 'Карниз Q5' },
+      { id: 'карниз_q10_мп', name: 'Карниз Q10' }
     ]
   };
 
   const [prices] = useState({
     canvas: { matte_white: 330, msd_premium_320_м2: 350, black: 400 },
     profile: { standard: 60, shadow: 350, floating: 500 },
-    light: 250, chand: 300, cornice: 1200, corner: 50, pipe: 200, track: 2000
+    cornices: { 'none': 0, 'карниз_м': 1200, 'карниз_q5_мп': 1500, 'карниз_q10_мп': 2200 },
+    light: 250, chand: 300, corner: 50, pipe: 200, track: 2000
   });
 
   const styles = {
@@ -56,14 +63,14 @@ function App() {
 
   const CalculatorScreen = () => {
     const [rooms, setRooms] = useState([
-      { id: Date.now(), name: 'Помещение 1', area: '18', perim: '16', corners: '4', canvas: 'matte_white', profile: 'standard', spots: '6', chands: '', track: '', cornice: '', pipe: '' }
+      { id: Date.now(), name: 'Помещение 1', area: '18', perim: '16', corners: '4', canvas: 'matte_white', profile: 'standard', spots: '6', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '' }
     ]);
     const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
-    const [expandedSubSec, setExpandedSubSec] = useState('geom'); // Какая вложенная вкладка открыта
+    const [expandedSubSec, setExpandedSubSec] = useState('geom'); 
 
     const updateRoom = (id, field, value) => { setRooms(rooms.map(r => r.id === id ? { ...r, [field]: value } : r)); };
     const addRoom = () => {
-      const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '', perim: '', corners: '4', canvas: 'matte_white', profile: 'standard', spots: '', chands: '', track: '', cornice: '', pipe: '' };
+      const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '', perim: '', corners: '4', canvas: 'matte_white', profile: 'standard', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '' };
       setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom');
     };
 
@@ -81,7 +88,7 @@ function App() {
       window.Telegram?.WebApp?.close();
     };
 
-    const localTotalSum = rooms.reduce((total, r) => total + ((Number(r.area) || 0) * (prices.canvas[r.canvas] || 330)) + ((Number(r.perim) || 0) * (prices.profile[r.profile] || 60)) + ((Number(r.spots) || 0) * prices.light) + ((Number(r.chands) || 0) * prices.chand) + ((Number(r.track) || 0) * prices.track) + ((Number(r.corners) || 0) * prices.corner) + ((Number(r.cornice) || 0) * prices.cornice) + ((Number(r.pipe) || 0) * prices.pipe), 0);
+    const localTotalSum = rooms.reduce((total, r) => total + ((Number(r.area) || 0) * (prices.canvas[r.canvas] || 330)) + ((Number(r.perim) || 0) * (prices.profile[r.profile] || 60)) + ((Number(r.spots) || 0) * prices.light) + ((Number(r.chands) || 0) * prices.chand) + ((Number(r.track) || 0) * prices.track) + ((Number(r.corners) || 0) * prices.corner) + ((Number(r.cornice) || 0) * (prices.cornices[r.corniceType] || 0)) + ((Number(r.pipe) || 0) * prices.pipe), 0);
 
     return (
       <div style={{ animation: 'fadeIn 0.3s ease-in' }}>
@@ -89,7 +96,6 @@ function App() {
         
         {rooms.map(room => (
           <div key={room.id} style={styles.card}>
-            {/* ШАПКА КОМНАТЫ */}
             <div style={styles.header} onClick={() => setExpandedRoomId(expandedRoomId === room.id ? null : room.id)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ color: '#007aff', fontSize: '18px' }}>{expandedRoomId === room.id ? '🔽' : '▶️'}</span>
@@ -98,7 +104,6 @@ function App() {
               <button onClick={(e) => removeRoom(room.id, e)} style={{ background: 'none', border: 'none', color: '#ff3b30', fontSize: '18px' }}>🗑</button>
             </div>
 
-            {/* ВНУТРЕННОСТИ КОМНАТЫ (Вложенные аккордеоны) */}
             {expandedRoomId === room.id && (
               <div style={{ animation: 'slideDown 0.2s ease-out' }}>
                 
@@ -154,7 +159,29 @@ function App() {
                   )}
                 </div>
 
-                {/* 4. ДОПЫ */}
+                {/* 4. КАРНИЗЫ */}
+                <div>
+                  <div style={styles.subHeader} onClick={() => setExpandedSubSec(expandedSubSec === 'corniceSec' ? null : 'corniceSec')}>
+                    <span style={{ fontWeight: '600', fontSize: '14px' }}>{t('corniceSec')}</span>
+                    <span style={{ color: '#8e8e93' }}>{expandedSubSec === 'corniceSec' ? '🔼' : '🔽'}</span>
+                  </div>
+                  {expandedSubSec === 'corniceSec' && (
+                    <div style={styles.subContent}>
+                      <span style={styles.label}>{t('corniceType')}</span>
+                      <select style={styles.select} value={room.corniceType} onChange={e => updateRoom(room.id, 'corniceType', e.target.value)}>
+                        {options.cornices.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                      </select>
+                      {room.corniceType !== 'none' && (
+                        <div style={{...styles.inputRow, marginTop: '12px'}}>
+                          <span>{t('corniceLen')}</span>
+                          <input type="number" value={room.cornice} onChange={e => updateRoom(room.id, 'cornice', e.target.value)} style={styles.numInput} placeholder="0" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. ДОПЫ */}
                 <div>
                   <div style={styles.subHeader} onClick={() => setExpandedSubSec(expandedSubSec === 'dops' ? null : 'dops')}>
                     <span style={{ fontWeight: '600', fontSize: '14px' }}>{t('dops')}</span>
@@ -162,7 +189,6 @@ function App() {
                   </div>
                   {expandedSubSec === 'dops' && (
                     <div style={styles.subContent}>
-                      <div style={styles.inputRow}><span>{t('cornice')}</span><input type="number" value={room.cornice} onChange={e => updateRoom(room.id, 'cornice', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('pipe')}</span><input type="number" value={room.pipe} onChange={e => updateRoom(room.id, 'pipe', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                     </div>
                   )}
