@@ -5,199 +5,213 @@ function App() {
   const [activeTab, setActiveTab] = useState('calc')
   const [userName, setUserName] = useState('Гость');
 
-  // Подключаем магию Telegram при старте приложения
+  // Подключаем магию Telegram
   useEffect(() => {
-    // Проверяем, открыто ли приложение внутри Телеграма
     const tg = window.Telegram?.WebApp;
-    
     if (tg) {
-      tg.ready(); // Сообщаем Телеграму, что приложение готово
-      tg.expand(); // Разворачиваем на всю высоту экрана
-      
-      // Пытаемся получить имя пользователя из Телеграма
+      tg.ready();
+      tg.expand();
       const name = tg.initDataUnsafe?.user?.first_name;
-      if (name) {
-        setUserName(name);
-      } else {
-        setUserName('Павел (Демо)'); // Если открыто просто в браузере
-      }
+      if (name) setUserName(name);
+      else setUserName('Павел (Демо)');
     }
   }, []);
 
-  // --- БАЗОВЫЕ ЦЕНЫ ДЛЯ ДЕМОНСТРАЦИИ ---
-  const [prices, setPrices] = useState({
+  // Базовые цены для мгновенного локального предпросмотра (до отправки на сервер)
+  const [prices] = useState({
     canvas: { matte_white: 330, gloss_white: 350, black: 400 },
     profile: { standard: 60, shadow: 350, floating: 500 },
-    light: 250, chand: 300, cornice: 1200
+    light: 250, chand: 300, cornice: 1200, corner: 50
   });
 
   const styles = {
     appContainer: { maxWidth: '480px', margin: '0 auto', height: '100vh', backgroundColor: '#f5f5f7', display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif' },
-    contentArea: { flex: 1, padding: '20px', overflowY: 'auto', paddingBottom: '100px' },
-    bottomNav: { position: 'fixed', bottom: 0, width: '100%', maxWidth: '480px', backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'space-around', padding: '15px 0', boxShadow: '0 -2px 10px rgba(0,0,0,0.05)', borderRadius: '20px 20px 0 0', zIndex: 100 },
+    contentArea: { flex: 1, padding: '20px', overflowY: 'auto', paddingBottom: '120px' },
+    bottomNav: { position: 'fixed', bottom: 0, width: '100%', maxWidth: '480px', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'space-around', padding: '15px 0', boxShadow: '0 -2px 10px rgba(0,0,0,0.05)', borderRadius: '20px 20px 0 0', zIndex: 100 },
     navButton: { background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', fontSize: '12px', fontWeight: '500' },
     navIcon: { fontSize: '24px', marginBottom: '4px' },
-    card: { background: 'white', padding: '16px', borderRadius: '16px', marginBottom: '15px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
-    slider: { width: '100%', accentColor: '#007aff', marginTop: '10px' },
-    select: { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '16px', marginTop: '5px' },
-    input: { width: '80px', padding: '8px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px', textAlign: 'center' }
+    card: { background: 'white', borderRadius: '16px', marginBottom: '15px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', overflow: 'hidden' },
+    select: { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e5e5ea', fontSize: '15px', marginTop: '5px', background: '#fcfcfc' },
+    inputGroup: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
+    numInput: { width: '70px', padding: '8px', borderRadius: '8px', border: '1px solid #e5e5ea', fontSize: '16px', textAlign: 'center', fontWeight: 'bold' }
   }
 
-  const DashboardScreen = () => {
-    return (
-      <div style={{ paddingBottom: '20px', animation: 'fadeIn 0.3s ease-in' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div><h2 style={{ margin: 0, color: '#1c1c1e', fontSize: '24px' }}>Привет, {userName}! 👋</h2><p style={{ margin: '4px 0 0 0', color: '#8e8e93', fontSize: '14px' }}>👑 Статус: Безлимит</p></div>
-        </div>
-        <div style={{ background: 'linear-gradient(135deg, #007aff 0%, #34c759 100%)', color: 'white', padding: '24px', borderRadius: '24px', boxShadow: '0 10px 20px rgba(52, 199, 89, 0.25)', marginBottom: '25px' }}>
-          <p style={{ margin: '0 0 5px 0', opacity: 0.9, fontSize: '14px', fontWeight: '500' }}>Заработано (Август)</p>
-          <h1 style={{ margin: 0, fontSize: '38px', fontWeight: '800' }}>185 400 ₴</h1>
-        </div>
-        <button onClick={() => setActiveTab('calc')} style={{ width: '100%', padding: '18px', background: '#1c1c1e', color: 'white', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '30px' }}>
-          ➕ СОЗДАТЬ НОВЫЙ РАСЧЕТ
-        </button>
+  // --- ЭКРАН 1: ГЛАВНАЯ ---
+  const DashboardScreen = () => (
+    <div style={{ paddingBottom: '20px', animation: 'fadeIn 0.3s ease-in' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div><h2 style={{ margin: 0, color: '#1c1c1e', fontSize: '24px' }}>Привет, {userName}! 👋</h2><p style={{ margin: '4px 0 0 0', color: '#8e8e93', fontSize: '14px' }}>👑 Статус: Безлимит</p></div>
       </div>
-    );
-  };
+      <div style={{ background: 'linear-gradient(135deg, #007aff 0%, #34c759 100%)', color: 'white', padding: '24px', borderRadius: '24px', boxShadow: '0 10px 20px rgba(52, 199, 89, 0.25)', marginBottom: '25px' }}>
+        <p style={{ margin: '0 0 5px 0', opacity: 0.9, fontSize: '14px', fontWeight: '500' }}>Заработано (Август)</p>
+        <h1 style={{ margin: 0, fontSize: '38px', fontWeight: '800' }}>185 400 ₴</h1>
+      </div>
+      <button onClick={() => setActiveTab('calc')} style={{ width: '100%', padding: '18px', background: '#1c1c1e', color: 'white', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '30px' }}>
+        ➕ СОЗДАТЬ НОВЫЙ РАСЧЕТ
+      </button>
+    </div>
+  );
 
-  // --- ЭКРАН 2: КАЛЬКУЛЯТОР (С АВТО-СКАНОМ) ---
+  // --- ЭКРАН 2: КАЛЬКУЛЯТОР (МУЛЬТИ-КОМНАТНЫЙ) ---
   const CalculatorScreen = () => {
-    const [step, setStep] = useState('upload');
-    const [canvasType, setCanvasType] = useState('matte_white');
-    const [profileType, setProfileType] = useState('standard');
-    const [lightsCount, setLightsCount] = useState(6);
+    // Состояние: Массив комнат
+    const [rooms, setRooms] = useState([
+      { id: Date.now(), name: 'Помещение 1', area: 15, perimeter: 16, corners: 4, canvasType: 'matte_white', profileType: 'standard', lightsCount: 6, cornice: 0 }
+    ]);
     
-    // ⭐️ ВОТ ОНА - ПЕРЕМЕННАЯ ДЛЯ ХРАНЕНИЯ ЦЕНЫ ОТ СЕРВЕРА
-    const [serverPrice, setServerPrice] = useState(0);
+    // Состояние: Какая карточка сейчас открыта
+    const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
 
-    // Реальная отправка данных на Python-сервер
-    const handleUpload = async () => {
-      setStep('analyzing');
-      try {
-        const response = await fetch('https://potolokpro777bot.website/api/calculate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            message: "Привет от Смарт-Сканера!",
-            canvasType: canvasType,
-            profileType: profileType,
-            lightsCount: lightsCount
-          })
-        });
-        
-        const data = await response.json();
-        console.log("Ответ от сервера:", data);
-        
-        // ⭐️ СОХРАНЯЕМ ПОЛУЧЕННУЮ СУММУ В НАШУ ПЕРЕМЕННУЮ
-        if (data.status === "success") {
-          setServerPrice(data.totalPrice);
-        }
-        
-        setStep('result');
-      } catch (error) {
-        console.error("Ошибка связи с сервером:", error);
-        alert("Не удалось связаться с сервером расчета. Попробуйте еще раз.");
-        setStep('upload');
+    // Функция добавления новой комнаты
+    const addRoom = () => {
+      const newRoom = {
+        id: Date.now(),
+        name: `Помещение ${rooms.length + 1}`,
+        area: 10, perimeter: 12, corners: 4, canvasType: 'matte_white', profileType: 'standard', lightsCount: 0, cornice: 0
+      };
+      setRooms([...rooms, newRoom]);
+      setExpandedRoomId(newRoom.id); // Сразу открываем её
+    };
+
+    // Функция обновления данных в конкретной комнате
+    const updateRoom = (id, field, value) => {
+      setRooms(rooms.map(room => room.id === id ? { ...room, [field]: value } : room));
+    };
+
+    // Функция удаления комнаты
+    const removeRoom = (id, e) => {
+      e.stopPropagation(); // Чтобы при клике на корзину не открывалась карточка
+      if (rooms.length > 1) {
+        setRooms(rooms.filter(room => room.id !== id));
+      } else {
+        alert("Должно остаться хотя бы одно помещение!");
       }
     };
 
-    // ШАГ 1: Загрузка фото
-    if (step === 'upload') {
-      return (
-        <div style={{ animation: 'fadeIn 0.3s ease-in', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <h2 style={{ textAlign: 'center', marginBottom: '10px' }}>Новый замер</h2>
-          <p style={{ textAlign: 'center', color: '#8e8e93', marginBottom: '30px' }}>Сфотографируйте чертеж, а система автоматически оцифрует углы и площади</p>
-          
-          <div onClick={handleUpload} style={{ background: 'white', border: '2px dashed #007aff', borderRadius: '24px', padding: '40px 20px', textAlign: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,122,255,0.1)' }}>
-            <div style={{ fontSize: '60px', marginBottom: '15px' }}>📸</div>
-            <h3 style={{ margin: '0 0 10px 0', color: '#007aff' }}>Смарт-сканер чертежа</h3>
-            <p style={{ margin: 0, color: '#8e8e93', fontSize: '14px' }}>Камера или файл из галереи</p>
-          </div>
-        </div>
-      )
-    }
+    // Считаем общую сумму (пока локально, для предпросмотра)
+    const localTotalSum = rooms.reduce((total, room) => {
+      return total + 
+        (room.area * prices.canvas[room.canvasType]) + 
+        (room.perimeter * prices.profile[room.profileType]) + 
+        (room.lightsCount * prices.light) + 
+        (room.corners * prices.corner) +
+        (room.cornice * prices.cornice);
+    }, 0);
 
-    // ШАГ 2: Анимация загрузки
-    if (step === 'analyzing') {
-      return (
-        <div style={{ animation: 'fadeIn 0.3s ease-in', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-          <div style={{ fontSize: '60px', animation: 'spin 2s linear infinite', color: '#007aff' }}>⚙️</div>
-          <h2 style={{ marginTop: '20px', color: '#1c1c1e' }}>Оцифровка данных...</h2>
-          <p style={{ color: '#8e8e93', textAlign: 'center' }}>Сканирование геометрии помещения<br/>Построение виртуальной модели</p>
-          <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
-        </div>
-      )
-    }
-
-    // ШАГ 3: Готовый расчет
     return (
-      <div style={{ paddingBottom: '60px', animation: 'fadeIn 0.3s ease-in' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-          <button onClick={() => setStep('upload')} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: 0 }}>⬅️</button>
-          <h2 style={{ margin: 0, color: '#1c1c1e' }}>Смета: Зал</h2>
-        </div>
-
-        <div style={{ height: '180px', background: canvasType === 'black' ? '#1c1c1e' : '#e5e5ea', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.3s ease', marginBottom: '20px' }}>
-          <span style={{ color: canvasType === 'black' ? 'white' : '#8e8e93', fontWeight: 'bold' }}>{canvasType === 'black' ? '⚫️ Черный потолок' : '⚪️ Светлый потолок'}</span>
-        </div>
-
-        <div style={styles.card}>
-          <label style={{ fontWeight: 'bold', fontSize: '13px', color: '#8e8e93' }}>ПОЛОТНО</label>
-          <select style={styles.select} value={canvasType} onChange={(e) => setCanvasType(e.target.value)}>
-            <option value="matte_white">Белый Матовый (MSD)</option>
-            <option value="black">Черный Матовый</option>
-          </select>
-        </div>
-
-        <div style={styles.card}>
-          <label style={{ fontWeight: 'bold', fontSize: '13px', color: '#8e8e93' }}>ПРОФИЛЬ</label>
-          <select style={styles.select} value={profileType} onChange={(e) => setProfileType(e.target.value)}>
-            <option value="standard">Стандартный (ПВХ)</option>
-            <option value="shadow">Теневой (6 мм)</option>
-            <option value="floating">Парящий (с подсветкой)</option>
-          </select>
-        </div>
-
-        <div style={styles.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}><span>Светильники: {lightsCount} шт</span></div>
-          <input type="range" min="0" max="20" value={lightsCount} onChange={(e) => setLightsCount(parseInt(e.target.value))} style={styles.slider} />
-        </div>
-
-        <div style={{ position: 'fixed', bottom: '75px', width: '100%', maxWidth: '440px', background: 'rgba(255,255,255,0.95)', padding: '15px 20px', borderRadius: '20px', boxShadow: '0 -4px 20px rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box' }}>
-          <div><p style={{ margin: 0, fontSize: '12px', color: '#8e8e93', fontWeight: 'bold' }}>ИТОГО:</p>
+      <div style={{ paddingBottom: '80px', animation: 'fadeIn 0.3s ease-in' }}>
+        <h2 style={{ margin: '0 0 15px 0', color: '#1c1c1e' }}>📝 Ручной расчет</h2>
+        
+        {/* РЕНДЕРИМ СПИСОК КОМНАТ */}
+        {rooms.map((room) => {
+          const isExpanded = expandedRoomId === room.id;
           
-          {/* ⭐️ ВЫВОДИМ ЦЕНУ ОТ СЕРВЕРА */}
-          <h2 style={{ margin: 0, color: '#1c1c1e', fontSize: '24px' }}>{serverPrice.toLocaleString()} ₴</h2>
-          
+          return (
+            <div key={room.id} style={styles.card}>
+              {/* ШАПКА КАРТОЧКИ (Кликабельная) */}
+              <div 
+                onClick={() => setExpandedRoomId(isExpanded ? null : room.id)} 
+                style={{ padding: '16px', background: isExpanded ? '#f0f4f8' : 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'background 0.3s' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '20px' }}>{isExpanded ? '🔽' : '▶️'}</span>
+                  <input 
+                    type="text" 
+                    value={room.name} 
+                    onChange={(e) => updateRoom(room.id, 'name', e.target.value)}
+                    onClick={(e) => e.stopPropagation()} // Чтобы не сворачивалось при клике на текст
+                    style={{ fontSize: '16px', fontWeight: 'bold', border: 'none', background: 'transparent', color: '#1c1c1e', outline: 'none', width: '150px' }}
+                  />
+                </div>
+                <button onClick={(e) => removeRoom(room.id, e)} style={{ background: 'none', border: 'none', color: '#ff3b30', fontSize: '18px', cursor: 'pointer' }}>🗑</button>
+              </div>
+
+              {/* ТЕЛО КАРТОЧКИ (Открывается при клике) */}
+              {isExpanded && (
+                <div style={{ padding: '16px', borderTop: '1px solid #e5e5ea', animation: 'fadeIn 0.2s ease-in' }}>
+                  
+                  <div style={styles.inputGroup}>
+                    <span style={{ color: '#8e8e93', fontWeight: '500' }}>Площадь (м²)</span>
+                    <input type="number" value={room.area} onChange={(e) => updateRoom(room.id, 'area', parseFloat(e.target.value) || 0)} style={styles.numInput} />
+                  </div>
+                  
+                  <div style={styles.inputGroup}>
+                    <span style={{ color: '#8e8e93', fontWeight: '500' }}>Периметр (м)</span>
+                    <input type="number" value={room.perimeter} onChange={(e) => updateRoom(room.id, 'perimeter', parseFloat(e.target.value) || 0)} style={styles.numInput} />
+                  </div>
+
+                  <div style={styles.inputGroup}>
+                    <span style={{ color: '#8e8e93', fontWeight: '500' }}>Углы (шт)</span>
+                    <input type="number" value={room.corners} onChange={(e) => updateRoom(room.id, 'corners', parseInt(e.target.value) || 0)} style={styles.numInput} />
+                  </div>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    <span style={{ color: '#8e8e93', fontSize: '12px', fontWeight: 'bold' }}>ПОЛОТНО</span>
+                    <select style={styles.select} value={room.canvasType} onChange={(e) => updateRoom(room.id, 'canvasType', e.target.value)}>
+                      <option value="matte_white">Белый Матовый (MSD Classic)</option>
+                      <option value="gloss_white">Белый Глянец (MSD Premium)</option>
+                      <option value="black">Черный Матовый</option>
+                    </select>
+                  </div>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    <span style={{ color: '#8e8e93', fontSize: '12px', fontWeight: 'bold' }}>ПРОФИЛЬ</span>
+                    <select style={styles.select} value={room.profileType} onChange={(e) => updateRoom(room.id, 'profileType', e.target.value)}>
+                      <option value="standard">Стандартный (ПВХ)</option>
+                      <option value="shadow">Теневой (6 мм)</option>
+                      <option value="floating">Парящий (с подсветкой)</option>
+                    </select>
+                  </div>
+
+                  <div style={styles.inputGroup}>
+                    <span style={{ color: '#8e8e93', fontWeight: '500' }}>Светильники (шт)</span>
+                    <input type="number" value={room.lightsCount} onChange={(e) => updateRoom(room.id, 'lightsCount', parseInt(e.target.value) || 0)} style={styles.numInput} />
+                  </div>
+
+                  <div style={styles.inputGroup}>
+                    <span style={{ color: '#8e8e93', fontWeight: '500' }}>Скрытый карниз (м)</span>
+                    <input type="number" value={room.cornice} onChange={(e) => updateRoom(room.id, 'cornice', parseFloat(e.target.value) || 0)} style={styles.numInput} />
+                  </div>
+
+                </div>
+              )}
+            </div>
+          )
+        })}
+
+        {/* КНОПКА ДОБАВЛЕНИЯ КОМНАТЫ */}
+        <button onClick={addRoom} style={{ width: '100%', padding: '14px', background: '#e5e5ea', color: '#007aff', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '20px' }}>
+          ➕ Добавить помещение
+        </button>
+
+        {/* ПЛАВАЮЩИЙ ПОДВАЛ С ЦЕНОЙ */}
+        <div style={{ position: 'fixed', bottom: '75px', width: '100%', maxWidth: '440px', background: 'rgba(255,255,255,0.95)', padding: '15px 20px', borderRadius: '20px', boxShadow: '0 -4px 20px rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box', zIndex: 90 }}>
+          <div>
+            <p style={{ margin: 0, fontSize: '12px', color: '#8e8e93', fontWeight: 'bold' }}>ПРЕДВАРИТЕЛЬНО:</p>
+            <h2 style={{ margin: 0, color: '#1c1c1e', fontSize: '24px' }}>{localTotalSum.toLocaleString()} ₴</h2>
           </div>
-          <button style={{ background: '#1c1c1e', color: 'white', border: 'none', padding: '14px 28px', borderRadius: '14px', fontWeight: 'bold', fontSize: '16px' }}>Оформить</button>
+          <button style={{ background: '#007aff', color: 'white', border: 'none', padding: '14px 24px', borderRadius: '14px', fontWeight: 'bold', fontSize: '15px', boxShadow: '0 4px 10px rgba(0,122,255,0.3)' }}>
+            В бот 🚀
+          </button>
         </div>
       </div>
     );
   };
 
-  const CrmScreen = () => {
-    return (
-      <div style={{ animation: 'fadeIn 0.3s ease-in' }}>
-        <h2 style={{ margin: '0 0 15px 0', color: '#1c1c1e' }}>Мои проекты</h2>
-        <div style={styles.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>Иван, ул. Киевская 10</h3>
-            <span style={{ fontSize: '12px', color: '#8e8e93' }}>📅 Сегодня</span>
-          </div>
-          <p style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#007aff', fontWeight: 'bold' }}>15 000 ₴</p>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#f2f2f7', color: '#1c1c1e', fontWeight: 'bold' }}>📄 Смета</button>
-            <button style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#f2f2f7', color: '#1c1c1e', fontWeight: 'bold' }}>📜 Договор</button>
-          </div>
+  // --- ОСТАЛЬНЫЕ ЭКРАНЫ ---
+  const CrmScreen = () => (
+    <div style={{ animation: 'fadeIn 0.3s ease-in' }}>
+      <h2 style={{ margin: '0 0 15px 0', color: '#1c1c1e' }}>Мои проекты</h2>
+      <div style={styles.card}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', padding: '16px' }}>
+          <h3 style={{ margin: 0, fontSize: '16px' }}>Иван, ул. Киевская 10</h3>
+          <span style={{ fontSize: '12px', color: '#8e8e93' }}>📅 Сегодня</span>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
   
-  const SettingsScreen = () => (<div style={styles.card}><h2>Настройки</h2><p>Прайс-лист...</p></div>);
+  const SettingsScreen = () => (<div style={styles.card}><h2 style={{padding: '16px'}}>Настройки</h2></div>);
 
   const renderScreen = () => {
     switch (activeTab) {
