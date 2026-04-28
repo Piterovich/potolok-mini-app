@@ -73,12 +73,36 @@ function App() {
 
     const totalSum = (roomArea * prices.canvas[canvasType]) + (roomPerimeter * prices.profile[profileType]) + (lightsCount * prices.light);
 
-    // Имитация работы сервера
-    const handleUpload = () => {
+    // Реальная отправка данных на Python-сервер
+    const handleUpload = async () => {
       setStep('analyzing');
-      setTimeout(() => {
+      
+      try {
+        const response = await fetch('https://declared-bruce-cheats-ent.trycloudflare.com/api/calculate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: "Привет от Смарт-Сканера!",
+            canvasType: canvasType,
+            profileType: profileType,
+            lightsCount: lightsCount
+          })
+        });
+
+        const data = await response.json();
+        console.log("Ответ от сервера:", data);
+        
+        // В будущем здесь мы будем подставлять реальные цены из data
+        // Но пока просто переключаем экран на результат
         setStep('result'); 
-      }, 2500);
+        
+      } catch (error) {
+        console.error("Ошибка связи с сервером:", error);
+        alert("Не удалось связаться с сервером расчета. Попробуйте еще раз.");
+        setStep('upload'); // Возвращаем на экран загрузки в случае ошибки
+      }
     };
 
     // ШАГ 1: Загрузка фото (Изменены тексты)
