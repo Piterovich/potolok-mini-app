@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react' // Добавили useEffect
+import { useState, useEffect } from 'react'
 import './App.css'
 
 function App() {
   const [activeTab, setActiveTab] = useState('calc')
-  const [userName, setUserName] = useState('Гость'); // Состояние для имени
+  const [userName, setUserName] = useState('Гость');
 
   // Подключаем магию Telegram при старте приложения
   useEffect(() => {
@@ -25,8 +25,6 @@ function App() {
   }, []);
 
   // --- БАЗОВЫЕ ЦЕНЫ ДЛЯ ДЕМОНСТРАЦИИ ---
-  // ... (весь остальной твой код с ценами и стилями оставляем без изменений)
-
   const [prices, setPrices] = useState({
     canvas: { matte_white: 330, gloss_white: 350, black: 400 },
     profile: { standard: 60, shadow: 350, floating: 500 },
@@ -64,19 +62,17 @@ function App() {
 
   // --- ЭКРАН 2: КАЛЬКУЛЯТОР (С АВТО-СКАНОМ) ---
   const CalculatorScreen = () => {
-    const [step, setStep] = useState('upload'); 
-    
-    const roomArea = 15; const roomPerimeter = 16;
+    const [step, setStep] = useState('upload');
     const [canvasType, setCanvasType] = useState('matte_white');
     const [profileType, setProfileType] = useState('standard');
     const [lightsCount, setLightsCount] = useState(6);
-
-    const totalSum = (roomArea * prices.canvas[canvasType]) + (roomPerimeter * prices.profile[profileType]) + (lightsCount * prices.light);
+    
+    // ⭐️ ВОТ ОНА - ПЕРЕМЕННАЯ ДЛЯ ХРАНЕНИЯ ЦЕНЫ ОТ СЕРВЕРА
+    const [serverPrice, setServerPrice] = useState(0);
 
     // Реальная отправка данных на Python-сервер
     const handleUpload = async () => {
       setStep('analyzing');
-      
       try {
         const response = await fetch('https://potolokpro777bot.website/api/calculate', {
           method: 'POST',
@@ -90,22 +86,24 @@ function App() {
             lightsCount: lightsCount
           })
         });
-
+        
         const data = await response.json();
         console.log("Ответ от сервера:", data);
         
-        // В будущем здесь мы будем подставлять реальные цены из data
-        // Но пока просто переключаем экран на результат
-        setStep('result'); 
+        // ⭐️ СОХРАНЯЕМ ПОЛУЧЕННУЮ СУММУ В НАШУ ПЕРЕМЕННУЮ
+        if (data.status === "success") {
+          setServerPrice(data.totalPrice);
+        }
         
+        setStep('result');
       } catch (error) {
         console.error("Ошибка связи с сервером:", error);
         alert("Не удалось связаться с сервером расчета. Попробуйте еще раз.");
-        setStep('upload'); // Возвращаем на экран загрузки в случае ошибки
+        setStep('upload');
       }
     };
 
-    // ШАГ 1: Загрузка фото (Изменены тексты)
+    // ШАГ 1: Загрузка фото
     if (step === 'upload') {
       return (
         <div style={{ animation: 'fadeIn 0.3s ease-in', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -121,7 +119,7 @@ function App() {
       )
     }
 
-    // ШАГ 2: Анимация загрузки (Изменены тексты и иконка)
+    // ШАГ 2: Анимация загрузки
     if (step === 'analyzing') {
       return (
         <div style={{ animation: 'fadeIn 0.3s ease-in', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
@@ -163,12 +161,17 @@ function App() {
         </div>
 
         <div style={styles.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}><span>Светильники: {lightsCount} шт</span><span style={{ color: '#007aff' }}>+{lightsCount * prices.light} ₴</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}><span>Светильники: {lightsCount} шт</span></div>
           <input type="range" min="0" max="20" value={lightsCount} onChange={(e) => setLightsCount(parseInt(e.target.value))} style={styles.slider} />
         </div>
 
         <div style={{ position: 'fixed', bottom: '75px', width: '100%', maxWidth: '440px', background: 'rgba(255,255,255,0.95)', padding: '15px 20px', borderRadius: '20px', boxShadow: '0 -4px 20px rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box' }}>
-          <div><p style={{ margin: 0, fontSize: '12px', color: '#8e8e93', fontWeight: 'bold' }}>ИТОГО:</p><h2 style={{ margin: 0, color: '#1c1c1e', fontSize: '24px' }}>{totalSum.toLocaleString()} ₴</h2></div>
+          <div><p style={{ margin: 0, fontSize: '12px', color: '#8e8e93', fontWeight: 'bold' }}>ИТОГО:</p>
+          
+          {/* ⭐️ ВЫВОДИМ ЦЕНУ ОТ СЕРВЕРА */}
+          <h2 style={{ margin: 0, color: '#1c1c1e', fontSize: '24px' }}>{serverPrice.toLocaleString()} ₴</h2>
+          
+          </div>
           <button style={{ background: '#1c1c1e', color: 'white', border: 'none', padding: '14px 28px', borderRadius: '14px', fontWeight: 'bold', fontSize: '16px' }}>Оформить</button>
         </div>
       </div>
@@ -176,7 +179,6 @@ function App() {
   };
 
   const CrmScreen = () => {
-    // Демо-данные для CRM (чтобы не было пустого экрана)
     return (
       <div style={{ animation: 'fadeIn 0.3s ease-in' }}>
         <h2 style={{ margin: '0 0 15px 0', color: '#1c1c1e' }}>Мои проекты</h2>
@@ -208,7 +210,7 @@ function App() {
   }
 
   const getNavStyle = (tabId) => ({ ...styles.navButton, color: activeTab === tabId ? '#007aff' : '#8e8e93' });
-
+  
   return (
     <div style={styles.appContainer}>
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
