@@ -6,7 +6,6 @@ function App() {
   const [userName, setUserName] = useState('Гость');
   const [userId, setUserId] = useState(null);
   
-  // Ссылка на невидимый инпут для фото
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -24,10 +23,12 @@ function App() {
     }
   }, []);
 
+  // Добавили цены на трубы и световые линии для предпросмотра
   const [prices] = useState({
     canvas: { matte_white: 330, gloss_white: 350, black: 400 },
     profile: { standard: 60, shadow: 350, floating: 500 },
-    light: 250, chand: 300, cornice: 1200, corner: 50
+    light: 250, chand: 300, cornice: 1200, corner: 50,
+    pipe: 200, lightLine: 1500
   });
 
   const styles = {
@@ -55,32 +56,31 @@ function App() {
 
   const CalculatorScreen = () => {
     const [step, setStep] = useState('upload');
+    
+    // Добавили pipes и lightLines в модель комнаты
     const [rooms, setRooms] = useState([
-      { id: Date.now(), name: 'Помещение 1', area: '', perimeter: '', corners: '4', canvasType: 'matte_white', profileType: 'standard', lightsCount: '', cornice: '' }
+      { id: Date.now(), name: 'Помещение 1', area: '', perimeter: '', corners: '4', canvasType: 'matte_white', profileType: 'standard', lightsCount: '', cornice: '', pipes: '', lightLines: '' }
     ]);
     const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
 
-    // --- НОВОЕ: Отправка ФОТО на сервер ---
     const handleFileChange = async (event) => {
       const file = event.target.files[0];
       if (!file) return;
 
-      setStep('analyzing'); // Показываем крутилку загрузки
+      setStep('analyzing');
 
       const formData = new FormData();
       formData.append('photo', file);
 
       try {
-        const response = await fetch('https://potolokpro777bot.website/api/recognize', {
-          method: 'POST',
-          body: formData
-        });
-        
+        const response = await fetch('https://potolokpro777bot.website/api/recognize', { method: 'POST', body: formData });
         const data = await response.json();
         
         if (data.status === "success" && data.rooms && data.rooms.length > 0) {
-          setRooms(data.rooms); // Перезаписываем комнаты данными от ИИ!
-          setExpandedRoomId(data.rooms[0].id); // Открываем первую
+          // Гарантируем, что новые поля не будут undefined
+          const updatedRooms = data.rooms.map(r => ({...r, pipes: '', lightLines: ''}));
+          setRooms(updatedRooms); 
+          setExpandedRoomId(data.rooms[0].id);
         } else {
           alert("Не удалось распознать чертеж. Создана пустая комната.");
         }
@@ -92,7 +92,7 @@ function App() {
     };
 
     const addRoom = () => {
-      const newRoom = { id: Date.now(), name: `Помещение ${rooms.length + 1}`, area: '', perimeter: '', corners: '4', canvasType: 'matte_white', profileType: 'standard', lightsCount: '', cornice: '' };
+      const newRoom = { id: Date.now(), name: `Помещение ${rooms.length + 1}`, area: '', perimeter: '', corners: '4', canvasType: 'matte_white', profileType: 'standard', lightsCount: '', cornice: '', pipes: '', lightLines: '' };
       setRooms([...rooms, newRoom]);
       setExpandedRoomId(newRoom.id);
     };
@@ -104,7 +104,16 @@ function App() {
       else alert("Должно остаться хотя бы одно помещение!");
     };
 
-    const localTotalSum = rooms.reduce((total, room) => total + ((Number(room.area) || 0) * prices.canvas[room.canvasType]) + ((Number(room.perimeter) || 0) * prices.profile[room.profileType]) + ((Number(room.lightsCount) || 0) * prices.light) + ((Number(room.corners) || 0) * prices.corner) + ((Number(room.cornice) || 0) * prices.cornice), 0);
+    // Добавили новые поля в локальную формулу суммы
+    const localTotalSum = rooms.reduce((total, room) => total + 
+      ((Number(room.area) || 0) * prices.canvas[room.canvasType]) + 
+      ((Number(room.perimeter) || 0) * prices.profile[room.profileType]) + 
+      ((Number(room.lightsCount) || 0) * prices.light) + 
+      ((Number(room.corners) || 0) * prices.corner) + 
+      ((Number(room.cornice) || 0) * prices.cornice) +
+      ((Number(room.pipes) || 0) * prices.pipe) + 
+      ((Number(room.lightLines) || 0) * prices.lightLine)
+    , 0);
 
     const sendToBot = async () => {
       try {
@@ -119,35 +128,22 @@ function App() {
       }
     };
 
-    // Экран загрузки фото
     if (step === 'upload') {
       return (
         <div style={{ animation: 'fadeIn 0.3s ease-in', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <h2 style={{ textAlign: 'center', marginBottom: '10px' }}>Новый замер</h2>
           <p style={{ textAlign: 'center', color: '#8e8e93', marginBottom: '30px' }}>Сфотографируйте чертеж, а система автоматически оцифрует углы и площади</p>
-          
-          {/* Невидимый инпут для файла */}
-          <input 
-            type="file" 
-            accept="image/*" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
-            style={{ display: 'none' }} 
-          />
-          
+          <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} />
           <div onClick={() => fileInputRef.current.click()} style={{ background: 'white', border: '2px dashed #007aff', borderRadius: '24px', padding: '40px 20px', textAlign: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,122,255,0.1)' }}>
             <div style={{ fontSize: '60px', marginBottom: '15px' }}>📸</div>
             <h3 style={{ margin: '0 0 10px 0', color: '#007aff' }}>Смарт-сканер чертежа</h3>
             <p style={{ margin: 0, color: '#8e8e93', fontSize: '14px' }}>Камера или файл из галереи</p>
           </div>
-          
-          {/* Кнопка ручного ввода, если нет фото */}
           <button onClick={() => setStep('result')} style={{ marginTop: '20px', background: 'transparent', color: '#8e8e93', border: 'none', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}>Ввести данные вручную</button>
         </div>
       )
     }
 
-    // Экран анимации
     if (step === 'analyzing') {
       return (
         <div style={{ animation: 'fadeIn 0.3s ease-in', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
@@ -159,7 +155,6 @@ function App() {
       )
     }
 
-    // Экран результата
     return (
       <div style={{ paddingBottom: '80px', animation: 'fadeIn 0.3s ease-in' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
@@ -180,12 +175,22 @@ function App() {
               </div>
               {isExpanded && (
                 <div style={{ padding: '16px', borderTop: '1px solid #e5e5ea' }}>
+                  
+                  {/* Базовые параметры */}
                   <div style={styles.inputGroup}><span style={{ color: '#8e8e93', fontWeight: '500' }}>Площадь (м²)</span><input type="number" value={room.area} onChange={(e) => updateRoom(room.id, 'area', e.target.value)} style={styles.numInput} /></div>
                   <div style={styles.inputGroup}><span style={{ color: '#8e8e93', fontWeight: '500' }}>Периметр (м)</span><input type="number" value={room.perimeter} onChange={(e) => updateRoom(room.id, 'perimeter', e.target.value)} style={styles.numInput} /></div>
                   <div style={styles.inputGroup}><span style={{ color: '#8e8e93', fontWeight: '500' }}>Углы (шт)</span><input type="number" value={room.corners} onChange={(e) => updateRoom(room.id, 'corners', e.target.value)} style={styles.numInput} /></div>
-                  <div style={{ marginBottom: '12px' }}><span style={{ color: '#8e8e93', fontSize: '12px', fontWeight: 'bold' }}>ПОЛОТНО</span><select style={styles.select} value={room.canvasType} onChange={(e) => updateRoom(room.id, 'canvasType', e.target.value)}><option value="matte_white">Белый Матовый (MSD)</option><option value="black">Черный Матовый</option></select></div>
-                  <div style={{ marginBottom: '12px' }}><span style={{ color: '#8e8e93', fontSize: '12px', fontWeight: 'bold' }}>ПРОФИЛЬ</span><select style={styles.select} value={room.profileType} onChange={(e) => updateRoom(room.id, 'profileType', e.target.value)}><option value="standard">Стандартный (ПВХ)</option><option value="shadow">Теневой (6 мм)</option></select></div>
-                  <div style={styles.inputGroup}><span style={{ color: '#8e8e93', fontWeight: '500' }}>Светильники</span><input type="number" value={room.lightsCount} onChange={(e) => updateRoom(room.id, 'lightsCount', e.target.value)} style={styles.numInput} /></div>
+                  
+                  {/* Выбор материалов */}
+                  <div style={{ marginBottom: '12px' }}><span style={{ color: '#8e8e93', fontSize: '12px', fontWeight: 'bold' }}>ПОЛОТНО</span><select style={styles.select} value={room.canvasType} onChange={(e) => updateRoom(room.id, 'canvasType', e.target.value)}><option value="matte_white">Белый Матовый (MSD)</option><option value="gloss_white">Белый Глянец (Premium)</option><option value="black">Черный Матовый</option></select></div>
+                  <div style={{ marginBottom: '12px' }}><span style={{ color: '#8e8e93', fontSize: '12px', fontWeight: 'bold' }}>ПРОФИЛЬ</span><select style={styles.select} value={room.profileType} onChange={(e) => updateRoom(room.id, 'profileType', e.target.value)}><option value="standard">Стандартный (ПВХ)</option><option value="shadow">Теневой (6 мм)</option><option value="floating">Парящий (с подсветкой)</option></select></div>
+                  
+                  {/* Дополнительные работы */}
+                  <div style={styles.inputGroup}><span style={{ color: '#8e8e93', fontWeight: '500' }}>Светильники (шт)</span><input type="number" value={room.lightsCount} onChange={(e) => updateRoom(room.id, 'lightsCount', e.target.value)} style={styles.numInput} /></div>
+                  <div style={styles.inputGroup}><span style={{ color: '#8e8e93', fontWeight: '500' }}>Скрытый карниз (м)</span><input type="number" value={room.cornice} onChange={(e) => updateRoom(room.id, 'cornice', e.target.value)} style={styles.numInput} /></div>
+                  <div style={styles.inputGroup}><span style={{ color: '#8e8e93', fontWeight: '500' }}>Обход труб (шт)</span><input type="number" value={room.pipes} onChange={(e) => updateRoom(room.id, 'pipes', e.target.value)} style={styles.numInput} /></div>
+                  <div style={styles.inputGroup}><span style={{ color: '#8e8e93', fontWeight: '500' }}>Световые линии (м)</span><input type="number" value={room.lightLines} onChange={(e) => updateRoom(room.id, 'lightLines', e.target.value)} style={styles.numInput} /></div>
+
                 </div>
               )}
             </div>
