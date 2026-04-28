@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 
 function App() {
   const [activeTab, setActiveTab] = useState('calc')
   const [userName, setUserName] = useState('Гость');
-  const [userId, setUserId] = useState(null); // <-- НОВОЕ: Храним ID пользователя
+  const [userId, setUserId] = useState(null);
+  
+  // Ссылка на невидимый инпут для фото
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -14,7 +17,7 @@ function App() {
       const user = tg.initDataUnsafe?.user;
       if (user) {
         setUserName(user.first_name);
-        setUserId(user.id); // <-- НОВОЕ: Запоминаем ID
+        setUserId(user.id);
       } else {
         setUserName('Павел (Демо)');
       }
@@ -51,10 +54,42 @@ function App() {
   );
 
   const CalculatorScreen = () => {
+    const [step, setStep] = useState('upload');
     const [rooms, setRooms] = useState([
       { id: Date.now(), name: 'Помещение 1', area: '', perimeter: '', corners: '4', canvasType: 'matte_white', profileType: 'standard', lightsCount: '', cornice: '' }
     ]);
     const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
+
+    // --- НОВОЕ: Отправка ФОТО на сервер ---
+    const handleFileChange = async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      setStep('analyzing'); // Показываем крутилку загрузки
+
+      const formData = new FormData();
+      formData.append('photo', file);
+
+      try {
+        const response = await fetch('https://potolokpro777bot.website/api/recognize', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === "success" && data.rooms && data.rooms.length > 0) {
+          setRooms(data.rooms); // Перезаписываем комнаты данными от ИИ!
+          setExpandedRoomId(data.rooms[0].id); // Открываем первую
+        } else {
+          alert("Не удалось распознать чертеж. Создана пустая комната.");
+        }
+        setStep('result');
+      } catch (error) {
+        alert("Ошибка сети. Проверьте подключение к серверу.");
+        setStep('result');
+      }
+    };
 
     const addRoom = () => {
       const newRoom = { id: Date.now(), name: `Помещение ${rooms.length + 1}`, area: '', perimeter: '', corners: '4', canvasType: 'matte_white', profileType: 'standard', lightsCount: '', cornice: '' };
@@ -71,26 +106,67 @@ function App() {
 
     const localTotalSum = rooms.reduce((total, room) => total + ((Number(room.area) || 0) * prices.canvas[room.canvasType]) + ((Number(room.perimeter) || 0) * prices.profile[room.profileType]) + ((Number(room.lightsCount) || 0) * prices.light) + ((Number(room.corners) || 0) * prices.corner) + ((Number(room.cornice) || 0) * prices.cornice), 0);
 
-    // --- НОВОЕ: ФУНКЦИЯ ОТПРАВКИ НА СЕРВЕР ---
     const sendToBot = async () => {
       try {
         await fetch('https://potolokpro777bot.website/api/calculate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: userId, // Передаем ID пользователя
-            rooms: rooms    // Передаем массив комнат
-          })
+          body: JSON.stringify({ userId: userId, rooms: rooms })
         });
-        window.Telegram?.WebApp?.close(); // Закрываем Mini App сразу после отправки
+        window.Telegram?.WebApp?.close();
       } catch (error) {
         alert("Ошибка отправки! Проверьте интернет.");
       }
     };
 
+    // Экран загрузки фото
+    if (step === 'upload') {
+      return (
+        <div style={{ animation: 'fadeIn 0.3s ease-in', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <h2 style={{ textAlign: 'center', marginBottom: '10px' }}>Новый замер</h2>
+          <p style={{ textAlign: 'center', color: '#8e8e93', marginBottom: '30px' }}>Сфотографируйте чертеж, а система автоматически оцифрует углы и площади</p>
+          
+          {/* Невидимый инпут для файла */}
+          <input 
+            type="file" 
+            accept="image/*" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            style={{ display: 'none' }} 
+          />
+          
+          <div onClick={() => fileInputRef.current.click()} style={{ background: 'white', border: '2px dashed #007aff', borderRadius: '24px', padding: '40px 20px', textAlign: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,122,255,0.1)' }}>
+            <div style={{ fontSize: '60px', marginBottom: '15px' }}>📸</div>
+            <h3 style={{ margin: '0 0 10px 0', color: '#007aff' }}>Смарт-сканер чертежа</h3>
+            <p style={{ margin: 0, color: '#8e8e93', fontSize: '14px' }}>Камера или файл из галереи</p>
+          </div>
+          
+          {/* Кнопка ручного ввода, если нет фото */}
+          <button onClick={() => setStep('result')} style={{ marginTop: '20px', background: 'transparent', color: '#8e8e93', border: 'none', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}>Ввести данные вручную</button>
+        </div>
+      )
+    }
+
+    // Экран анимации
+    if (step === 'analyzing') {
+      return (
+        <div style={{ animation: 'fadeIn 0.3s ease-in', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+          <div style={{ fontSize: '60px', animation: 'spin 2s linear infinite', color: '#007aff' }}>⚙️</div>
+          <h2 style={{ marginTop: '20px', color: '#1c1c1e' }}>Оцифровка данных...</h2>
+          <p style={{ color: '#8e8e93', textAlign: 'center' }}>Нейросеть распознает чертеж<br/>Это займет около 10 секунд</p>
+          <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
+        </div>
+      )
+    }
+
+    // Экран результата
     return (
       <div style={{ paddingBottom: '80px', animation: 'fadeIn 0.3s ease-in' }}>
-        <h2 style={{ margin: '0 0 15px 0', color: '#1c1c1e' }}>📝 Ручной расчет</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+          <button onClick={() => setStep('upload')} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: 0 }}>⬅️</button>
+          <h2 style={{ margin: 0, color: '#1c1c1e' }}>Смета</h2>
+        </div>
+        
         {rooms.map((room) => {
           const isExpanded = expandedRoomId === room.id;
           return (
@@ -118,7 +194,6 @@ function App() {
         <button onClick={addRoom} style={{ width: '100%', padding: '14px', background: '#e5e5ea', color: '#007aff', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 'bold', marginBottom: '20px' }}>➕ Добавить помещение</button>
         <div style={{ position: 'fixed', bottom: '75px', width: '100%', maxWidth: '440px', background: 'rgba(255,255,255,0.95)', padding: '15px 20px', borderRadius: '20px', boxShadow: '0 -4px 20px rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box', zIndex: 90 }}>
           <div><p style={{ margin: 0, fontSize: '12px', color: '#8e8e93', fontWeight: 'bold' }}>ПРЕДВАРИТЕЛЬНО:</p><h2 style={{ margin: 0, color: '#1c1c1e', fontSize: '24px' }}>{localTotalSum.toLocaleString()} ₴</h2></div>
-          {/* НОВОЕ: ПРИВЯЗАЛИ ФУНКЦИЮ К КНОПКЕ */}
           <button onClick={sendToBot} style={{ background: '#007aff', color: 'white', border: 'none', padding: '14px 24px', borderRadius: '14px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer' }}>В бот 🚀</button>
         </div>
       </div>
