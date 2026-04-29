@@ -9,32 +9,43 @@ const T = {
 // --- КОМПОНЕНТ УМНОГО ХОЛСТА (CANVAS) ---
 const RoomCanvas = ({ room, updateRoom }) => {
   const canvasRef = useRef(null);
-  
-  // Масштаб: 40 пикселей = 1 метр.
-  const SCALE = 40; 
-  
-  // Дефолтные координаты для новой комнаты 4х4 метра
-  const [pts, setPts] = useState(room.vertices || [
-    { x: 60, y: 60 }, { x: 220, y: 60 }, { x: 220, y: 220 }, { x: 60, y: 220 }
+
+  // Масштаб: сколько пикселей в 1 метре (по умолчанию 35)
+  const [scale, setScale] = useState(35);
+  // Смещение центра холста (чтобы чертеж был ровно по центру)
+  const offset = { x: 150, y: 130 }; 
+
+  // Точки теперь хранятся в МЕТРАХ (логические координаты от центра)
+  const [pts, setPts] = useState(room.logicalPts || [
+    { x: -2, y: -2 }, { x: 2, y: -2 }, { x: 2, y: 2 }, { x: -2, y: 2 }
   ]);
   const [draggingIdx, setDraggingIdx] = useState(null);
 
-  // Отрисовка чертежа
+  // Перевод из метров в пиксели экрана
+  const toScreen = (p) => ({ x: p.x * scale + offset.x, y: p.y * scale + offset.y });
+  // Перевод из пикселей экрана обратно в метры
+  const toLogical = (p) => ({ x: (p.x - offset.x) / scale, y: (p.y - offset.y) / scale });
+
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 1. Рисуем миллиметровую сетку
-    ctx.strokeStyle = '#f2f2f7';
+    // 1. Рисуем миллиметровую сетку (привязана к метрам)
+    ctx.strokeStyle = '#e5e5ea';
     ctx.lineWidth = 1;
-    for(let i = 0; i < canvas.width; i += 20) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
-    for(let i = 0; i < canvas.height; i += 20) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+    const step = scale; // 1 клетка = 1 метр
+    const startX = offset.x % step;
+    const startY = offset.y % step;
+    for(let i = startX; i < canvas.width; i += step) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
+    for(let i = startY; i < canvas.height; i += step) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
 
-    // 2. Рисуем заливку и контур комнаты
+    const screenPts = pts.map(toScreen);
+
+    // 2. Рисуем контур комнаты
     ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for(let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.moveTo(screenPts[0].x, screenPts[0].y);
+    for(let i = 1; i < screenPts.length; i++) ctx.lineTo(screenPts[i].x, screenPts[i].y);
     ctx.closePath();
     ctx.fillStyle = 'rgba(0, 122, 255, 0.1)';
     ctx.fill();
@@ -42,46 +53,40 @@ const RoomCanvas = ({ room, updateRoom }) => {
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    // 3. Вычисляем данные и рисуем длины стен
+    // 3. Вычисляем данные и рисуем длины
     ctx.fillStyle = '#1c1c1e';
     ctx.font = 'bold 12px system-ui';
     ctx.textAlign = 'center';
-    
-    let perimPx = 0;
-    let areaPx = 0;
 
     for(let i = 0; i < pts.length; i++) {
        let p1 = pts[i], p2 = pts[(i+1) % pts.length];
-       let dx = p2.x - p1.x, dy = p2.y - p1.y;
-       let dist = Math.sqrt(dx*dx + dy*dy);
-       perimPx += dist;
-       areaPx += (p1.x * p2.y - p2.x * p1.y);
+       // Дистанция считается в метрах (идеальная точность)
+       let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
 
-       // Текст посередине линии (длина стены)
-       let mx = (p1.x + p2.x)/2, my = (p1.y + p2.y)/2;
-       let meters = (dist / SCALE).toFixed(2); 
-       
-       // Белая подложка под текст, чтобы было читаемо
-       ctx.fillStyle = 'rgba(255,255,255,0.8)';
+       // Координаты экрана для вывода текста
+       let sp1 = screenPts[i], sp2 = screenPts[(i+1) % screenPts.length];
+       let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
+       let meters = dist.toFixed(2);
+
+       ctx.fillStyle = 'rgba(255,255,255,0.85)';
        ctx.fillRect(mx - 15, my - 15, 30, 16);
-       
        ctx.fillStyle = '#007aff';
        ctx.fillText(meters + 'м', mx, my - 4);
     }
 
-    // 4. Рисуем интерактивные точки (углы)
-    for(let i = 0; i < pts.length; i++) {
+    // 4. Интерактивные точки (углы)
+    for(let i = 0; i < screenPts.length; i++) {
        ctx.beginPath();
-       ctx.arc(pts[i].x, pts[i].y, 10, 0, 2 * Math.PI);
+       ctx.arc(screenPts[i].x, screenPts[i].y, 10, 0, 2 * Math.PI);
        ctx.fillStyle = draggingIdx === i ? '#ff3b30' : '#ffffff';
        ctx.fill();
        ctx.lineWidth = 3;
        ctx.strokeStyle = '#ff3b30';
        ctx.stroke();
     }
-  }, [pts, draggingIdx]);
+  }, [pts, draggingIdx, scale]);
 
-  // Обработчики перетаскивания (Touch + Mouse)
+  // Обработчики касаний
   const getMousePos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const clientX = e.clientX || (e.touches && e.touches[0].clientX);
@@ -91,42 +96,49 @@ const RoomCanvas = ({ room, updateRoom }) => {
 
   const handlePointerDown = (e) => {
     const pos = getMousePos(e);
-    // Ищем, попал ли палец в радиус одной из точек
-    const hitIndex = pts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 20);
-    if (hitIndex !== -1) setDraggingIdx(hitIndex);
+    const screenPts = pts.map(toScreen);
+    // Увеличили радиус захвата точки для удобства на телефоне
+    const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 25); 
+    if (hitIndex !== -1) {
+        setDraggingIdx(hitIndex);
+        // Захватываем палец, чтобы он не терялся при выходе за рамку
+        e.target.setPointerCapture(e.pointerId);
+    }
   };
 
   const handlePointerMove = (e) => {
     if (draggingIdx === null) return;
     const pos = getMousePos(e);
     const newPts = [...pts];
-    newPts[draggingIdx] = { x: pos.x, y: pos.y };
+    // Переводим пиксели обратно в логические метры
+    newPts[draggingIdx] = toLogical(pos);
     setPts(newPts);
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e) => {
     if (draggingIdx === null) return;
     setDraggingIdx(null);
-    
-    // --- ПЕРЕСЧЕТ МАТЕМАТИКИ И ОБНОВЛЕНИЕ КАРТОЧКИ ---
-    let perimPx = 0;
-    let areaPx = 0;
+    e.target.releasePointerCapture(e.pointerId);
+
+    // Пересчет площади и периметра
+    let perim = 0;
+    let area = 0;
     for(let i = 0; i < pts.length; i++) {
        let p1 = pts[i], p2 = pts[(i+1) % pts.length];
-       perimPx += Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
-       areaPx += (p1.x * p2.y - p2.x * p1.y);
+       perim += Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
+       area += (p1.x * p2.y - p2.x * p1.y);
     }
-    
-    const finalArea = (Math.abs(areaPx / 2) / (SCALE * SCALE)).toFixed(2);
-    const finalPerim = (perimPx / SCALE).toFixed(2);
-    
+
+    const finalArea = Math.abs(area / 2).toFixed(2);
+    const finalPerim = perim.toFixed(2);
+
     updateRoom(room.id, 'area', finalArea);
     updateRoom(room.id, 'perim', finalPerim);
-    updateRoom(room.id, 'vertices', pts);
+    updateRoom(room.id, 'logicalPts', pts); // Сохраняем в метрах
   };
 
   return (
-    <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+    <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
       <canvas 
         ref={canvasRef} 
         width={300} 
@@ -135,8 +147,13 @@ const RoomCanvas = ({ room, updateRoom }) => {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
+        onPointerCancel={handlePointerUp}
       />
+      {/* ПАНЕЛЬ МАСШТАБА (ZOOM) */}
+      <div style={{ position: 'absolute', right: '10px', top: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+         <button onClick={() => setScale(s => Math.min(s + 5, 80))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+         <button onClick={() => setScale(s => Math.max(s - 5, 5))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+      </div>
     </div>
   );
 };
