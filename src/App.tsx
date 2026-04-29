@@ -112,42 +112,35 @@ const CeilingGeometry3D = ({ roomPts, elements }) => {
 
   return (
     <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 2.7, 0]}> 
-      {/* Потолок */}
       <mesh receiveShadow>
         <shapeGeometry args={[shape]} />
         <meshPhysicalMaterial color="#ffffff" metalness={0.1} roughness={0.3} clearcoat={0.5} emissive="#ffffff" emissiveIntensity={0.05} />
       </mesh>
-      
-      {/* Стены */}
       <mesh position={[0, 0, -2.7]} castShadow>
         <extrudeGeometry args={[shape, wallExtrudeSettings]} />
         <meshStandardMaterial color="#f0f0f0" side={THREE.BackSide} roughness={1} />
       </mesh>
-      
-      {/* Пол */}
       <mesh rotation={[0, 0, 0]} position={[0,0,-2.69]}>
           <shapeGeometry args={[shape]} />
           <meshBasicMaterial color="#1c1c1e" side={THREE.DoubleSide} />
       </mesh>
 
-      {/* ⭐️ ОБОРУДОВАНИЕ (Опущено внутрь комнаты по оси -Z) */}
       {elements?.map((el, idx) => {
           if (el.type === 'spot') return (
-              <mesh key={el.id} position={[el.x, el.y, -0.05]}> {/* Опустили под потолок */}
+              <mesh key={el.id} position={[el.x, el.y, -0.05]}> 
                   <cylinderGeometry args={[0.06, 0.06, 0.02, 16]} rotation={[Math.PI/2, 0, 0]} />
                   <meshBasicMaterial color="#ffffff" />
                   <pointLight distance={3} intensity={0.6} color="#fff8e7" />
               </mesh>
           );
           if (el.type === 'chand') return (
-              <mesh key={el.id} position={[el.x, el.y, -0.2]}> {/* Люстра висит еще ниже */}
+              <mesh key={el.id} position={[el.x, el.y, -0.2]}> 
                   <sphereGeometry args={[0.15, 16, 16]} />
                   <meshBasicMaterial color="#ffcc00" />
                   <pointLight distance={5} intensity={1} color="#ffffff" />
               </mesh>
           );
           if (el.type === 'track') {
-              // Рисуем трек из кусочков между всеми точками
               return el.points.map((pt, i) => {
                   if (i === 0) return null;
                   let prev = el.points[i-1];
@@ -157,12 +150,10 @@ const CeilingGeometry3D = ({ roomPts, elements }) => {
                   
                   return (
                       <group key={`${el.id}-${i}`} position={[mx, my, -0.02]} rotation={[0, 0, angle]}>
-                          {/* Черный корпус трека */}
                           <mesh>
                               <boxGeometry args={[len + 0.035, 0.035, 0.02]} /> 
                               <meshBasicMaterial color="#1c1c1e" />
                           </mesh>
-                          {/* Светящаяся LED-лента внутри трека */}
                           <mesh position={[0, 0, -0.015]}>
                               <boxGeometry args={[len, 0.02, 0.01]} />
                               <meshBasicMaterial color="#ffffff" />
@@ -204,9 +195,11 @@ const RoomCanvas = ({ room, updateRoom }) => {
   
   const [mode, setMode] = useState('drag'); 
   const [selectedDiagPt, setSelectedDiagPt] = useState(null); 
-  
-  // ⭐️ НОВОЕ: Состояние для рисования непрерывного трека (Световой линии)
   const [activeTrackPts, setActiveTrackPts] = useState([]);
+  
+  // ⭐️ ЛОКАЛЬНОЕ СОСТОЯНИЕ ОБОРУДОВАНИЯ (ДЛЯ ПЛАВНОГО ПЕРЕТАСКИВАНИЯ)
+  const [els, setEls] = useState(room.elements || []);
+  const [draggingElement, setDraggingElement] = useState(null); // { elId, ptIdx }
   
   const CANVAS_WIDTH = 340;
   const CANVAS_HEIGHT = 320;
@@ -220,8 +213,10 @@ const RoomCanvas = ({ room, updateRoom }) => {
   const allPossibleDiags = getAllPossibleDiags(pts.length);
 
   useEffect(() => { if (room.logicalPts) setPts(room.logicalPts); }, [room.logicalPts]);
+  useEffect(() => { setEls(room.elements || []) }, [room.elements]); // Синхронизируем локальные элементы
 
   const syncElementsToInputs = (newEls) => {
+      setEls(newEls);
       updateRoom(room.id, 'elements', newEls);
       const spots = newEls.filter(e => e.type === 'spot').length;
       const chands = newEls.filter(e => e.type === 'chand').length;
@@ -291,36 +286,56 @@ const RoomCanvas = ({ room, updateRoom }) => {
        ctx.fillStyle = '#007aff'; ctx.fillText(`${name}: ${displayDist}м`, mx, my + 2);
     }
 
-    // Оборудование
-    room.elements?.forEach(el => {
+    // ⭐️ 3. ОТРИСОВКА ОБОРУДОВАНИЯ (Используем локальный els)
+    els.forEach(el => {
         if (el.type === 'track') {
+            // Рисуем линии трека
             ctx.beginPath();
             ctx.moveTo(toScreen(el.points[0]).x, toScreen(el.points[0]).y);
             for(let i=1; i<el.points.length; i++) ctx.lineTo(toScreen(el.points[i]).x, toScreen(el.points[i]).y);
             ctx.strokeStyle = '#1c1c1e'; ctx.lineWidth = 4; ctx.stroke();
             
-            // Кружочки на стыках трека
-            el.points.forEach(p => {
+            // ⭐️ Рисуем плашки с размерами для каждого отрезка трека
+            for(let i=1; i<el.points.length; i++) {
+                let dist = Math.sqrt((el.points[i].x - el.points[i-1].x)**2 + (el.points[i].y - el.points[i-1].y)**2).toFixed(2);
+                let sp1 = toScreen(el.points[i-1]); let sp2 = toScreen(el.points[i]);
+                let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
+                ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(mx - 15, my - 8, 30, 16);
+                ctx.fillStyle = '#1c1c1e'; ctx.font = 'bold 10px system-ui'; ctx.fillText(`${dist}м`, mx, my + 3);
+            }
+            
+            // Кружочки на стыках трека (с подсветкой при перетаскивании)
+            el.points.forEach((p, idx) => {
                 let sp = toScreen(p);
-                ctx.beginPath(); ctx.arc(sp.x, sp.y, 3, 0, 2*Math.PI); ctx.fillStyle = '#fff'; ctx.fill();
+                ctx.beginPath(); ctx.arc(sp.x, sp.y, 4, 0, 2*Math.PI); 
+                ctx.fillStyle = (draggingElement && draggingElement.elId === el.id && draggingElement.ptIdx === idx) ? '#ff3b30' : '#fff'; 
+                ctx.fill(); ctx.strokeStyle = '#1c1c1e'; ctx.lineWidth = 2; ctx.stroke();
             });
         } else {
             let sp = toScreen({x: el.x, y: el.y});
             ctx.beginPath(); 
             ctx.arc(sp.x, sp.y, el.type === 'chand' ? 8 : 5, 0, 2*Math.PI);
-            ctx.fillStyle = el.type === 'spot' ? '#ffcc00' : (el.type === 'chand' ? '#ff9500' : '#8e8e93');
+            ctx.fillStyle = (draggingElement && draggingElement.elId === el.id) ? '#ff3b30' : (el.type === 'spot' ? '#ffcc00' : (el.type === 'chand' ? '#ff9500' : '#8e8e93'));
             ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
             if (el.type === 'pipe') { ctx.fillStyle='#fff'; ctx.font='bold 8px system-ui'; ctx.fillText('T', sp.x, sp.y+3); }
         }
     });
 
-    // Рисуем процесс создания нового трека
+    // Рисуем процесс создания нового трека (он тоже с размерами)
     if (mode === 'track' && activeTrackPts.length > 0) {
         ctx.beginPath();
         ctx.moveTo(toScreen(activeTrackPts[0]).x, toScreen(activeTrackPts[0]).y);
         for(let i=1; i<activeTrackPts.length; i++) ctx.lineTo(toScreen(activeTrackPts[i]).x, toScreen(activeTrackPts[i]).y);
         ctx.strokeStyle = '#ff9500'; ctx.lineWidth = 4; ctx.stroke();
         
+        for(let i=1; i<activeTrackPts.length; i++) {
+            let dist = Math.sqrt((activeTrackPts[i].x - activeTrackPts[i-1].x)**2 + (activeTrackPts[i].y - activeTrackPts[i-1].y)**2).toFixed(2);
+            let sp1 = toScreen(activeTrackPts[i-1]); let sp2 = toScreen(activeTrackPts[i]);
+            let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
+            ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(mx - 15, my - 8, 30, 16);
+            ctx.fillStyle = '#ff9500'; ctx.font = 'bold 10px system-ui'; ctx.fillText(`${dist}м`, mx, my + 3);
+        }
+
         activeTrackPts.forEach(p => {
             let sp = toScreen(p);
             ctx.beginPath(); ctx.arc(sp.x, sp.y, 5, 0, 2*Math.PI); ctx.fillStyle = '#ff9500'; ctx.fill();
@@ -338,7 +353,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
        const label = String.fromCharCode(65 + i); 
        ctx.fillStyle = '#1c1c1e'; ctx.font = '900 16px system-ui'; ctx.fillText(label, sp.x + 18, sp.y - 12);
     }
-  }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode, room.activeDiags, selectedDiagPt, viewMode, room.elements, activeTrackPts]);
+  }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode, room.activeDiags, selectedDiagPt, viewMode, els, activeTrackPts, draggingElement]);
 
   const updateAreaPerimAndSave = (newPts, newDiags = null) => {
     let perim = 0, area = 0;
@@ -371,25 +386,47 @@ const RoomCanvas = ({ room, updateRoom }) => {
     const screenPts = pts.map(toScreen);
     const logicalPos = toLogical(pos);
 
-    // Умный ластик (Удаляем углы или оборудование)
+    // ⭐️ УМНЫЙ ЛАСТИК (Режет треки на куски!)
     if (mode === 'remove') {
-        if (room.elements) {
-            const hitElIndex = room.elements.findIndex(el => {
-                if (el.type === 'track') {
-                    for(let i=1; i<el.points.length; i++) {
-                        if(getDistToSegment(pos, toScreen(el.points[i-1]), toScreen(el.points[i])) < 15) return true;
+        let hitFound = false;
+        let newEls = [];
+        
+        for (let el of els) {
+            if (hitFound) { newEls.push(el); continue; }
+
+            if (el.type === 'track') {
+                let segmentHitIdx = -1;
+                // Ищем, по какому отрезку кликнули
+                for(let i=1; i<el.points.length; i++) {
+                    if(getDistToSegment(pos, toScreen(el.points[i-1]), toScreen(el.points[i])) < 15) {
+                        segmentHitIdx = i; break;
                     }
-                    return false;
-                } else {
-                    return Math.sqrt((toScreen(el).x - pos.x)**2 + (toScreen(el).y - pos.y)**2) < 15;
                 }
-            });
-            if (hitElIndex !== -1) {
-                const newEls = room.elements.filter((_, idx) => idx !== hitElIndex);
-                syncElementsToInputs(newEls);
-                return;
+                if (segmentHitIdx !== -1) {
+                    hitFound = true;
+                    // Разрезаем трек!
+                    let part1 = el.points.slice(0, segmentHitIdx);
+                    let part2 = el.points.slice(segmentHitIdx);
+                    // Если кусок состоит из 2+ точек, сохраняем его как новый отдельный трек
+                    if (part1.length >= 2) newEls.push({ id: Date.now() + Math.random(), type: 'track', points: part1 });
+                    if (part2.length >= 2) newEls.push({ id: Date.now() + Math.random(), type: 'track', points: part2 });
+                } else {
+                    newEls.push(el);
+                }
+            } else {
+                if (Math.sqrt((toScreen(el).x - pos.x)**2 + (toScreen(el).y - pos.y)**2) < 15) {
+                    hitFound = true; // Удаляем точку
+                } else {
+                    newEls.push(el);
+                }
             }
         }
+        if (hitFound) {
+            syncElementsToInputs(newEls);
+            return;
+        }
+
+        // Если не задели оборудование, пробуем удалить угол комнаты
         const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 30);
         if (hitIndex !== -1) {
             if (pts.length <= 3) return alert("Минимум 3 угла!");
@@ -401,12 +438,11 @@ const RoomCanvas = ({ room, updateRoom }) => {
     }
 
     if (['spot', 'chand', 'pipe'].includes(mode)) {
-        const newEls = [...(room.elements || []), { id: Date.now(), type: mode, x: logicalPos.x, y: logicalPos.y }];
+        const newEls = [...els, { id: Date.now(), type: mode, x: logicalPos.x, y: logicalPos.y }];
         syncElementsToInputs(newEls);
         return; 
     }
 
-    // ⭐️ Рисование непрерывной фигуры трека
     if (mode === 'track') {
         setActiveTrackPts([...activeTrackPts, logicalPos]);
         return;
@@ -443,28 +479,82 @@ const RoomCanvas = ({ room, updateRoom }) => {
         setMode('drag'); return;
     }
 
-    const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 25); 
-    if (hitIndex !== -1) { setDraggingIdx(hitIndex); e.target.setPointerCapture(e.pointerId); }
+    // ⭐️ ИНТЕРАКТИВНОЕ ПЕРЕТАСКИВАНИЕ ОБОРУДОВАНИЯ (В режиме Drag)
+    if (mode === 'drag') {
+        // Проверяем углы
+        const hitCornerIdx = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 25); 
+        if (hitCornerIdx !== -1) { 
+            setDraggingIdx(hitCornerIdx); e.target.setPointerCapture(e.pointerId); return; 
+        }
+        
+        // Проверяем оборудование
+        for (let el of els) {
+            if (el.type === 'track') {
+                for(let i=0; i<el.points.length; i++) {
+                    let sp = toScreen(el.points[i]);
+                    if (Math.sqrt((sp.x - pos.x)**2 + (sp.y - pos.y)**2) < 25) {
+                        setDraggingElement({ elId: el.id, ptIdx: i }); e.target.setPointerCapture(e.pointerId); return;
+                    }
+                }
+            } else {
+                let sp = toScreen(el);
+                if (Math.sqrt((sp.x - pos.x)**2 + (sp.y - pos.y)**2) < 25) {
+                    setDraggingElement({ elId: el.id, ptIdx: null }); e.target.setPointerCapture(e.pointerId); return;
+                }
+            }
+        }
+    }
   };
 
   const handlePointerMove = (e) => {
-    if (draggingIdx === null || mode !== 'drag') return;
+    if (mode !== 'drag') return;
     const pos = getMousePos(e);
-    const newPts = [...pts];
-    newPts[draggingIdx] = toLogical(pos);
-    setPts(newPts);
+    const logicalPos = toLogical(pos);
+
+    // Тянем оборудование (очень плавно!)
+    if (draggingElement) {
+        const newEls = els.map(el => {
+            if (el.id === draggingElement.elId) {
+                if (el.type === 'track') {
+                    let newPts = [...el.points];
+                    newPts[draggingElement.ptIdx] = logicalPos;
+                    return { ...el, points: newPts };
+                } else {
+                    return { ...el, x: logicalPos.x, y: logicalPos.y };
+                }
+            }
+            return el;
+        });
+        setEls(newEls); // Обновляем локально без задержек
+        return;
+    }
+
+    // Тянем угол
+    if (draggingIdx !== null) {
+        const newPts = [...pts];
+        newPts[draggingIdx] = logicalPos;
+        setPts(newPts);
+    }
   };
 
   const handlePointerUp = (e) => {
-    if (draggingIdx === null) return;
-    setDraggingIdx(null); e.target.releasePointerCapture(e.pointerId);
-    updateAreaPerimAndSave(centerShape(pts));
+    e.target.releasePointerCapture(e.pointerId);
+    if (draggingElement) {
+        setDraggingElement(null);
+        syncElementsToInputs(els); // Сохраняем в смету
+        return;
+    }
+    if (draggingIdx !== null) {
+        setDraggingIdx(null);
+        updateAreaPerimAndSave(centerShape(pts));
+    }
   };
 
   const handleModeSwitch = (newMode) => {
       setMode(mode === newMode ? 'drag' : newMode);
       setSelectedDiagPt(null);
       setActiveTrackPts([]);
+      setDraggingElement(null);
   };
 
   const getHelperText = () => {
@@ -476,7 +566,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
       if (mode === 'chand') return '👆 Кликните, чтобы повесить Люстру';
       if (mode === 'pipe') return '👆 Кликните у стены, чтобы отметить Обход трубы';
       if (mode === 'track') return activeTrackPts.length === 0 ? '👆 Кликните на чертеж, чтобы начать рисовать трек' : '👆 Кликайте дальше. Чтобы завершить, нажмите ✅';
-      return '👆 Потяните углы ИЛИ выберите инструмент ниже';
+      return '👆 Потяните углы, оборудование, ИЛИ выберите инструмент';
   };
 
   return (
@@ -499,11 +589,11 @@ const RoomCanvas = ({ room, updateRoom }) => {
             <ThreeDPreview roomPts={pts} elements={room.elements} />
         )}
         
-        {/* КНОПКА ЗАВЕРШЕНИЯ ТРЕКА ПОВЕРХ ХОЛСТА */}
+        {/* КНОПКА ЗАВЕРШЕНИЯ ТРЕКА */}
         {mode === 'track' && activeTrackPts.length > 0 && viewMode === '2d' && (
             <button onClick={() => {
                 if(activeTrackPts.length > 1) {
-                    const newEls = [...(room.elements || []), { id: Date.now(), type: 'track', points: activeTrackPts }];
+                    const newEls = [...els, { id: Date.now(), type: 'track', points: activeTrackPts }];
                     syncElementsToInputs(newEls);
                 }
                 setActiveTrackPts([]);
@@ -530,7 +620,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
           {viewMode === '2d' ? '👀 3D' : '🔙 2D Чертеж'}
       </button>
 
-      {/* ⭐️ ПАНЕЛИ ИНСТРУМЕНТОВ (ТОЛЬКО В 2D) */}
       {viewMode === '2d' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
@@ -547,7 +636,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
           </div>
       )}
 
-      {/* --- БЛОК РУЧНЫХ РАЗМЕРОВ --- */}
       <div style={{ background: '#f9f9fb', padding: '15px', borderRadius: '12px', marginTop: '15px', border: '1px solid #e5e5ea', textAlign: 'left' }}>
         <span style={{ fontSize: '11px', fontWeight: '800', color: '#8e8e93', display: 'block', marginBottom: '8px' }}>📐 СТЕНЫ (м):</span>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '15px' }}>
