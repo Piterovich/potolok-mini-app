@@ -623,6 +623,7 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
           {getHelperText()}
       </div>
 
+      {/* ⭐️ БЛОК С ХОЛСТАМИ ⭐️ */}
       <div style={{position: 'relative'}}>
         
         {/* ХОЛСТ МОНТАЖА */}
@@ -654,53 +655,43 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
                 ✅ Завершить фигуру
             </button>
         )}
+
+        {/* ⭐️ КНОПКА 3D ТЕПЕРЬ ПРИВЯЗАНА ЧЕТКО К УГЛУ ЧЕРТЕЖА ⭐️ */}
+        <button onClick={() => setViewMode(viewMode === '2d' ? '3d' : '2d')} style={{ position: 'absolute', bottom: '10px', right: '10px', padding: '8px 12px', borderRadius: '20px', background: viewMode === '2d' ? '#ff3b30' : '#8e8e93', color: 'white', border: 'none', fontWeight: '900', fontSize: '13px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)', zIndex: 10, transition: '0.3s' }}>
+            {viewMode === '2d' ? '👀 3D' : '🔙 2D Чертеж'}
+        </button>
       </div>
       
-      {/* ⭐️ ПАНЕЛЬ "УПРАВЛЕНИЕ ВИДОМ" ⭐️ */}
       {viewMode === '2d' && (
-          <div style={{ position: 'absolute', right: '10px', top: '10px', zIndex: 5, width: '180px', textAlign: 'left' }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#1c1c1e', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  ⚙️ Управление видом
-              </div>
-              <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', border: '1px solid #e5e5ea', overflow: 'hidden' }}>
-                  
-                  {/* Кнопка диагоналей */}
-                  <button onClick={() => setShowDiags(!showDiags)} style={{ width: '100%', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', border: 'none', borderBottom: '1px solid #f2f2f7', fontSize: '12px', fontWeight: '700', color: '#1c1c1e', cursor: 'pointer', transition: '0.2s' }}>
+          <>
+              {/* ⭐️ НОВАЯ ПАНЕЛЬ УПРАВЛЕНИЯ ВИДОМ (ИМЕННО ТАМ, ГДЕ ТЫ НАРИСОВАЛ ЛИНИЮ) ⭐️ */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', padding: '0 4px' }}>
+                  <button onClick={() => setShowDiags(!showDiags)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e5ea', background: '#fff', fontSize: '13px', color: '#1c1c1e', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', cursor: 'pointer' }}>
                       <span style={{ fontSize: '16px' }}>{showDiags ? '👁' : '👓'}</span>
-                      {showDiags ? 'Скрыть диагонали' : 'Показ. диагонали'}
+                      {showDiags ? 'Скрыть диагонали' : 'Показать диагонали'}
                   </button>
                   
-                  {/* Блок зума */}
-                  <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fcfcfc' }}>
-                      <span style={{ fontSize: '11px', fontWeight: '800', color: '#8e8e93', textTransform: 'uppercase' }}>🔍 Масштаб:</span>
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                          <button onClick={() => setScale(s => Math.min(s + 5, 80))} style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1px solid #e5e5ea', background: '#fff', fontSize: '18px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>+</button>
-                          <button onClick={() => setScale(s => Math.max(s - 5, 5))} style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1px solid #e5e5ea', background: '#fff', fontSize: '18px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>-</button>
-                      </div>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <button onClick={() => setScale(s => Math.max(s - 5, 5))} style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #e5e5ea', background: '#fff', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', cursor: 'pointer' }}>-</button>
+                      <button onClick={() => setScale(s => Math.min(s + 5, 80))} style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #e5e5ea', background: '#fff', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', cursor: 'pointer' }}>+</button>
                   </div>
+              </div>
 
+              {/* ПАНЕЛИ ИНСТРУМЕНТОВ */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                    <button onClick={() => handleModeSwitch('add')} style={{ flex: 1, padding: '10px 4px', background: mode === 'add' ? '#34c759' : '#e5f1ff', color: mode === 'add' ? '#fff' : '#007aff', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>{mode === 'add' ? 'Отмена' : '➕ Угол'}</button>
+                    <button onClick={() => handleModeSwitch('remove')} style={{ flex: 1, padding: '10px 4px', background: mode === 'remove' ? '#ff3b30' : '#ffe5e5', color: mode === 'remove' ? '#fff' : '#ff3b30', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>{mode === 'remove' ? 'Отмена' : '➖ Ластик'}</button>
+                    <button onClick={() => handleModeSwitch('add_diag')} style={{ flex: 1, padding: '10px 4px', background: mode === 'add_diag' ? '#ff9500' : '#fff4e5', color: mode === 'add_diag' ? '#fff' : '#ff9500', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>{mode === 'add_diag' ? 'Отмена' : '📏 Диагональ'}</button>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                    <button onClick={() => handleModeSwitch('spot')} style={{ flex: 1, padding: '10px 4px', background: mode === 'spot' ? '#ffcc00' : '#fff', color: mode === 'spot' ? '#fff' : '#1c1c1e', border: '1px solid #e5e5ea', borderRadius: '8px', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>💡 Точка</button>
+                    <button onClick={() => handleModeSwitch('chand')} style={{ flex: 1, padding: '10px 4px', background: mode === 'chand' ? '#ff9500' : '#fff', color: mode === 'chand' ? '#fff' : '#1c1c1e', border: '1px solid #e5e5ea', borderRadius: '8px', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>🏮 Люстра</button>
+                    <button onClick={() => handleModeSwitch('track')} style={{ flex: 1, padding: '10px 4px', background: mode === 'track' ? '#1c1c1e' : '#fff', color: mode === 'track' ? '#fff' : '#1c1c1e', border: '1px solid #e5e5ea', borderRadius: '8px', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>➖ Трек</button>
+                    <button onClick={() => handleModeSwitch('pipe')} style={{ flex: 1, padding: '10px 4px', background: mode === 'pipe' ? '#8e8e93' : '#fff', color: mode === 'pipe' ? '#fff' : '#1c1c1e', border: '1px solid #e5e5ea', borderRadius: '8px', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>🔲 Труба</button>
+                  </div>
               </div>
-          </div>
-      )}
-      
-      <button onClick={() => setViewMode(viewMode === '2d' ? '3d' : '2d')} style={{ position: 'absolute', bottom: '130px', right: '10px', padding: '10px 15px', borderRadius: '20px', background: viewMode === '2d' ? '#ff3b30' : '#8e8e93', color: 'white', border: 'none', fontWeight: '900', fontSize: '14px', boxShadow: '0 4px 15px rgba(255,59,48,0.4)', zIndex: 10, transition: '0.3s' }}>
-          {viewMode === '2d' ? '👀 3D' : '🔙 2D Чертеж'}
-      </button>
-
-      {viewMode === '2d' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                <button onClick={() => handleModeSwitch('add')} style={{ flex: 1, padding: '10px 4px', background: mode === 'add' ? '#34c759' : '#e5f1ff', color: mode === 'add' ? '#fff' : '#007aff', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>{mode === 'add' ? 'Отмена' : '➕ Угол'}</button>
-                <button onClick={() => handleModeSwitch('remove')} style={{ flex: 1, padding: '10px 4px', background: mode === 'remove' ? '#ff3b30' : '#ffe5e5', color: mode === 'remove' ? '#fff' : '#ff3b30', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>{mode === 'remove' ? 'Отмена' : '➖ Ластик'}</button>
-                <button onClick={() => handleModeSwitch('add_diag')} style={{ flex: 1, padding: '10px 4px', background: mode === 'add_diag' ? '#ff9500' : '#fff4e5', color: mode === 'add_diag' ? '#fff' : '#ff9500', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>{mode === 'add_diag' ? 'Отмена' : '📏 Диагональ'}</button>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                <button onClick={() => handleModeSwitch('spot')} style={{ flex: 1, padding: '10px 4px', background: mode === 'spot' ? '#ffcc00' : '#fff', color: mode === 'spot' ? '#fff' : '#1c1c1e', border: '1px solid #e5e5ea', borderRadius: '8px', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>💡 Точка</button>
-                <button onClick={() => handleModeSwitch('chand')} style={{ flex: 1, padding: '10px 4px', background: mode === 'chand' ? '#ff9500' : '#fff', color: mode === 'chand' ? '#fff' : '#1c1c1e', border: '1px solid #e5e5ea', borderRadius: '8px', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>🏮 Люстра</button>
-                <button onClick={() => handleModeSwitch('track')} style={{ flex: 1, padding: '10px 4px', background: mode === 'track' ? '#1c1c1e' : '#fff', color: mode === 'track' ? '#fff' : '#1c1c1e', border: '1px solid #e5e5ea', borderRadius: '8px', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>➖ Трек</button>
-                <button onClick={() => handleModeSwitch('pipe')} style={{ flex: 1, padding: '10px 4px', background: mode === 'pipe' ? '#8e8e93' : '#fff', color: mode === 'pipe' ? '#fff' : '#1c1c1e', border: '1px solid #e5e5ea', borderRadius: '8px', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>🔲 Труба</button>
-              </div>
-          </div>
+          </>
       )}
 
       <div style={{ background: '#f9f9fb', padding: '15px', borderRadius: '12px', marginTop: '15px', border: '1px solid #e5e5ea', textAlign: 'left' }}>
@@ -744,7 +735,6 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
     </div>
   );
 };
-// ----------------------------------------
 
 function App() {
   const [activeTab, setActiveTab] = useState('calc')
