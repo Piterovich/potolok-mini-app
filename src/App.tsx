@@ -2,25 +2,88 @@ import { useState, useEffect, useRef } from 'react'
 import './App.css'
 
 const T = {
-  ru: { calc: "Расчет", addRoom: "Добавить помещение", toBot: "В бот 🚀", area: "Площадь (м²)", perim: "Периметр (м)", corners: "Углы (шт)", geom: "📏 Геометрия", materials: "🎨 Полотно и Профиль", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", spots: "Точечные (шт)", chands: "Люстры (шт)", track: "Магн. трек (м)", corniceType: "Вид карниза", corniceLen: "Метраж (м)", pipe: "Обход труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФИЛЬ", pre: "ПРЕДВАРИТЕЛЬНО:", dragInfo: "👆 Потяните за красные точки, чтобы изменить геометрию" },
-  uk: { calc: "Розрахунок", addRoom: "Додати приміщення", toBot: "В бот 🚀", area: "Площа (м²)", perim: "Периметр (м)", corners: "Кути (шт)", geom: "📏 Геометрія", materials: "🎨 Полотно та Профіль", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", spots: "Точкові (шт)", chands: "Люстри (шт)", track: "Магн. трек (м)", corniceType: "Вид карнизу", corniceLen: "Метраж (м)", pipe: "Обхід труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФІЛЬ", pre: "ПОПЕРЕДНЬО:", dragInfo: "👆 Потягніть за червоні точки, щоб змінити геометрію" }
+  ru: { calc: "Расчет", addRoom: "Добавить помещение", toBot: "В бот 🚀", area: "Площадь (м²)", perim: "Периметр (м)", corners: "Углы (шт)", geom: "📏 Геометрия", materials: "🎨 Полотно и Профиль", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", spots: "Точечные (шт)", chands: "Люстры (шт)", track: "Магн. трек (м)", corniceType: "Вид карниза", corniceLen: "Метраж (м)", pipe: "Обход труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФИЛЬ", pre: "ПРЕДВАРИТЕЛЬНО:", dragInfo: "👆 Потяните углы ИЛИ введите цифры ниже" },
+  uk: { calc: "Розрахунок", addRoom: "Додати приміщення", toBot: "В бот 🚀", area: "Площа (м²)", perim: "Периметр (м)", corners: "Кути (шт)", geom: "📏 Геометрія", materials: "🎨 Полотно та Профіль", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", spots: "Точкові (шт)", chands: "Люстри (шт)", track: "Магн. трек (м)", corniceType: "Вид карнизу", corniceLen: "Метраж (м)", pipe: "Обхід труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФІЛЬ", pre: "ПОПЕРЕДНЬО:", dragInfo: "👆 Потягніть кути АБО введіть цифри нижче" }
 };
+
+// ==========================================
+// 🧠 ФИЗИЧЕСКИЙ ДВИЖОК САПР (Verlet Integration)
+// ==========================================
+const getDist = (p1, p2) => Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
+
+const solveGeometry = (pts, manualData) => {
+  let newPts = pts.map(p => ({...p}));
+  let springs = [];
+
+  // Собираем "пружины" для СТЕН
+  for(let i = 0; i < pts.length; i++) {
+      let j = (i + 1) % pts.length;
+      let name = String.fromCharCode(65 + i) + String.fromCharCode(65 + j);
+      let target = manualData[name] !== undefined && manualData[name] !== '' ? parseFloat(manualData[name]) : getDist(pts[i], pts[j]);
+      if (!isNaN(target) && target > 0) springs.push({i, j, target});
+  }
+
+  // Собираем "пружины" для ДИАГОНАЛЕЙ
+  if (pts.length === 4) {
+      let d1 = "AC", d2 = "BD";
+      let t1 = manualData[d1] !== undefined && manualData[d1] !== '' ? parseFloat(manualData[d1]) : getDist(pts[0], pts[2]);
+      let t2 = manualData[d2] !== undefined && manualData[d2] !== '' ? parseFloat(manualData[d2]) : getDist(pts[1], pts[3]);
+      if (!isNaN(t1) && t1 > 0) springs.push({i:0, j:2, target: t1});
+      if (!isNaN(t2) && t2 > 0) springs.push({i:1, j:3, target: t2});
+  } else if (pts.length > 4) {
+       for (let i = 2; i < pts.length - 1; i++) {
+           let name = "A" + String.fromCharCode(65 + i);
+           let target = manualData[name] !== undefined && manualData[name] !== '' ? parseFloat(manualData[name]) : getDist(pts[0], pts[i]);
+           if (!isNaN(target) && target > 0) springs.push({i:0, j:i, target});
+       }
+  }
+
+  // Запускаем симуляцию стягивания пружин (500 циклов для точности)
+  for(let iter = 0; iter < 500; iter++) { 
+      for(let s of springs) {
+          let p1 = newPts[s.i], p2 = newPts[s.j];
+          let dx = p2.x - p1.x, dy = p2.y - p1.y;
+          let d = Math.sqrt(dx*dx + dy*dy);
+          if (d < 0.001) continue;
+          let diff = (d - s.target) / d * 0.5; // Сила стягивания
+          p1.x += dx * diff; p1.y += dy * diff;
+          p2.x -= dx * diff; p2.y -= dy * diff;
+      }
+  }
+
+  // Выравниваем фигуру по оси X (чтобы она не крутилась волчком)
+  let angle = Math.atan2(newPts[1].y - newPts[0].y, newPts[1].x - newPts[0].x);
+  let alignedPts = [];
+  let cx = newPts[0].x, cy = newPts[0].y;
+  for(let p of newPts) {
+      let nx = p.x - cx, ny = p.y - cy;
+      alignedPts.push({
+          x: nx * Math.cos(-angle) - ny * Math.sin(-angle),
+          y: nx * Math.sin(-angle) + ny * Math.cos(-angle)
+      });
+  }
+  return alignedPts;
+};
+// ==========================================
+
 
 // --- КОМПОНЕНТ УМНОГО ХОЛСТА (CANVAS) ---
 const RoomCanvas = ({ room, updateRoom }) => {
   const canvasRef = useRef(null);
-
   const [scale, setScale] = useState(35);
   const [showDiags, setShowDiags] = useState(true);
   const offset = { x: 150, y: 130 }; 
 
-  const [pts, setPts] = useState(room.logicalPts || [
-    { x: -2, y: -2 }, { x: 2, y: -2 }, { x: 2, y: 2 }, { x: -2, y: 2 }
-  ]);
+  const [pts, setPts] = useState(room.logicalPts || [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]);
   const [draggingIdx, setDraggingIdx] = useState(null);
 
   const toScreen = (p) => ({ x: p.x * scale + offset.x, y: p.y * scale + offset.y });
   const toLogical = (p) => ({ x: (p.x - offset.x) / scale, y: (p.y - offset.y) / scale });
+
+  // Если пришли новые точки снаружи (например от движка ручного ввода), обновляем холст
+  useEffect(() => {
+    if (room.logicalPts) setPts(room.logicalPts);
+  }, [room.logicalPts]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -36,8 +99,9 @@ const RoomCanvas = ({ room, updateRoom }) => {
     for(let i = startY; i < canvas.height; i += step) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
 
     const screenPts = pts.map(toScreen);
-    const manual = room.manualWalls || {}; // Читаем ручные данные
+    const manual = room.manualWalls || {}; 
 
+    // Заливка и контур
     ctx.beginPath();
     ctx.moveTo(screenPts[0].x, screenPts[0].y);
     for(let i = 1; i < screenPts.length; i++) ctx.lineTo(screenPts[i].x, screenPts[i].y);
@@ -48,7 +112,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    // 1. РИСУЕМ ДИАГОНАЛИ
+    // 1. ДИАГОНАЛИ
     if (showDiags) {
         ctx.setLineDash([5, 5]); 
         ctx.strokeStyle = 'rgba(255, 149, 0, 0.6)'; 
@@ -73,7 +137,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
             let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
             let name = String.fromCharCode(65+i) + String.fromCharCode(65+j); 
             
-            // МАГИЯ: Если есть ручной ввод, показываем его!
             let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2);
             
             ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
@@ -85,7 +148,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
         ctx.setLineDash([]); 
     }
 
-    // 2. РИСУЕМ ДЛИНЫ СТЕН
+    // 2. СТЕНЫ
     ctx.fillStyle = '#1c1c1e';
     ctx.font = 'bold 12px system-ui';
     ctx.textAlign = 'center';
@@ -98,7 +161,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
        let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
        let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length); 
 
-       // МАГИЯ: Если есть ручной ввод, показываем его!
        let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2);
 
        ctx.fillStyle = 'rgba(255,255,255,0.85)';
@@ -107,7 +169,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
        ctx.fillText(`${name}: ${displayDist}м`, mx, my + 2);
     }
 
-    // 3. ТОЧКИ И БУКВЫ
+    // 3. УГЛЫ
     for(let i = 0; i < screenPts.length; i++) {
        let sp = screenPts[i];
        ctx.beginPath();
@@ -166,7 +228,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
     const finalArea = Math.abs(area / 2).toFixed(2);
     const finalPerim = perim.toFixed(2);
 
-    updateRoom(room.id, 'manualWalls', {}); // Сбрасываем ручной ввод, так как фигуру перерисовали
+    updateRoom(room.id, 'manualWalls', {}); // Сброс ручного ввода при перетаскивании
     updateRoom(room.id, 'area', finalArea);
     updateRoom(room.id, 'perim', finalPerim);
     updateRoom(room.id, 'logicalPts', pts);
@@ -198,6 +260,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
   );
 };
 // ----------------------------------------
+
 
 function App() {
   const [activeTab, setActiveTab] = useState('calc')
@@ -259,7 +322,7 @@ function App() {
       { 
         id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', 
         canvas: 'полотно_м2', profile: 'профиль_м', spots: '6', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '',
-        logicalPts: [{ x: -2, y: -2 }, { x: 2, y: -2 }, { x: 2, y: 2 }, { x: -2, y: 2 }],
+        logicalPts: [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }],
         manualWalls: {} 
       }
     ]);
@@ -267,11 +330,32 @@ function App() {
     const [expandedSubSec, setExpandedSubSec] = useState('geom'); 
 
     const updateRoom = (id, field, value) => { setRooms(prevRooms => prevRooms.map(r => r.id === id ? { ...r, [field]: value } : r)); };
+    
+    // --- ОБРАБОТЧИК ВВОДА С УМНОЙ ФИЗИКОЙ ---
+    const handleManualInputChange = (room, name, newVal) => {
+        const newManual = {...(room.manualWalls || {}), [name]: newVal};
+        updateRoom(room.id, 'manualWalls', newManual);
+        
+        // Магия: просим физический движок пересчитать форму комнаты!
+        const newPts = solveGeometry(room.logicalPts, newManual);
+        updateRoom(room.id, 'logicalPts', newPts);
+
+        // Пересчет Площади и Периметра по новой геометрии
+        let p_sum = 0, area = 0;
+        for(let k=0; k<newPts.length; k++) {
+            let p1 = newPts[k], p2 = newPts[(k+1)%newPts.length];
+            p_sum += Math.sqrt((p2.x-p1.x)**2 + (p2.y-p1.y)**2);
+            area += (p1.x*p2.y - p2.x*p1.y);
+        }
+        updateRoom(room.id, 'perim', p_sum.toFixed(2));
+        updateRoom(room.id, 'area', Math.abs(area/2).toFixed(2));
+    };
+
     const addRoom = () => {
       const nr = { 
         id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', 
         canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '',
-        logicalPts: [{ x: -2, y: -2 }, { x: 2, y: -2 }, { x: 2, y: 2 }, { x: -2, y: 2 }],
+        logicalPts: [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }],
         manualWalls: {} 
       };
       setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom');
@@ -322,7 +406,6 @@ function App() {
                       <RoomCanvas room={room} updateRoom={updateRoom} />
                       <p style={{ textAlign: 'center', fontSize: '11px', color: '#8e8e93', marginTop: '-10px', marginBottom: '15px' }}>{t('dragInfo')}</p>
 
-                      {/* НОВЫЙ БЛОК: РУЧНАЯ КОРРЕКТИРОВКА РАЗМЕРОВ С ДИАГОНАЛЯМИ */}
                       <div style={{ background: '#f9f9fb', padding: '12px', borderRadius: '12px', marginBottom: '15px', border: '1px solid #e5e5ea' }}>
                         <span style={{...styles.label, marginBottom: '10px'}}>📐 ТОЧНЫЕ РАЗМЕРЫ (Стены и Диагонали):</span>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -340,21 +423,7 @@ function App() {
                                   <input 
                                     type="number" 
                                     value={displayVal} 
-                                    onChange={(e) => {
-                                        const newVal = e.target.value;
-                                        const newManual = {...(room.manualWalls || {}), [name]: newVal};
-                                        updateRoom(room.id, 'manualWalls', newManual);
-                                        
-                                        // АВТО-ПЕРЕСЧЕТ ПЕРИМЕТРА С УЧЕТОМ РУЧНЫХ ПРАВОК
-                                        let p_sum = 0;
-                                        room.logicalPts.forEach((pt, k) => {
-                                            let nI = (k+1)%room.logicalPts.length;
-                                            let wName = String.fromCharCode(65+k) + String.fromCharCode(65+nI);
-                                            let wDist = newManual[wName] !== undefined && newManual[wName] !== '' ? parseFloat(newManual[wName]) : Math.sqrt((room.logicalPts[nI].x - pt.x)**2 + (room.logicalPts[nI].y - pt.y)**2);
-                                            p_sum += (isNaN(wDist) ? 0 : wDist);
-                                        });
-                                        updateRoom(room.id, 'perim', p_sum.toFixed(2));
-                                    }}
+                                    onChange={(e) => handleManualInputChange(room, name, e.target.value)}
                                     style={{ width: '55px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '14px', color: '#1c1c1e' }} 
                                   />
                                 </div>
@@ -381,7 +450,7 @@ function App() {
                                       <input 
                                         type="number" 
                                         value={displayVal} 
-                                        onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [name]: e.target.value})}
+                                        onChange={(e) => handleManualInputChange(room, name, e.target.value)}
                                         style={{ width: '55px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '14px', color: '#1c1c1e' }} 
                                       />
                                     </div>
