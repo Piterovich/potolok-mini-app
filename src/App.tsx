@@ -185,7 +185,7 @@ const ThreeDPreview = ({ roomPts, elements }) => {
 };
 
 // ==========================================
-// 🎨 2D ХОЛСТ С ОБОРУДОВАНИЕМ (С ДОП. ОПЦИЕЙ options)
+// 🎨 2D ХОЛСТ С ОБОРУДОВАНИЕМ
 // ==========================================
 const RoomCanvas = ({ room, updateRoom, options }) => {
   const canvasRef = useRef(null);
@@ -235,12 +235,11 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
   useEffect(() => {
     if (!canvasRef.current) return;
     
-    // Получаем красивое название материала для вывода на холст
     const canvasName = options.canvases.find(c => c.id === room.canvas)?.name || 'Полотно';
     const screenPts = pts.map(toScreen);
     const manual = room.manualWalls || {}; 
 
-    // === 1. ГЛАВНЫЙ ХОЛСТ ДЛЯ МОНТАЖНИКОВ (С ОБОРУДОВАНИЕМ) ===
+    // === 1. ГЛАВНЫЙ ХОЛСТ ДЛЯ МОНТАЖНИКОВ ===
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -348,13 +347,12 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
        ctx.fillStyle = '#1c1c1e'; ctx.font = '900 16px system-ui'; ctx.fillText(label, sp.x + 18, sp.y - 12);
     }
 
-    // ⭐️ ПОДПИСЬ НА МОНТАЖНОМ ЧЕРТЕЖЕ
     ctx.fillStyle = '#1c1c1e'; ctx.font = '900 16px system-ui'; ctx.textAlign = 'left';
     ctx.fillText(`Монтаж: ${room.name}`, 10, 24);
     ctx.fillStyle = '#007aff'; ctx.font = 'bold 12px system-ui'; ctx.fillText(canvasName, 10, 42);
 
 
-    // === 2. СКРЫТЫЙ ХОЛСТ ДЛЯ ЗАВОДА (ПРОИЗВОДСТВО) ===
+    // === 2. СКРЫТЫЙ ХОЛСТ ДЛЯ ЗАВОДА ===
     const factCanvas = document.getElementById(`canvas-factory-${room.id}`);
     if (factCanvas) {
         const fCtx = factCanvas.getContext('2d');
@@ -408,7 +406,6 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
            fCtx.fillStyle = '#1c1c1e'; fCtx.font = '900 16px system-ui'; fCtx.fillText(label, sp.x + 18, sp.y - 12);
         }
 
-        // ⭐️ ПОДПИСЬ НА ЗАВОДСКОМ ЧЕРТЕЖЕ
         fCtx.fillStyle = '#1c1c1e'; fCtx.font = '900 16px system-ui'; fCtx.textAlign = 'left';
         fCtx.fillText(`Производство: ${room.name}`, 10, 24);
         fCtx.fillStyle = '#ff9500'; fCtx.font = 'bold 12px system-ui'; fCtx.fillText(canvasName, 10, 42);
@@ -628,7 +625,7 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
 
       <div style={{position: 'relative'}}>
         
-        {/* ⭐️ ОСНОВНОЙ ХОЛСТ ДЛЯ ИНТЕРФЕЙСА ⭐️ */}
+        {/* ХОЛСТ МОНТАЖА */}
         <canvas id={`canvas-${room.id}`} ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} 
             style={{ 
                 display: viewMode === '2d' ? 'block' : 'none',
@@ -638,7 +635,7 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
             }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}
         />
 
-        {/* ⭐️ СКРЫТЫЙ ХОЛСТ ДЛЯ ЗАВОДА ⭐️ */}
+        {/* ХОЛСТ ЗАВОДА */}
         <canvas id={`canvas-factory-${room.id}`} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} style={{ display: 'none' }} />
         
         {viewMode === '3d' && (
@@ -823,7 +820,6 @@ function App() {
       else alert("Должно остаться хотя бы одно помещение!");
     };
 
-    // ⭐️ УЛУЧШЕННАЯ ФУНКЦИЯ: ДЕЛАЕТ 2 СКРИНШОТА СРАЗУ (ИНСТАЛЛЯЦИЯ И ЗАВОД)
     const sendToBot = async () => {
       const roomsWithImages = rooms.map(room => {
         const instCanvas = document.getElementById(`canvas-${room.id}`);
@@ -870,31 +866,29 @@ function App() {
               </div>
               <button onClick={(e) => removeRoom(room.id, e)} style={{ background: 'none', border: 'none', color: '#ff3b30', fontSize: '22px' }}>🗑</button>
             </div>
-            {expandedRoomId === room.id && (
-              <div style={{ animation: 'slideDown 0.2s ease-out' }}>
+            
+            {/* ⭐️ НОВАЯ ЛОГИКА: ВКЛАДКИ ПРЯЧУТСЯ, НО НЕ УДАЛЯЮТСЯ ИЗ ПАМЯТИ ⭐️ */}
+            <div style={{ display: expandedRoomId === room.id ? 'block' : 'none', animation: 'slideDown 0.2s ease-out' }}>
                 <div>
                   <div style={styles.subHeader} onClick={() => setExpandedSubSec(expandedSubSec === 'geom' ? null : 'geom')}>
                     <span style={{ fontWeight: '700', fontSize: '15px' }}>{t('geom')}</span>
                     <span style={{ color: '#8e8e93' }}>{expandedSubSec === 'geom' ? '🔼' : '🔽'}</span>
                   </div>
-                  {expandedSubSec === 'geom' && (
-                    <div style={styles.subContent}>
+                  <div style={{ display: expandedSubSec === 'geom' ? 'block' : 'none', ...styles.subContent }}>
                       
                       <RoomCanvas room={room} updateRoom={updateRoom} options={options} />
                       
                       <div style={{...styles.inputRow, marginTop: '20px'}}><span>{t('area')}</span><input type="number" value={room.area} onChange={e => updateRoom(room.id, 'area', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('perim')}</span><input type="number" value={room.perim} onChange={e => updateRoom(room.id, 'perim', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('corners')}</span><input type="number" value={room.corners} readOnly style={{...styles.numInput, background: '#f2f2f7', color: '#8e8e93'}} placeholder="4" /></div>
-                    </div>
-                  )}
+                  </div>
                 </div>
                 <div>
                   <div style={styles.subHeader} onClick={() => setExpandedSubSec(expandedSubSec === 'mat' ? null : 'mat')}>
                     <span style={{ fontWeight: '700', fontSize: '15px' }}>{t('materials')}</span>
                     <span style={{ color: '#8e8e93' }}>{expandedSubSec === 'mat' ? '🔼' : '🔽'}</span>
                   </div>
-                  {expandedSubSec === 'mat' && (
-                    <div style={styles.subContent}>
+                  <div style={{ display: expandedSubSec === 'mat' ? 'block' : 'none', ...styles.subContent }}>
                       <span style={styles.label}>{t('canvas')}</span>
                       <select style={styles.select} value={room.canvas} onChange={e => updateRoom(room.id, 'canvas', e.target.value)}>
                         {options.canvases.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
@@ -905,29 +899,25 @@ function App() {
                           {options.profiles.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                         </select>
                       </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
                 <div>
                   <div style={styles.subHeader} onClick={() => setExpandedSubSec(expandedSubSec === 'light' ? null : 'light')}>
                     <span style={{ fontWeight: '700', fontSize: '15px' }}>{t('lighting')}</span>
                     <span style={{ color: '#8e8e93' }}>{expandedSubSec === 'light' ? '🔼' : '🔽'}</span>
                   </div>
-                  {expandedSubSec === 'light' && (
-                    <div style={styles.subContent}>
+                  <div style={{ display: expandedSubSec === 'light' ? 'block' : 'none', ...styles.subContent }}>
                       <div style={styles.inputRow}><span>{t('spots')}</span><input type="number" value={room.spots} onChange={e => updateRoom(room.id, 'spots', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('chands')}</span><input type="number" value={room.chands} onChange={e => updateRoom(room.id, 'chands', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('track')}</span><input type="number" value={room.track} onChange={e => updateRoom(room.id, 'track', e.target.value)} style={styles.numInput} placeholder="0" /></div>
-                    </div>
-                  )}
+                  </div>
                 </div>
                 <div>
                   <div style={styles.subHeader} onClick={() => setExpandedSubSec(expandedSubSec === 'corniceSec' ? null : 'corniceSec')}>
                     <span style={{ fontWeight: '700', fontSize: '15px' }}>{t('corniceSec')}</span>
                     <span style={{ color: '#8e8e93' }}>{expandedSubSec === 'corniceSec' ? '🔼' : '🔽'}</span>
                   </div>
-                  {expandedSubSec === 'corniceSec' && (
-                    <div style={styles.subContent}>
+                  <div style={{ display: expandedSubSec === 'corniceSec' ? 'block' : 'none', ...styles.subContent }}>
                       <span style={styles.label}>{t('corniceType')}</span>
                       <select style={styles.select} value={room.corniceType} onChange={e => updateRoom(room.id, 'corniceType', e.target.value)}>
                         {options.cornices.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
@@ -938,22 +928,18 @@ function App() {
                           <input type="number" value={room.cornice} onChange={e => updateRoom(room.id, 'cornice', e.target.value)} style={styles.numInput} placeholder="0" />
                         </div>
                       )}
-                    </div>
-                  )}
+                  </div>
                 </div>
                 <div>
                   <div style={styles.subHeader} onClick={() => setExpandedSubSec(expandedSubSec === 'dops' ? null : 'dops')}>
                     <span style={{ fontWeight: '700', fontSize: '15px' }}>{t('dops')}</span>
                     <span style={{ color: '#8e8e93' }}>{expandedSubSec === 'dops' ? '🔼' : '🔽'}</span>
                   </div>
-                  {expandedSubSec === 'dops' && (
-                    <div style={styles.subContent}>
+                  <div style={{ display: expandedSubSec === 'dops' ? 'block' : 'none', ...styles.subContent }}>
                       <div style={styles.inputRow}><span>{t('pipe')}</span><input type="number" value={room.pipe} onChange={e => updateRoom(room.id, 'pipe', e.target.value)} style={styles.numInput} placeholder="0" /></div>
-                    </div>
-                  )}
+                  </div>
                 </div>
-              </div>
-            )}
+            </div>
           </div>
         ))}
         <button onClick={addRoom} style={{ width: '100%', padding: '16px', background: '#f2f2f7', color: '#007aff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', marginBottom: '20px' }}>➕ {t('addRoom')}</button>
