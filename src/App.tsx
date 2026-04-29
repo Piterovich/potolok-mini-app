@@ -7,15 +7,25 @@ const T = {
 };
 
 // ==========================================
-// 🧠 ФИЗИЧЕСКИЙ ДВИЖОК САПР (Verlet Integration)
+// 🧠 ФИЗИЧЕСКИЙ ДВИЖОК + АВТО-ЦЕНТРИРОВАНИЕ
 // ==========================================
 const getDist = (p1, p2) => Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
+
+// Функция авто-центрирования любой фигуры
+const centerShape = (pts) => {
+    let minX = Math.min(...pts.map(p => p.x));
+    let maxX = Math.max(...pts.map(p => p.x));
+    let minY = Math.min(...pts.map(p => p.y));
+    let maxY = Math.max(...pts.map(p => p.y));
+    let cx = (minX + maxX) / 2;
+    let cy = (minY + maxY) / 2;
+    return pts.map(p => ({ x: p.x - cx, y: p.y - cy }));
+};
 
 const solveGeometry = (pts, manualData) => {
   let newPts = pts.map(p => ({...p}));
   let springs = [];
 
-  // Собираем "пружины" для СТЕН
   for(let i = 0; i < pts.length; i++) {
       let j = (i + 1) % pts.length;
       let name = String.fromCharCode(65 + i) + String.fromCharCode(65 + j);
@@ -23,7 +33,6 @@ const solveGeometry = (pts, manualData) => {
       if (!isNaN(target) && target > 0) springs.push({i, j, target});
   }
 
-  // Собираем "пружины" для ДИАГОНАЛЕЙ
   if (pts.length === 4) {
       let d1 = "AC", d2 = "BD";
       let t1 = manualData[d1] !== undefined && manualData[d1] !== '' ? parseFloat(manualData[d1]) : getDist(pts[0], pts[2]);
@@ -38,20 +47,18 @@ const solveGeometry = (pts, manualData) => {
        }
   }
 
-  // Запускаем симуляцию стягивания пружин (500 циклов для точности)
   for(let iter = 0; iter < 500; iter++) { 
       for(let s of springs) {
           let p1 = newPts[s.i], p2 = newPts[s.j];
           let dx = p2.x - p1.x, dy = p2.y - p1.y;
           let d = Math.sqrt(dx*dx + dy*dy);
           if (d < 0.001) continue;
-          let diff = (d - s.target) / d * 0.5; // Сила стягивания
+          let diff = (d - s.target) / d * 0.5; 
           p1.x += dx * diff; p1.y += dy * diff;
           p2.x -= dx * diff; p2.y -= dy * diff;
       }
   }
 
-  // Выравниваем фигуру по оси X (чтобы она не крутилась волчком)
   let angle = Math.atan2(newPts[1].y - newPts[0].y, newPts[1].x - newPts[0].x);
   let alignedPts = [];
   let cx = newPts[0].x, cy = newPts[0].y;
@@ -62,7 +69,9 @@ const solveGeometry = (pts, manualData) => {
           y: nx * Math.sin(-angle) + ny * Math.cos(-angle)
       });
   }
-  return alignedPts;
+  
+  // Возвращаем ИДЕАЛЬНО отцентрированную фигуру
+  return centerShape(alignedPts);
 };
 // ==========================================
 
@@ -70,17 +79,16 @@ const solveGeometry = (pts, manualData) => {
 // --- КОМПОНЕНТ УМНОГО ХОЛСТА (CANVAS) ---
 const RoomCanvas = ({ room, updateRoom }) => {
   const canvasRef = useRef(null);
-  const [scale, setScale] = useState(35);
+  const [scale, setScale] = useState(30); // Чуть отдалили масштаб по умолчанию
   const [showDiags, setShowDiags] = useState(true);
   const offset = { x: 150, y: 130 }; 
 
-  const [pts, setPts] = useState(room.logicalPts || [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]);
+  const [pts, setPts] = useState(room.logicalPts || centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]));
   const [draggingIdx, setDraggingIdx] = useState(null);
 
   const toScreen = (p) => ({ x: p.x * scale + offset.x, y: p.y * scale + offset.y });
   const toLogical = (p) => ({ x: (p.x - offset.x) / scale, y: (p.y - offset.y) / scale });
 
-  // Если пришли новые точки снаружи (например от движка ручного ввода), обновляем холст
   useEffect(() => {
     if (room.logicalPts) setPts(room.logicalPts);
   }, [room.logicalPts]);
@@ -101,7 +109,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
     const screenPts = pts.map(toScreen);
     const manual = room.manualWalls || {}; 
 
-    // Заливка и контур
     ctx.beginPath();
     ctx.moveTo(screenPts[0].x, screenPts[0].y);
     for(let i = 1; i < screenPts.length; i++) ctx.lineTo(screenPts[i].x, screenPts[i].y);
@@ -217,10 +224,13 @@ const RoomCanvas = ({ room, updateRoom }) => {
     setDraggingIdx(null);
     e.target.releasePointerCapture(e.pointerId);
 
+    // ⭐️ МАГИЯ: Авто-центрирование при отпускании пальца
+    const centeredPts = centerShape(pts);
+
     let perim = 0;
     let area = 0;
-    for(let i = 0; i < pts.length; i++) {
-       let p1 = pts[i], p2 = pts[(i+1) % pts.length];
+    for(let i = 0; i < centeredPts.length; i++) {
+       let p1 = centeredPts[i], p2 = centeredPts[(i+1) % centeredPts.length];
        perim += Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
        area += (p1.x * p2.y - p2.x * p1.y);
     }
@@ -228,10 +238,10 @@ const RoomCanvas = ({ room, updateRoom }) => {
     const finalArea = Math.abs(area / 2).toFixed(2);
     const finalPerim = perim.toFixed(2);
 
-    updateRoom(room.id, 'manualWalls', {}); // Сброс ручного ввода при перетаскивании
+    updateRoom(room.id, 'manualWalls', {}); 
     updateRoom(room.id, 'area', finalArea);
     updateRoom(room.id, 'perim', finalPerim);
-    updateRoom(room.id, 'logicalPts', pts);
+    updateRoom(room.id, 'logicalPts', centeredPts); // Сохраняем отцентрированные точки
   };
 
   return (
@@ -260,7 +270,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
   );
 };
 // ----------------------------------------
-
 
 function App() {
   const [activeTab, setActiveTab] = useState('calc')
@@ -322,7 +331,7 @@ function App() {
       { 
         id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', 
         canvas: 'полотно_м2', profile: 'профиль_м', spots: '6', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '',
-        logicalPts: [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }],
+        logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]),
         manualWalls: {} 
       }
     ]);
@@ -331,16 +340,13 @@ function App() {
 
     const updateRoom = (id, field, value) => { setRooms(prevRooms => prevRooms.map(r => r.id === id ? { ...r, [field]: value } : r)); };
     
-    // --- ОБРАБОТЧИК ВВОДА С УМНОЙ ФИЗИКОЙ ---
     const handleManualInputChange = (room, name, newVal) => {
         const newManual = {...(room.manualWalls || {}), [name]: newVal};
         updateRoom(room.id, 'manualWalls', newManual);
         
-        // Магия: просим физический движок пересчитать форму комнаты!
         const newPts = solveGeometry(room.logicalPts, newManual);
         updateRoom(room.id, 'logicalPts', newPts);
 
-        // Пересчет Площади и Периметра по новой геометрии
         let p_sum = 0, area = 0;
         for(let k=0; k<newPts.length; k++) {
             let p1 = newPts[k], p2 = newPts[(k+1)%newPts.length];
@@ -355,7 +361,7 @@ function App() {
       const nr = { 
         id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', 
         canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '',
-        logicalPts: [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }],
+        logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]),
         manualWalls: {} 
       };
       setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom');
