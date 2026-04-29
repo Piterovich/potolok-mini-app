@@ -735,15 +735,30 @@ function App() {
   const [activeTab, setActiveTab] = useState('calc')
   const [lang, setLang] = useState('ru');
   const [userId, setUserId] = useState(null);
+  const [isTelegram, setIsTelegram] = useState(true); // ⭐️ НОВОЕ СОСТОЯНИЕ
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
-    if (tg) {
+    // ⭐️ Проверяем, есть ли initData (она есть ТОЛЬКО если открыто внутри Telegram)
+    if (tg && tg.initData) {
       tg.ready(); tg.expand();
       const user = tg.initDataUnsafe?.user;
       if (user) { setUserId(user.id); setLang(user.language_code === 'uk' ? 'uk' : 'ru'); }
+    } else {
+      setIsTelegram(false); // ⭐️ Блокируем доступ!
     }
   }, []);
+
+  // ⭐️ ЕСЛИ ЗАШЛИ ИЗ ОБЫЧНОГО БРАУЗЕРА — ПОКАЗЫВАЕМ ЗАГЛУШКУ
+  if (!isTelegram) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', padding: '20px', textAlign: 'center', background: '#f5f5f7' }}>
+        <h2 style={{ color: '#ff3b30' }}>⚠️ Доступ запрещен</h2>
+        <p style={{ fontSize: '16px', color: '#8e8e93', marginTop: '10px', fontWeight: 'bold' }}>Это приложение работает только внутри Telegram.</p>
+        <a href="https://t.me/PotolokPro777Bot" style={{ marginTop: '20px', padding: '12px 24px', background: '#007aff', color: 'white', textDecoration: 'none', borderRadius: '12px', fontWeight: 'bold' }}>Перейти в Бота</a>
+      </div>
+    );
+  }
 
   const t = (key) => T[lang]?.[key] || T['ru'][key];
 
