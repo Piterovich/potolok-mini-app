@@ -239,7 +239,6 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
     const screenPts = pts.map(toScreen);
     const manual = room.manualWalls || {}; 
 
-    // === 1. ГЛАВНЫЙ ХОЛСТ ДЛЯ МОНТАЖНИКОВ ===
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -352,7 +351,6 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
     ctx.fillStyle = '#007aff'; ctx.font = 'bold 12px system-ui'; ctx.fillText(canvasName, 10, 42);
 
 
-    // === 2. СКРЫТЫЙ ХОЛСТ ДЛЯ ЗАВОДА ===
     const factCanvas = document.getElementById(`canvas-factory-${room.id}`);
     if (factCanvas) {
         const fCtx = factCanvas.getContext('2d');
@@ -623,10 +621,8 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
           {getHelperText()}
       </div>
 
-      {/* ⭐️ БЛОК С ХОЛСТАМИ ⭐️ */}
       <div style={{position: 'relative'}}>
         
-        {/* ХОЛСТ МОНТАЖА */}
         <canvas id={`canvas-${room.id}`} ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} 
             style={{ 
                 display: viewMode === '2d' ? 'block' : 'none',
@@ -636,7 +632,6 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
             }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}
         />
 
-        {/* ХОЛСТ ЗАВОДА */}
         <canvas id={`canvas-factory-${room.id}`} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} style={{ display: 'none' }} />
         
         {viewMode === '3d' && (
@@ -656,7 +651,6 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
             </button>
         )}
 
-        {/* ⭐️ КНОПКА 3D ТЕПЕРЬ ПРИВЯЗАНА ЧЕТКО К УГЛУ ЧЕРТЕЖА ⭐️ */}
         <button onClick={() => setViewMode(viewMode === '2d' ? '3d' : '2d')} style={{ position: 'absolute', bottom: '10px', right: '10px', padding: '8px 12px', borderRadius: '20px', background: viewMode === '2d' ? '#ff3b30' : '#8e8e93', color: 'white', border: 'none', fontWeight: '900', fontSize: '13px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)', zIndex: 10, transition: '0.3s' }}>
             {viewMode === '2d' ? '👀 3D' : '🔙 2D Чертеж'}
         </button>
@@ -664,7 +658,6 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
       
       {viewMode === '2d' && (
           <>
-              {/* ⭐️ НОВАЯ ПАНЕЛЬ УПРАВЛЕНИЯ ВИДОМ (ИМЕННО ТАМ, ГДЕ ТЫ НАРИСОВАЛ ЛИНИЮ) ⭐️ */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', padding: '0 4px' }}>
                   <button onClick={() => setShowDiags(!showDiags)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e5ea', background: '#fff', fontSize: '13px', color: '#1c1c1e', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', cursor: 'pointer' }}>
                       <span style={{ fontSize: '16px' }}>{showDiags ? '👁' : '👓'}</span>
@@ -677,7 +670,6 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
                   </div>
               </div>
 
-              {/* ПАНЕЛИ ИНСТРУМЕНТОВ */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                     <button onClick={() => handleModeSwitch('add')} style={{ flex: 1, padding: '10px 4px', background: mode === 'add' ? '#34c759' : '#e5f1ff', color: mode === 'add' ? '#fff' : '#007aff', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>{mode === 'add' ? 'Отмена' : '➕ Угол'}</button>
@@ -735,6 +727,66 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
     </div>
   );
 };
+// ----------------------------------------
+
+// ⭐️ НОВЫЙ КОМПОНЕНТ: ПОИСКОВЫЙ ВЫПАДАЮЩИЙ СПИСОК ⭐️
+const SearchableSelect = ({ options, value, onChange, placeholder = "Выберите..." }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  const selectedOption = options.find(o => o.id === value);
+  
+  const filteredOptions = options.filter(o => 
+    o.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <div 
+         style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #e5e5ea', fontSize: '16px', background: '#f9f9fb', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+         onClick={() => { setIsOpen(true); setSearchTerm(""); }}
+      >
+        {isOpen ? (
+            <input 
+              autoFocus
+              type="text" 
+              value={searchTerm} 
+              onChange={e => setSearchTerm(e.target.value)} 
+              onBlur={() => setTimeout(() => setIsOpen(false), 150)} 
+              style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '16px', color: '#1c1c1e' }}
+              placeholder="Поиск..."
+            />
+        ) : (
+            <span translate="no" className="notranslate" style={{ fontSize: '16px', color: selectedOption ? '#1c1c1e' : '#8e8e93', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {selectedOption ? selectedOption.name : placeholder}
+            </span>
+        )}
+        <span style={{ color: '#8e8e93', fontSize: '12px', marginLeft: '8px' }}>{isOpen ? '▲' : '▼'}</span>
+      </div>
+      
+      {isOpen && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e5e5ea', borderRadius: '10px', marginTop: '4px', maxHeight: '220px', overflowY: 'auto', zIndex: 1000, boxShadow: '0 8px 20px rgba(0,0,0,0.15)' }}>
+          {filteredOptions.length > 0 ? filteredOptions.map(o => (
+            <div 
+              key={o.id} 
+              onMouseDown={(e) => { 
+                  e.preventDefault(); 
+                  onChange(o.id); 
+                  setIsOpen(false); 
+              }}
+              style={{ padding: '12px 15px', borderBottom: '1px solid #f2f2f7', fontSize: '15px', color: value === o.id ? '#007aff' : '#1c1c1e', fontWeight: value === o.id ? 'bold' : 'normal', cursor: 'pointer', background: value === o.id ? '#f0f8ff' : '#fff' }}
+            >
+              <span translate="no" className="notranslate">{o.name}</span>
+            </div>
+          )) : (
+            <div style={{ padding: '15px', color: '#8e8e93', textAlign: 'center', fontSize: '14px' }}>Ничего не найдено</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 
 function App() {
   const [activeTab, setActiveTab] = useState('calc')
@@ -906,15 +958,23 @@ function App() {
                     <span style={{ color: '#8e8e93' }}>{expandedSubSec === 'mat' ? '🔼' : '🔽'}</span>
                   </div>
                   <div style={{ display: expandedSubSec === 'mat' ? 'block' : 'none', ...styles.subContent }}>
+                      
+                      {/* ⭐️ ИСПОЛЬЗУЕМ НАШ НОВЫЙ КРУТОЙ КОМПОНЕНТ ДЛЯ ПОЛОТНА ⭐️ */}
                       <span style={styles.label}>{t('canvas')}</span>
-                      <select style={styles.select} value={room.canvas} onChange={e => updateRoom(room.id, 'canvas', e.target.value)}>
-                        {options.canvases.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                      </select>
+                      <SearchableSelect 
+                          options={options.canvases} 
+                          value={room.canvas} 
+                          onChange={(val) => updateRoom(room.id, 'canvas', val)} 
+                      />
+
                       <div style={{ marginTop: '15px' }}>
+                        {/* ⭐️ ИСПОЛЬЗУЕМ НАШ НОВЫЙ КРУТОЙ КОМПОНЕНТ ДЛЯ ПРОФИЛЯ ⭐️ */}
                         <span style={styles.label}>{t('profile')}</span>
-                        <select style={styles.select} value={room.profile} onChange={e => updateRoom(room.id, 'profile', e.target.value)}>
-                          {options.profiles.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                        </select>
+                        <SearchableSelect 
+                            options={options.profiles} 
+                            value={room.profile} 
+                            onChange={(val) => updateRoom(room.id, 'profile', val)} 
+                        />
                       </div>
                   </div>
                 </div>
@@ -935,10 +995,15 @@ function App() {
                     <span style={{ color: '#8e8e93' }}>{expandedSubSec === 'corniceSec' ? '🔼' : '🔽'}</span>
                   </div>
                   <div style={{ display: expandedSubSec === 'corniceSec' ? 'block' : 'none', ...styles.subContent }}>
+                      
+                      {/* ⭐️ ИСПОЛЬЗУЕМ НАШ НОВЫЙ КРУТОЙ КОМПОНЕНТ ДЛЯ КАРНИЗА ⭐️ */}
                       <span style={styles.label}>{t('corniceType')}</span>
-                      <select style={styles.select} value={room.corniceType} onChange={e => updateRoom(room.id, 'corniceType', e.target.value)}>
-                        {options.cornices.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                      </select>
+                      <SearchableSelect 
+                          options={options.cornices} 
+                          value={room.corniceType} 
+                          onChange={(val) => updateRoom(room.id, 'corniceType', val)} 
+                      />
+
                       {room.corniceType !== 'none' && (
                         <div style={{...styles.inputRow, marginTop: '15px'}}>
                           <span>{t('corniceLen')}</span>
