@@ -7,11 +7,10 @@ const T = {
 };
 
 // ==========================================
-// 🧠 ФИЗИЧЕСКИЙ ДВИЖОК + АВТО-ЦЕНТРИРОВАНИЕ
+// 🧠 ФИЗИЧЕСКИЙ ДВИЖОК + ВЕСА (ЖЕСТКОСТЬ)
 // ==========================================
 const getDist = (p1, p2) => Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
 
-// Функция авто-центрирования любой фигуры
 const centerShape = (pts) => {
     let minX = Math.min(...pts.map(p => p.x));
     let maxX = Math.max(...pts.map(p => p.x));
@@ -26,34 +25,50 @@ const solveGeometry = (pts, manualData) => {
   let newPts = pts.map(p => ({...p}));
   let springs = [];
 
+  // 1. СТЕНЫ
   for(let i = 0; i < pts.length; i++) {
       let j = (i + 1) % pts.length;
       let name = String.fromCharCode(65 + i) + String.fromCharCode(65 + j);
-      let target = manualData[name] !== undefined && manualData[name] !== '' ? parseFloat(manualData[name]) : getDist(pts[i], pts[j]);
-      if (!isNaN(target) && target > 0) springs.push({i, j, target});
+      let isManual = manualData[name] !== undefined && manualData[name] !== '';
+      let target = isManual ? parseFloat(manualData[name]) : getDist(pts[i], pts[j]);
+      
+      // Стены всегда жесткие (сохраняют свои размеры). Ручной ввод - абсолютный приоритет.
+      let weight = isManual ? 0.9 : 0.6; 
+      if (!isNaN(target) && target > 0) springs.push({i, j, target, weight});
   }
 
+  // 2. ДИАГОНАЛИ
   if (pts.length === 4) {
       let d1 = "AC", d2 = "BD";
-      let t1 = manualData[d1] !== undefined && manualData[d1] !== '' ? parseFloat(manualData[d1]) : getDist(pts[0], pts[2]);
-      let t2 = manualData[d2] !== undefined && manualData[d2] !== '' ? parseFloat(manualData[d2]) : getDist(pts[1], pts[3]);
-      if (!isNaN(t1) && t1 > 0) springs.push({i:0, j:2, target: t1});
-      if (!isNaN(t2) && t2 > 0) springs.push({i:1, j:3, target: t2});
+      let isM1 = manualData[d1] !== undefined && manualData[d1] !== '';
+      let t1 = isM1 ? parseFloat(manualData[d1]) : getDist(pts[0], pts[2]);
+      // Если диагональ не задана вручную - делаем ее "резинкой" (0.02), чтобы комната могла искажаться
+      let w1 = isM1 ? 0.9 : 0.02; 
+      
+      let isM2 = manualData[d2] !== undefined && manualData[d2] !== '';
+      let t2 = isM2 ? parseFloat(manualData[d2]) : getDist(pts[1], pts[3]);
+      let w2 = isM2 ? 0.9 : 0.02;
+      
+      if (!isNaN(t1) && t1 > 0) springs.push({i:0, j:2, target: t1, weight: w1});
+      if (!isNaN(t2) && t2 > 0) springs.push({i:1, j:3, target: t2, weight: w2});
   } else if (pts.length > 4) {
        for (let i = 2; i < pts.length - 1; i++) {
            let name = "A" + String.fromCharCode(65 + i);
-           let target = manualData[name] !== undefined && manualData[name] !== '' ? parseFloat(manualData[name]) : getDist(pts[0], pts[i]);
-           if (!isNaN(target) && target > 0) springs.push({i:0, j:i, target});
+           let isM = manualData[name] !== undefined && manualData[name] !== '';
+           let target = isM ? parseFloat(manualData[name]) : getDist(pts[0], pts[i]);
+           let weight = isM ? 0.9 : 0.02;
+           if (!isNaN(target) && target > 0) springs.push({i:0, j:i, target, weight});
        }
   }
 
-  for(let iter = 0; iter < 500; iter++) { 
+  // Запускаем симуляцию (1000 итераций для идеальной точности)
+  for(let iter = 0; iter < 1000; iter++) { 
       for(let s of springs) {
           let p1 = newPts[s.i], p2 = newPts[s.j];
           let dx = p2.x - p1.x, dy = p2.y - p1.y;
           let d = Math.sqrt(dx*dx + dy*dy);
           if (d < 0.001) continue;
-          let diff = (d - s.target) / d * 0.5; 
+          let diff = (d - s.target) / d * s.weight; // Применяем ВЕС
           p1.x += dx * diff; p1.y += dy * diff;
           p2.x -= dx * diff; p2.y -= dy * diff;
       }
@@ -69,8 +84,6 @@ const solveGeometry = (pts, manualData) => {
           y: nx * Math.sin(-angle) + ny * Math.cos(-angle)
       });
   }
-  
-  // Возвращаем ИДЕАЛЬНО отцентрированную фигуру
   return centerShape(alignedPts);
 };
 // ==========================================
@@ -79,7 +92,7 @@ const solveGeometry = (pts, manualData) => {
 // --- КОМПОНЕНТ УМНОГО ХОЛСТА (CANVAS) ---
 const RoomCanvas = ({ room, updateRoom }) => {
   const canvasRef = useRef(null);
-  const [scale, setScale] = useState(30); // Чуть отдалили масштаб по умолчанию
+  const [scale, setScale] = useState(30); 
   const [showDiags, setShowDiags] = useState(true);
   const offset = { x: 150, y: 130 }; 
 
@@ -224,7 +237,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
     setDraggingIdx(null);
     e.target.releasePointerCapture(e.pointerId);
 
-    // ⭐️ МАГИЯ: Авто-центрирование при отпускании пальца
     const centeredPts = centerShape(pts);
 
     let perim = 0;
@@ -241,7 +253,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
     updateRoom(room.id, 'manualWalls', {}); 
     updateRoom(room.id, 'area', finalArea);
     updateRoom(room.id, 'perim', finalPerim);
-    updateRoom(room.id, 'logicalPts', centeredPts); // Сохраняем отцентрированные точки
+    updateRoom(room.id, 'logicalPts', centeredPts); 
   };
 
   return (
