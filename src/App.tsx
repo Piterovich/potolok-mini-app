@@ -1,4 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+// ⭐️ ИМПОРТИРУЕМ 3D-БИБЛИОТЕКИ
+import { Canvas, useFrame } from '@react-three/fiber'
+import { OrbitControls, Environment, Grid, Html } from '@react-three/drei'
+import * as THREE from 'three'
 import './App.css'
 
 const T = {
@@ -104,15 +108,138 @@ const solveGeometry = (pts, manualData, activeDiags) => {
 // ==========================================
 
 
+// ==========================================
+// 🧊 ЭТАЖЕРКА 3D: КОМПОНЕНТЫ
+// ==========================================
+
+// 1. Помощник для создания Shape из наших logicalPts
+const createThreeShape = (pts) => {
+  const shape = new THREE.Shape();
+  if (!pts || pts.length < 3) return shape;
+  shape.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) shape.lineTo(pts[i].x, pts[i].y);
+  shape.closePath();
+  return shape;
+};
+
+// 2. Ядро 3D-потолка: Экструзия (выдавливание)
+const CeilingGeometry3D = ({ roomPts, ceilingColor = '#ffffff' }) => {
+  // Настройки выдавливания
+  const extrudeSettings = useMemo(() => ({
+    depth: 0.1,             // Толщина профиля/карниза (чуть-чуть вниз)
+    bevelEnabled: true,    // Скруглить края
+    bevelThickness: 0.01,
+    bevelSize: 0.01,
+    bevelSegments: 2,
+  }), []);
+
+  // Настройки для Стен (выдавливаем Shape на 2.7 метра вверх)
+  const wallExtrudeSettings = useMemo(() => ({
+    depth: 2.7,             // Высота комнаты в метрах!
+    bevelEnabled: false,
+  }), []);
+
+  const shape = useMemo(() => createThreeShape(roomPts), [roomPts]);
+
+  return (
+    <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 2.7, 0]}> 
+      {/* 1. ПОЛОТНО ПОТОЛКА (Плоскость на высоте 2.7м) */}
+      <mesh receiveShadow>
+        <shapeGeometry args={[shape]} />
+        {/* Делаем материал похожим на пленку */}
+        <meshPhysicalMaterial 
+          color={ceilingColor} 
+          metalness={0.1}
+          roughness={0.3}     // Глянец будет ниже, мат - выше
+          clearcoat={0.5}     // Добавляем лаковый слой
+          emissive={ceilingColor}
+          emissiveIntensity={0.05} // Легкое свечение, чтобы не было черных пятен
+        />
+      </mesh>
+
+      {/* 2. СТЕНЫ КОМНАТЫ (Выдавливаем тот же Shape вниз) */}
+      <mesh position={[0, 0, -2.7]} castShadow>
+        {/* Three.js ExtrudeGeometry создает стены из Shape */}
+        <extrudeGeometry args={[shape, wallExtrudeSettings]} />
+        <meshStandardMaterial 
+          color="#f0f0f0"       // Стены серые/бетонные
+          side={THREE.BackSide} // Рисуем только ВНУТРЕННЮЮ сторону
+          roughness={1}
+        />
+      </mesh>
+      
+      {/* 3. ПОЛ (Черная плоскость внизу) */}
+      <mesh rotation={[0, 0, 0]} position={[0,0,-2.69]}>
+          <shapeGeometry args={[shape]} />
+          <meshBasicMaterial color="#1c1c1e" side={THREE.DoubleSide} />
+      </mesh>
+    </group>
+  );
+};
+
+// 3. Компонент Сцены (Окружение, свет, камера)
+const ThreeDPreview = ({ roomPts }) => {
+  return (
+    <div style={{ width: '100%', height: '320px', borderRadius: '12px', overflow: 'hidden', background: '#f5f5f7', position: 'relative' }}>
+      
+      <Canvas 
+        shadows 
+        camera={{ position: [0, 1.5, 5], fov: 60 }} // Камера на уровне глаз, смотрит на комнату
+      >
+        {/* Свет Окружения (равномерный) */}
+        <ambientLight intensity={0.4} />
+        
+        {/* Направленный свет (как из окна), создает тени */}
+        <directionalLight
+          position={[5, 10, 5]}
+          intensity={1}
+          castShadow
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
+        />
+
+        {/* Ядро потолка */}
+        <CeilingGeometry3D roomPts={roomPts} ceilingColor="#fff" />
+        
+        {/* Контроллер камеры (OrbitControls) */}
+        <OrbitControls 
+            enablePan={true}    // Можно двигать
+            enableZoom={true}   // Можно приближать
+            enableRotate={true} // Можно крутить
+            minDistance={1}     // Ограничитель сближения
+            maxDistance={10}    // Ограничитель удаления
+            target={[0, 1.35, 0]} // Камера смотрит в центр комнаты
+        />
+
+        {/* Фон окружения */}
+        <Environment preset="city" blur={0.5} />
+        
+        {/* Сетка на полу для понимания масштаба */}
+        <Grid position={[0, 0.01, 0]} args={[10, 10]} cellColor="#e5e5ea" sectionColor="#8e8e93" fadeDistance={20} />
+
+        {/* Подсказка, что это 3D */}
+        <Html position={[1.5, 0.2, 1]} center>
+          <div style={{ color: '#8e8e93', fontSize: '10px', background: 'rgba(255,255,255,0.7)', padding: '2px 5px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+              Крутите пальцем! м: 1:1
+          </div>
+        </Html>
+      </Canvas>
+    </div>
+  );
+};
+// ==========================================
+
+
 // --- КОМПОНЕНТ УМНОГО ХОЛСТА (CANVAS) ---
 const RoomCanvas = ({ room, updateRoom }) => {
   const canvasRef = useRef(null);
   const [scale, setScale] = useState(30); 
   const [showDiags, setShowDiags] = useState(true);
   
-  // РЕЖИМЫ: 'drag' (тянуть) | 'add' (+угол) | 'remove' (-угол) | 'add_diag' (рисовать диагональ)
+  // ⭐️ ДОБАВЛЯЕМ ПЕРЕКЛЮЧАТЕЛЬ 2D/3D
+  const [viewMode, setViewMode] = useState('2d'); // '2d' | '3d'
+  
   const [mode, setMode] = useState('drag'); 
-  // Хранит первую выбранную точку для рисования диагонали
   const [selectedDiagPt, setSelectedDiagPt] = useState(null); 
   
   const CANVAS_WIDTH = 340;
@@ -132,6 +259,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
   }, [room.logicalPts]);
 
   useEffect(() => {
+    if (viewMode !== '2d' || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -152,9 +280,9 @@ const RoomCanvas = ({ room, updateRoom }) => {
     for(let i = 1; i < screenPts.length; i++) ctx.lineTo(screenPts[i].x, screenPts[i].y);
     ctx.closePath();
     
-    ctx.fillStyle = mode === 'add' ? 'rgba(52, 199, 89, 0.1)' : (mode === 'remove' ? 'rgba(255, 59, 48, 0.05)' : 'rgba(0, 122, 255, 0.08)'); 
+    ctx.fillStyle = mode === 'add' ? 'rgba(52, 199, 89, 0.1)' : (mode === 'remove' ? 'rgba(255, 59, 48, 0.05)' : (mode === 'add_diag' ? 'rgba(255, 149, 0, 0.05)' : 'rgba(0, 122, 255, 0.08)')); 
     ctx.fill();
-    ctx.strokeStyle = mode === 'add' ? '#34c759' : '#007aff';
+    ctx.strokeStyle = mode === 'add' ? '#34c759' : (mode === 'add_diag' ? '#ff9500' : '#007aff');
     ctx.lineWidth = 3;
     ctx.stroke();
 
@@ -168,17 +296,14 @@ const RoomCanvas = ({ room, updateRoom }) => {
             let i = diag.charCodeAt(0) - 65;
             let j = diag.charCodeAt(1) - 65;
             if (i >= pts.length || j >= pts.length || i < 0 || j < 0) return;
-
             let sp1 = screenPts[i], sp2 = screenPts[j];
             ctx.beginPath();
             ctx.moveTo(sp1.x, sp1.y);
             ctx.lineTo(sp2.x, sp2.y);
             ctx.stroke();
-
             let dist = Math.sqrt((pts[j].x - pts[i].x)**2 + (pts[j].y - pts[i].y)**2);
             let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
             let displayDist = manual[diag] !== undefined && manual[diag] !== '' ? manual[diag] : dist.toFixed(2);
-            
             ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
             ctx.fillRect(mx - 28, my - 10, 56, 18);
             ctx.fillStyle = '#ff9500';
@@ -191,7 +316,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
     ctx.fillStyle = '#1c1c1e';
     ctx.font = 'bold 12px system-ui';
     ctx.textAlign = 'center';
-
     for(let i = 0; i < pts.length; i++) {
        let p1 = pts[i], p2 = pts[(i+1) % pts.length];
        let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
@@ -199,34 +323,29 @@ const RoomCanvas = ({ room, updateRoom }) => {
        let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
        let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length); 
        let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2);
-
        ctx.fillStyle = 'rgba(255,255,255,0.85)';
        ctx.fillRect(mx - 32, my - 12, 64, 18); 
        ctx.fillStyle = mode === 'add' ? '#34c759' : '#007aff';
        ctx.fillText(`${name}: ${displayDist}м`, mx, my + 2);
     }
 
-    // ⭐️ ОТРИСОВКА УГЛОВ С ПОДСВЕТКОЙ ВЫБРАННОГО ⭐️
     for(let i = 0; i < screenPts.length; i++) {
        let sp = screenPts[i];
        ctx.beginPath();
        ctx.arc(sp.x, sp.y, 10, 0, 2 * Math.PI);
-       
        if (mode === 'remove') ctx.fillStyle = '#ff3b30';
-       else if (mode === 'add_diag' && selectedDiagPt === i) ctx.fillStyle = '#ff9500'; // Подсветка выбранной точки диагонали!
+       else if (mode === 'add_diag' && selectedDiagPt === i) ctx.fillStyle = '#ff9500'; 
        else ctx.fillStyle = draggingIdx === i ? '#ff3b30' : '#ffffff';
-       
        ctx.fill();
        ctx.lineWidth = 3;
        ctx.strokeStyle = (mode === 'add_diag' && selectedDiagPt === i) ? '#ff9500' : '#ff3b30';
        ctx.stroke();
-
        const label = String.fromCharCode(65 + i); 
        ctx.fillStyle = '#1c1c1e';
        ctx.font = '900 16px system-ui';
        ctx.fillText(label, sp.x + 18, sp.y - 12);
     }
-  }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode, room.activeDiags, selectedDiagPt]);
+  }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode, room.activeDiags, selectedDiagPt, viewMode]);
 
   const updateAreaPerimAndSave = (newPts, newDiags = null) => {
     let perim = 0, area = 0;
@@ -245,6 +364,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
 
   const getMousePos = (e) => {
     const canvas = canvasRef.current;
+    if(!canvas) return {x:0,y:0};
     const rect = canvas.getBoundingClientRect();
     const clientX = e.clientX || (e.touches && e.touches[0].clientX);
     const clientY = e.clientY || (e.touches && e.touches[0].clientY);
@@ -254,40 +374,27 @@ const RoomCanvas = ({ room, updateRoom }) => {
   };
 
   const handlePointerDown = (e) => {
+    if (viewMode !== '2d') return; 
     const pos = getMousePos(e);
     const screenPts = pts.map(toScreen);
 
-    // ⭐️ ИНТЕРАКТИВНОЕ РИСОВАНИЕ ДИАГОНАЛИ ⭐️
     if (mode === 'add_diag') {
         const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 30);
         if (hitIndex !== -1) {
-            if (selectedDiagPt === null) {
-                // Выбрали первую точку
-                setSelectedDiagPt(hitIndex);
-            } else {
-                // Выбрали вторую точку
-                if (hitIndex === selectedDiagPt) {
-                    setSelectedDiagPt(null); // Отмена, если кликнули на ту же
-                    return;
-                }
+            if (selectedDiagPt === null) setSelectedDiagPt(hitIndex);
+            else {
+                if (hitIndex === selectedDiagPt) { setSelectedDiagPt(null); return; }
                 const diff = Math.abs(hitIndex - selectedDiagPt);
-                if (diff === 1 || diff === pts.length - 1) {
-                    alert("Это соседние углы (стена)! Выберите противоположный угол.");
-                    return;
-                }
-                
-                // Создаем имя диагонали (алфавитный порядок)
+                if (diff === 1 || diff === pts.length - 1) { alert("Это стена! Выберите противоположный угол."); return; }
                 let i = Math.min(selectedDiagPt, hitIndex);
                 let j = Math.max(selectedDiagPt, hitIndex);
                 let diagName = String.fromCharCode(65+i) + String.fromCharCode(65+j);
-
                 const newDiags = [...room.activeDiags];
                 if (!newDiags.includes(diagName)) {
                     newDiags.push(diagName);
                     updateRoom(room.id, 'activeDiags', newDiags);
                 }
-                setSelectedDiagPt(null);
-                setMode('drag'); // Возвращаемся в обычный режим
+                setSelectedDiagPt(null); setMode('drag'); 
             }
         }
         return;
@@ -307,16 +414,13 @@ const RoomCanvas = ({ room, updateRoom }) => {
     if (mode === 'add') {
         if (pts.length >= 26) return alert("Достигнут предел углов (Z)");
         const logicalPos = toLogical(pos);
-        
         let minDist = Infinity;
         let insertIdx = -1;
         for(let i=0; i<pts.length; i++) {
-            let p1 = pts[i];
-            let p2 = pts[(i+1)%pts.length];
+            let p1 = pts[i]; let p2 = pts[(i+1)%pts.length];
             let dist = getDistToSegment(logicalPos, p1, p2);
             if (dist < minDist) { minDist = dist; insertIdx = i; }
         }
-        
         const newPts = [...pts];
         newPts.splice(insertIdx + 1, 0, logicalPos);
         updateAreaPerimAndSave(centerShape(newPts), getDefaultDiags(newPts.length));
@@ -357,12 +461,12 @@ const RoomCanvas = ({ room, updateRoom }) => {
       updateRoom(room.id, 'activeDiags', newDiags);
   };
 
-  // Текст подсказки в зависимости от режима
   const getHelperText = () => {
+      if (viewMode === '3d') return '👀 3D Режим. Стены: 2.7м. Можно крутить пальцем.';
       if (mode === 'add') return '👆 Кликните на линию стены для создания угла';
       if (mode === 'remove') return '👆 Кликните на угол, который нужно удалить';
       if (mode === 'add_diag') {
-          return selectedDiagPt === null ? '👆 Выберите первый угол для диагонали' : '👆 Теперь кликните на противоположный угол';
+          return selectedDiagPt === null ? '👆 Выберите первый угол для диагонали' : '👆 Кликните на противоположный угол';
       }
       return '👆 Потяните углы ИЛИ введите цифры ниже';
   };
@@ -371,59 +475,75 @@ const RoomCanvas = ({ room, updateRoom }) => {
     <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
       
       <div style={{ height: '24px', marginBottom: '8px', fontWeight: '800', fontSize: '13px', 
-        color: mode === 'add' ? '#34c759' : (mode === 'remove' ? '#ff3b30' : (mode === 'add_diag' ? '#ff9500' : '#8e8e93')) }}>
+        color: viewMode === '3d' ? '#ff3b30' : (mode === 'add' ? '#34c759' : (mode === 'remove' ? '#ff3b30' : (mode === 'add_diag' ? '#ff9500' : '#8e8e93'))) }}>
           {getHelperText()}
       </div>
 
-      <canvas 
-        ref={canvasRef} 
-        width={CANVAS_WIDTH} 
-        height={CANVAS_HEIGHT} 
-        style={{ 
-            width: '100%',           
-            maxWidth: '400px',       
-            height: 'auto',          
-            background: '#fafafa', 
-            borderRadius: '12px', 
-            border: mode === 'add' ? '2px solid #34c759' : (mode === 'remove' ? '2px solid #ff3b30' : (mode === 'add_diag' ? '2px solid #ff9500' : '1px solid #e5e5ea')), 
-            touchAction: 'none',
-            cursor: mode === 'drag' ? 'default' : 'crosshair'
-        }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-      />
+      {/* ⭐️ УМНОЕ ОТОБРАЖЕНИЕ: 2D Canvas ИЛИ 3D ThreeDPreview */}
+      {viewMode === '2d' ? (
+          <canvas 
+            ref={canvasRef} 
+            width={CANVAS_WIDTH} 
+            height={CANVAS_HEIGHT} 
+            style={{ 
+                width: '100%', maxWidth: '400px', height: 'auto',          
+                background: '#fafafa', borderRadius: '12px', 
+                border: mode === 'add' ? '2px solid #34c759' : (mode === 'remove' ? '2px solid #ff3b30' : (mode === 'add_diag' ? '2px solid #ff9500' : '1px solid #e5e5ea')), 
+                touchAction: 'none', cursor: 'default'
+            }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+          />
+      ) : (
+          <ThreeDPreview roomPts={pts} />
+      )}
       
+      {/* 2D УПРАВЛЕНИЕ */}
+      {viewMode === '2d' && (
+          <>
+            <button 
+                onClick={() => setShowDiags(!showDiags)} 
+                style={{ position: 'absolute', left: '10px', top: '40px', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '12px', color: '#1c1c1e', fontWeight: 'bold', zIndex: 5 }}>
+                {showDiags ? '👁 Скрыть диагонали' : '👁 Показать диагонали'}
+            </button>
+
+            <div style={{ position: 'absolute', right: '10px', top: '40px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 5 }}>
+                <button onClick={() => setScale(s => Math.min(s + 5, 80))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                <button onClick={() => setScale(s => Math.max(s - 5, 5))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+            </div>
+          </>
+      )}
+      
+      {/* ⭐️ ПЕРЕКЛЮЧАТЕЛЬ 2D/3D (Z-INDEX ДЛЯ ТОГО, ЧТОБЫ БЫЛОВ ПОВЕРХ 3D CANVAS) */}
       <button 
-        onClick={() => setShowDiags(!showDiags)} 
-        style={{ position: 'absolute', left: '10px', top: '40px', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '12px', color: '#1c1c1e', fontWeight: 'bold' }}>
-        {showDiags ? '👁 Скрыть диагонали' : '👁 Показать диагонали'}
+        onClick={() => setViewMode(viewMode === '2d' ? '3d' : '2d')}
+        style={{ position: 'absolute', bottom: '70px', right: '10px', padding: '10px 15px', borderRadius: '20px', background: viewMode === '2d' ? '#ff3b30' : '#8e8e93', color: 'white', border: 'none', fontWeight: '900', fontSize: '14px', boxShadow: '0 4px 15px rgba(255,59,48,0.4)', zIndex: 10, transition: '0.3s' }}
+      >
+          {viewMode === '2d' ? '👀 3D Смотреть' : '🔙 Чертеж'}
       </button>
 
-      <div style={{ position: 'absolute', right: '10px', top: '40px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-         <button onClick={() => setScale(s => Math.min(s + 5, 80))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
-         <button onClick={() => setScale(s => Math.max(s - 5, 5))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
-      </div>
-
-      {/* ⭐️ 3 ИНТЕРАКТИВНЫЕ КНОПКИ ⭐️ */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
-        <button 
-            onClick={() => { setMode(mode === 'add' ? 'drag' : 'add'); setSelectedDiagPt(null); }} 
-            style={{ flex: 1, padding: '10px 4px', background: mode === 'add' ? '#34c759' : '#e5f1ff', color: mode === 'add' ? '#fff' : '#007aff', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>
-            {mode === 'add' ? 'Отмена' : '➕ Угол'}
-        </button>
-        <button 
-            onClick={() => { setMode(mode === 'remove' ? 'drag' : 'remove'); setSelectedDiagPt(null); }} 
-            style={{ flex: 1, padding: '10px 4px', background: mode === 'remove' ? '#ff3b30' : '#ffe5e5', color: mode === 'remove' ? '#fff' : '#ff3b30', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>
-            {mode === 'remove' ? 'Отмена' : '➖ Угол'}
-        </button>
-        <button 
-            onClick={() => { setMode(mode === 'add_diag' ? 'drag' : 'add_diag'); setSelectedDiagPt(null); }} 
-            style={{ flex: 1, padding: '10px 4px', background: mode === 'add_diag' ? '#ff9500' : '#fff4e5', color: mode === 'add_diag' ? '#fff' : '#ff9500', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>
-            {mode === 'add_diag' ? 'Отмена' : '📏 Диагональ'}
-        </button>
-      </div>
+      {/* КНОПКИ РЕЖИМОВ (ТОЛЬКО В 2D) */}
+      {viewMode === '2d' && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
+            <button 
+                onClick={() => { setMode(mode === 'add' ? 'drag' : 'add'); setSelectedDiagPt(null); }} 
+                style={{ flex: 1, padding: '10px 4px', background: mode === 'add' ? '#34c759' : '#e5f1ff', color: mode === 'add' ? '#fff' : '#007aff', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>
+                {mode === 'add' ? 'Отмена' : '➕ Угол'}
+            </button>
+            <button 
+                onClick={() => { setMode(mode === 'remove' ? 'drag' : 'remove'); setSelectedDiagPt(null); }} 
+                style={{ flex: 1, padding: '10px 4px', background: mode === 'remove' ? '#ff3b30' : '#ffe5e5', color: mode === 'remove' ? '#fff' : '#ff3b30', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>
+                {mode === 'remove' ? 'Отмена' : '➖ Угол'}
+            </button>
+            <button 
+                onClick={() => { setMode(mode === 'add_diag' ? 'drag' : 'add_diag'); setSelectedDiagPt(null); }} 
+                style={{ flex: 1, padding: '10px 4px', background: mode === 'add_diag' ? '#ff9500' : '#fff4e5', color: mode === 'add_diag' ? '#fff' : '#ff9500', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>
+                {mode === 'add_diag' ? 'Отмена' : '📏 Диагональ'}
+            </button>
+          </div>
+      )}
 
       {/* --- БЛОК РУЧНЫХ РАЗМЕРОВ --- */}
       <div style={{ background: '#f9f9fb', padding: '15px', borderRadius: '12px', marginTop: '15px', border: '1px solid #e5e5ea', textAlign: 'left' }}>
@@ -435,57 +555,39 @@ const RoomCanvas = ({ room, updateRoom }) => {
                 let name = String.fromCharCode(65+i) + String.fromCharCode(65+nextI);
                 let dist = Math.sqrt((room.logicalPts[nextI].x - p.x)**2 + (room.logicalPts[nextI].y - p.y)**2).toFixed(2);
                 let displayVal = room.manualWalls?.[name] !== undefined ? room.manualWalls[name] : dist;
-
                 return (
                 <div key={name} style={{ display: 'flex', alignItems: 'center', background: '#fff', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e5e5ea' }}>
                     <span style={{ fontSize: '13px', fontWeight: '800', marginRight: '6px', color: '#007aff' }}>{name}:</span>
-                    <input 
-                    type="number" 
-                    value={displayVal} 
-                    onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [name]: e.target.value})}
-                    style={{ width: '55px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '14px', color: '#1c1c1e' }} 
-                    />
+                    <input type="number" value={displayVal} onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [name]: e.target.value})}
+                    style={{ width: '55px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '14px', color: '#1c1c1e' }}/>
                 </div>
                 )
             })}
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#8e8e93' }}>📏 АКТИВНЫЕ ДИАГОНАЛИ (м):</span>
-        </div>
-        
+        <span style={{ fontSize: '11px', fontWeight: '800', color: '#8e8e93', display: 'block', marginBottom: '8px' }}>📏 АКТИВНЫЕ ДИАГОНАЛИ (м):</span>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {room.activeDiags?.map((diagName, index) => {
                 let i = diagName.charCodeAt(0) - 65;
                 let j = diagName.charCodeAt(1) - 65;
                 if(i >= room.logicalPts.length || j >= room.logicalPts.length) return null;
-
                 let p1 = room.logicalPts[i], p2 = room.logicalPts[j];
                 let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2).toFixed(2);
                 let displayVal = room.manualWalls?.[diagName] !== undefined ? room.manualWalls[diagName] : dist;
-
                 return (
                 <div key={index} style={{ display: 'flex', alignItems: 'center', background: '#fff', padding: '4px 6px', borderRadius: '8px', border: '1px solid #e5e5ea' }}>
-                    <select 
-                        value={diagName} 
-                        onChange={(e) => handleDiagChange(index, e.target.value)}
-                        style={{ border: 'none', outline: 'none', fontWeight: '800', color: '#ff9500', background: 'transparent', fontSize: '13px', marginRight: '4px' }}
-                    >
+                    <select value={diagName} onChange={(e) => handleDiagChange(index, e.target.value)}
+                        style={{ border: 'none', outline: 'none', fontWeight: '800', color: '#ff9500', background: 'transparent', fontSize: '13px', marginRight: '4px' }}>
                         {allPossibleDiags.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
                     <span style={{fontWeight: '800', color: '#ff9500', marginRight: '4px'}}>:</span>
-                    <input 
-                        type="number" 
-                        value={displayVal} 
-                        onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [diagName]: e.target.value})}
-                        style={{ width: '50px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '14px', color: '#1c1c1e' }} 
-                    />
+                    <input type="number" value={displayVal} onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [diagName]: e.target.value})}
+                        style={{ width: '50px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '14px', color: '#1c1c1e' }}/>
                     <button onClick={() => handleRemoveDiagRow(index)} style={{ background: 'none', border: 'none', color: '#ff3b30', marginLeft: '5px', fontSize: '14px' }}>✕</button>
                 </div>
                 )
             })}
         </div>
-
       </div>
     </div>
   );
@@ -609,7 +711,6 @@ function App() {
     return (
       <div style={{ animation: 'fadeIn 0.3s ease-in', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <h2 style={{ fontSize: '24px', marginBottom: '15px', alignSelf: 'flex-start', paddingLeft: '8px' }}>{t('calc')}</h2>
-        
         {rooms.map(room => (
           <div key={room.id} style={styles.card}>
             <div style={styles.header} onClick={() => setExpandedRoomId(expandedRoomId === room.id ? null : room.id)}>
@@ -619,11 +720,8 @@ function App() {
               </div>
               <button onClick={(e) => removeRoom(room.id, e)} style={{ background: 'none', border: 'none', color: '#ff3b30', fontSize: '22px' }}>🗑</button>
             </div>
-
             {expandedRoomId === room.id && (
               <div style={{ animation: 'slideDown 0.2s ease-out' }}>
-                
-                {/* 1. ГЕОМЕТРИЯ + CANVAS */}
                 <div>
                   <div style={styles.subHeader} onClick={() => setExpandedSubSec(expandedSubSec === 'geom' ? null : 'geom')}>
                     <span style={{ fontWeight: '700', fontSize: '15px' }}>{t('geom')}</span>
@@ -631,20 +729,14 @@ function App() {
                   </div>
                   {expandedSubSec === 'geom' && (
                     <div style={styles.subContent}>
-                      
                       <RoomCanvas room={room} updateRoom={updateRoom} />
-
                       <div style={styles.inputRow}><span>{t('area')}</span><input type="number" value={room.area} onChange={e => updateRoom(room.id, 'area', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('perim')}</span><input type="number" value={room.perim} onChange={e => updateRoom(room.id, 'perim', e.target.value)} style={styles.numInput} placeholder="0" /></div>
-                      <div style={styles.inputRow}>
-                        <span>{t('corners')}</span>
-                        <input type="number" value={room.corners} readOnly style={{...styles.numInput, background: '#f2f2f7', color: '#8e8e93'}} placeholder="4" />
-                      </div>
+                      <div style={styles.inputRow}><span>{t('corners')}</span><input type="number" value={room.corners} readOnly style={{...styles.numInput, background: '#f2f2f7', color: '#8e8e93'}} placeholder="4" /></div>
                     </div>
                   )}
                 </div>
-
-                {/* 2. МАТЕРИАЛЫ */}
+                {/* ОСТАЛЬНЫЕ СЕКЦИИ БЕЗ ИЗМЕНЕНИЙ */}
                 <div>
                   <div style={styles.subHeader} onClick={() => setExpandedSubSec(expandedSubSec === 'mat' ? null : 'mat')}>
                     <span style={{ fontWeight: '700', fontSize: '15px' }}>{t('materials')}</span>
@@ -665,8 +757,6 @@ function App() {
                     </div>
                   )}
                 </div>
-
-                {/* 3. ОСВЕЩЕНИЕ */}
                 <div>
                   <div style={styles.subHeader} onClick={() => setExpandedSubSec(expandedSubSec === 'light' ? null : 'light')}>
                     <span style={{ fontWeight: '700', fontSize: '15px' }}>{t('lighting')}</span>
@@ -680,8 +770,6 @@ function App() {
                     </div>
                   )}
                 </div>
-
-                {/* 4. КАРНИЗЫ */}
                 <div>
                   <div style={styles.subHeader} onClick={() => setExpandedSubSec(expandedSubSec === 'corniceSec' ? null : 'corniceSec')}>
                     <span style={{ fontWeight: '700', fontSize: '15px' }}>{t('corniceSec')}</span>
@@ -702,8 +790,6 @@ function App() {
                     </div>
                   )}
                 </div>
-
-                {/* 5. ДОПЫ */}
                 <div>
                   <div style={styles.subHeader} onClick={() => setExpandedSubSec(expandedSubSec === 'dops' ? null : 'dops')}>
                     <span style={{ fontWeight: '700', fontSize: '15px' }}>{t('dops')}</span>
@@ -715,16 +801,11 @@ function App() {
                     </div>
                   )}
                 </div>
-
               </div>
             )}
           </div>
         ))}
-
-        <button onClick={addRoom} style={{ width: '100%', padding: '16px', background: '#f2f2f7', color: '#007aff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', marginBottom: '20px' }}>
-          ➕ {t('addRoom')}
-        </button>
-
+        <button onClick={addRoom} style={{ width: '100%', padding: '16px', background: '#f2f2f7', color: '#007aff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '800', marginBottom: '20px' }}>➕ {t('addRoom')}</button>
         <div style={{ position: 'fixed', bottom: '20px', left: '10px', right: '10px', background: '#1c1c1e', padding: '16px', borderRadius: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 8px 25px rgba(0,0,0,0.3)', zIndex: 100 }}>
            <div>
              <span style={{ color: '#8e8e93', fontSize: '12px', fontWeight: '800', display: 'block' }}>{t('pre')}</span>
