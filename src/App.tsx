@@ -35,7 +35,6 @@ const centerShape = (pts) => {
     return pts.map(p => ({ x: p.x - cx, y: p.y - cy }));
 };
 
-// Генерация стандартных диагоналей (веер)
 const getDefaultDiags = (count) => {
     if (count < 4) return [];
     if (count === 4) return ['AC', 'BD'];
@@ -44,24 +43,21 @@ const getDefaultDiags = (count) => {
     return diags;
 };
 
-// Генерация ВСЕХ ВОЗМОЖНЫХ диагоналей для выпадающего списка
 const getAllPossibleDiags = (count) => {
     let diags = [];
     for (let i = 0; i < count; i++) {
         for (let j = i + 2; j < count; j++) {
-            if (i === 0 && j === count - 1) continue; // Отсекаем последнюю стену
+            if (i === 0 && j === count - 1) continue; 
             diags.push(String.fromCharCode(65 + i) + String.fromCharCode(65 + j));
         }
     }
     return diags;
 };
 
-// Физический движок
 const solveGeometry = (pts, manualData, activeDiags) => {
   let newPts = pts.map(p => ({...p}));
   let springs = [];
 
-  // СТЕНЫ (Жесткие пружины)
   for(let i = 0; i < pts.length; i++) {
       let j = (i + 1) % pts.length;
       let name = String.fromCharCode(65 + i) + String.fromCharCode(65 + j);
@@ -71,21 +67,16 @@ const solveGeometry = (pts, manualData, activeDiags) => {
       if (!isNaN(target) && target > 0) springs.push({i, j, target, weight});
   }
 
-  // ДИАГОНАЛИ (Берем только те, что юзер выбрал в списке)
   for(let diag of activeDiags) {
       let i = diag.charCodeAt(0) - 65;
       let j = diag.charCodeAt(1) - 65;
       if (i >= pts.length || j >= pts.length || i < 0 || j < 0) continue; 
-      
       let isManual = manualData[diag] !== undefined && manualData[diag] !== '';
       let target = isManual ? parseFloat(manualData[diag]) : getDist(pts[i], pts[j]);
-      // Если юзер ввел цифру руками - диагональ жесткая (0.9), иначе - мягкая резинка (0.02)
       let weight = isManual ? 0.9 : 0.02; 
-      
       if (!isNaN(target) && target > 0) springs.push({i, j, target, weight});
   }
 
-  // Симуляция стягивания
   for(let iter = 0; iter < 1000; iter++) { 
       for(let s of springs) {
           let p1 = newPts[s.i], p2 = newPts[s.j];
@@ -118,7 +109,11 @@ const RoomCanvas = ({ room, updateRoom }) => {
   const canvasRef = useRef(null);
   const [scale, setScale] = useState(30); 
   const [showDiags, setShowDiags] = useState(true);
+  
+  // РЕЖИМЫ: 'drag' (тянуть) | 'add' (+угол) | 'remove' (-угол) | 'add_diag' (рисовать диагональ)
   const [mode, setMode] = useState('drag'); 
+  // Хранит первую выбранную точку для рисования диагонали
+  const [selectedDiagPt, setSelectedDiagPt] = useState(null); 
   
   const CANVAS_WIDTH = 340;
   const CANVAS_HEIGHT = 320;
@@ -130,7 +125,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
   const toScreen = (p) => ({ x: p.x * scale + offset.x, y: p.y * scale + offset.y });
   const toLogical = (p) => ({ x: (p.x - offset.x) / scale, y: (p.y - offset.y) / scale });
 
-  // Все возможные диагонали для текущего кол-ва углов
   const allPossibleDiags = getAllPossibleDiags(pts.length);
 
   useEffect(() => {
@@ -164,7 +158,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    // 1. РИСУЕМ ТОЛЬКО АКТИВНЫЕ ДИАГОНАЛИ ИЗ СПИСКА
     if (showDiags && room.activeDiags) {
         ctx.setLineDash([5, 5]); 
         ctx.strokeStyle = 'rgba(255, 149, 0, 0.6)'; 
@@ -195,7 +188,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
         ctx.setLineDash([]); 
     }
 
-    // 2. СТЕНЫ
     ctx.fillStyle = '#1c1c1e';
     ctx.font = 'bold 12px system-ui';
     ctx.textAlign = 'center';
@@ -206,7 +198,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
        let sp1 = screenPts[i], sp2 = screenPts[(i+1) % screenPts.length];
        let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
        let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length); 
-
        let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2);
 
        ctx.fillStyle = 'rgba(255,255,255,0.85)';
@@ -215,17 +206,19 @@ const RoomCanvas = ({ room, updateRoom }) => {
        ctx.fillText(`${name}: ${displayDist}м`, mx, my + 2);
     }
 
-    // 3. УГЛЫ
+    // ⭐️ ОТРИСОВКА УГЛОВ С ПОДСВЕТКОЙ ВЫБРАННОГО ⭐️
     for(let i = 0; i < screenPts.length; i++) {
        let sp = screenPts[i];
        ctx.beginPath();
        ctx.arc(sp.x, sp.y, 10, 0, 2 * Math.PI);
+       
        if (mode === 'remove') ctx.fillStyle = '#ff3b30';
+       else if (mode === 'add_diag' && selectedDiagPt === i) ctx.fillStyle = '#ff9500'; // Подсветка выбранной точки диагонали!
        else ctx.fillStyle = draggingIdx === i ? '#ff3b30' : '#ffffff';
        
        ctx.fill();
        ctx.lineWidth = 3;
-       ctx.strokeStyle = '#ff3b30';
+       ctx.strokeStyle = (mode === 'add_diag' && selectedDiagPt === i) ? '#ff9500' : '#ff3b30';
        ctx.stroke();
 
        const label = String.fromCharCode(65 + i); 
@@ -233,7 +226,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
        ctx.font = '900 16px system-ui';
        ctx.fillText(label, sp.x + 18, sp.y - 12);
     }
-  }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode, room.activeDiags]);
+  }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode, room.activeDiags, selectedDiagPt]);
 
   const updateAreaPerimAndSave = (newPts, newDiags = null) => {
     let perim = 0, area = 0;
@@ -264,12 +257,47 @@ const RoomCanvas = ({ room, updateRoom }) => {
     const pos = getMousePos(e);
     const screenPts = pts.map(toScreen);
 
+    // ⭐️ ИНТЕРАКТИВНОЕ РИСОВАНИЕ ДИАГОНАЛИ ⭐️
+    if (mode === 'add_diag') {
+        const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 30);
+        if (hitIndex !== -1) {
+            if (selectedDiagPt === null) {
+                // Выбрали первую точку
+                setSelectedDiagPt(hitIndex);
+            } else {
+                // Выбрали вторую точку
+                if (hitIndex === selectedDiagPt) {
+                    setSelectedDiagPt(null); // Отмена, если кликнули на ту же
+                    return;
+                }
+                const diff = Math.abs(hitIndex - selectedDiagPt);
+                if (diff === 1 || diff === pts.length - 1) {
+                    alert("Это соседние углы (стена)! Выберите противоположный угол.");
+                    return;
+                }
+                
+                // Создаем имя диагонали (алфавитный порядок)
+                let i = Math.min(selectedDiagPt, hitIndex);
+                let j = Math.max(selectedDiagPt, hitIndex);
+                let diagName = String.fromCharCode(65+i) + String.fromCharCode(65+j);
+
+                const newDiags = [...room.activeDiags];
+                if (!newDiags.includes(diagName)) {
+                    newDiags.push(diagName);
+                    updateRoom(room.id, 'activeDiags', newDiags);
+                }
+                setSelectedDiagPt(null);
+                setMode('drag'); // Возвращаемся в обычный режим
+            }
+        }
+        return;
+    }
+
     if (mode === 'remove') {
-        const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 25);
+        const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 30);
         if (hitIndex !== -1) {
             if (pts.length <= 3) return alert("Минимум 3 угла!");
             const newPts = pts.filter((_, idx) => idx !== hitIndex);
-            // При удалении угла сбрасываем диагонали на дефолтные
             updateAreaPerimAndSave(centerShape(newPts), getDefaultDiags(newPts.length));
             setMode('drag'); 
         }
@@ -291,7 +319,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
         
         const newPts = [...pts];
         newPts.splice(insertIdx + 1, 0, logicalPos);
-        // При добавлении угла сбрасываем диагонали на дефолтные
         updateAreaPerimAndSave(centerShape(newPts), getDefaultDiags(newPts.length));
         setMode('drag'); 
         return;
@@ -319,21 +346,10 @@ const RoomCanvas = ({ room, updateRoom }) => {
     updateAreaPerimAndSave(centerShape(pts));
   };
 
-  // --- ОБРАБОТЧИКИ ДЛЯ СПИСКА ДИАГОНАЛЕЙ ---
   const handleDiagChange = (index, newDiagValue) => {
       const newDiags = [...room.activeDiags];
       newDiags[index] = newDiagValue;
       updateRoom(room.id, 'activeDiags', newDiags);
-  };
-
-  const handleAddDiagRow = () => {
-      const newDiags = [...room.activeDiags];
-      // Берем первую попавшуюся доступную диагональ, которой еще нет в списке
-      const available = allPossibleDiags.find(d => !newDiags.includes(d)) || allPossibleDiags[0];
-      if (available) {
-          newDiags.push(available);
-          updateRoom(room.id, 'activeDiags', newDiags);
-      }
   };
 
   const handleRemoveDiagRow = (index) => {
@@ -341,11 +357,22 @@ const RoomCanvas = ({ room, updateRoom }) => {
       updateRoom(room.id, 'activeDiags', newDiags);
   };
 
+  // Текст подсказки в зависимости от режима
+  const getHelperText = () => {
+      if (mode === 'add') return '👆 Кликните на линию стены для создания угла';
+      if (mode === 'remove') return '👆 Кликните на угол, который нужно удалить';
+      if (mode === 'add_diag') {
+          return selectedDiagPt === null ? '👆 Выберите первый угол для диагонали' : '👆 Теперь кликните на противоположный угол';
+      }
+      return '👆 Потяните углы ИЛИ введите цифры ниже';
+  };
+
   return (
     <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
       
-      <div style={{ height: '24px', marginBottom: '8px', fontWeight: '800', fontSize: '13px', color: mode === 'add' ? '#34c759' : (mode === 'remove' ? '#ff3b30' : '#8e8e93') }}>
-          {mode === 'add' ? '👆 Кликните в нужное место чертежа' : (mode === 'remove' ? '👆 Кликните на угол, который нужно удалить' : '👆 Потяните углы ИЛИ введите цифры ниже')}
+      <div style={{ height: '24px', marginBottom: '8px', fontWeight: '800', fontSize: '13px', 
+        color: mode === 'add' ? '#34c759' : (mode === 'remove' ? '#ff3b30' : (mode === 'add_diag' ? '#ff9500' : '#8e8e93')) }}>
+          {getHelperText()}
       </div>
 
       <canvas 
@@ -358,9 +385,9 @@ const RoomCanvas = ({ room, updateRoom }) => {
             height: 'auto',          
             background: '#fafafa', 
             borderRadius: '12px', 
-            border: mode === 'add' ? '2px solid #34c759' : (mode === 'remove' ? '2px solid #ff3b30' : '1px solid #e5e5ea'), 
+            border: mode === 'add' ? '2px solid #34c759' : (mode === 'remove' ? '2px solid #ff3b30' : (mode === 'add_diag' ? '2px solid #ff9500' : '1px solid #e5e5ea')), 
             touchAction: 'none',
-            cursor: mode === 'add' ? 'crosshair' : (mode === 'remove' ? 'no-drop' : 'default')
+            cursor: mode === 'drag' ? 'default' : 'crosshair'
         }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -379,23 +406,28 @@ const RoomCanvas = ({ room, updateRoom }) => {
          <button onClick={() => setScale(s => Math.max(s - 5, 5))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '12px' }}>
+      {/* ⭐️ 3 ИНТЕРАКТИВНЫЕ КНОПКИ ⭐️ */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
         <button 
-            onClick={() => setMode(mode === 'add' ? 'drag' : 'add')} 
-            style={{ flex: 1, padding: '12px', background: mode === 'add' ? '#34c759' : '#e5f1ff', color: mode === 'add' ? '#fff' : '#007aff', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '14px', transition: '0.2s' }}>
-            {mode === 'add' ? 'Отмена' : '➕ Добавить угол'}
+            onClick={() => { setMode(mode === 'add' ? 'drag' : 'add'); setSelectedDiagPt(null); }} 
+            style={{ flex: 1, padding: '10px 4px', background: mode === 'add' ? '#34c759' : '#e5f1ff', color: mode === 'add' ? '#fff' : '#007aff', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>
+            {mode === 'add' ? 'Отмена' : '➕ Угол'}
         </button>
         <button 
-            onClick={() => setMode(mode === 'remove' ? 'drag' : 'remove')} 
-            style={{ flex: 1, padding: '12px', background: mode === 'remove' ? '#ff3b30' : '#ffe5e5', color: mode === 'remove' ? '#fff' : '#ff3b30', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '14px', transition: '0.2s' }}>
-            {mode === 'remove' ? 'Отмена' : '➖ Удалить угол'}
+            onClick={() => { setMode(mode === 'remove' ? 'drag' : 'remove'); setSelectedDiagPt(null); }} 
+            style={{ flex: 1, padding: '10px 4px', background: mode === 'remove' ? '#ff3b30' : '#ffe5e5', color: mode === 'remove' ? '#fff' : '#ff3b30', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>
+            {mode === 'remove' ? 'Отмена' : '➖ Угол'}
+        </button>
+        <button 
+            onClick={() => { setMode(mode === 'add_diag' ? 'drag' : 'add_diag'); setSelectedDiagPt(null); }} 
+            style={{ flex: 1, padding: '10px 4px', background: mode === 'add_diag' ? '#ff9500' : '#fff4e5', color: mode === 'add_diag' ? '#fff' : '#ff9500', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '13px', transition: '0.2s' }}>
+            {mode === 'add_diag' ? 'Отмена' : '📏 Диагональ'}
         </button>
       </div>
 
-      {/* --- БЛОК РУЧНЫХ РАЗМЕРОВ (ДИНАМИЧЕСКИЙ) --- */}
+      {/* --- БЛОК РУЧНЫХ РАЗМЕРОВ --- */}
       <div style={{ background: '#f9f9fb', padding: '15px', borderRadius: '12px', marginTop: '15px', border: '1px solid #e5e5ea', textAlign: 'left' }}>
         
-        {/* СЕКЦИЯ СТЕН */}
         <span style={{ fontSize: '11px', fontWeight: '800', color: '#8e8e93', display: 'block', marginBottom: '8px' }}>📐 СТЕНЫ (м):</span>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '15px' }}>
             {room.logicalPts?.map((p, i) => {
@@ -418,18 +450,14 @@ const RoomCanvas = ({ room, updateRoom }) => {
             })}
         </div>
 
-        {/* СЕКЦИЯ ДИАГОНАЛЕЙ */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#8e8e93' }}>📏 ДИАГОНАЛИ (м):</span>
-            <button onClick={handleAddDiagRow} style={{ background: 'none', border: 'none', color: '#ff9500', fontWeight: '800', fontSize: '12px', cursor: 'pointer' }}>➕ Добавить</button>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#8e8e93' }}>📏 АКТИВНЫЕ ДИАГОНАЛИ (м):</span>
         </div>
         
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {room.activeDiags?.map((diagName, index) => {
                 let i = diagName.charCodeAt(0) - 65;
                 let j = diagName.charCodeAt(1) - 65;
-                
-                // Защита, если после удаления угла диагональ сломалась
                 if(i >= room.logicalPts.length || j >= room.logicalPts.length) return null;
 
                 let p1 = room.logicalPts[i], p2 = room.logicalPts[j];
@@ -438,8 +466,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
 
                 return (
                 <div key={index} style={{ display: 'flex', alignItems: 'center', background: '#fff', padding: '4px 6px', borderRadius: '8px', border: '1px solid #e5e5ea' }}>
-                    
-                    {/* ⭐️ ВЫПАДАЮЩИЙ СПИСОК ВЫБОРА ДИАГОНАЛИ ⭐️ */}
                     <select 
                         value={diagName} 
                         onChange={(e) => handleDiagChange(index, e.target.value)}
@@ -447,16 +473,13 @@ const RoomCanvas = ({ room, updateRoom }) => {
                     >
                         {allPossibleDiags.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
-                    
                     <span style={{fontWeight: '800', color: '#ff9500', marginRight: '4px'}}>:</span>
-                    
                     <input 
                         type="number" 
                         value={displayVal} 
                         onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [diagName]: e.target.value})}
                         style={{ width: '50px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '14px', color: '#1c1c1e' }} 
                     />
-                    
                     <button onClick={() => handleRemoveDiagRow(index)} style={{ background: 'none', border: 'none', color: '#ff3b30', marginLeft: '5px', fontSize: '14px' }}>✕</button>
                 </div>
                 )
@@ -525,13 +548,12 @@ function App() {
   };
 
   const CalculatorScreen = () => {
-    // ⭐️ ИНИЦИАЛИЗАЦИЯ ДИАГОНАЛЕЙ ПРИ СТАРТЕ
     const [rooms, setRooms] = useState([
       { 
         id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', 
         canvas: 'полотно_м2', profile: 'профиль_м', spots: '6', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '',
         logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]),
-        activeDiags: ['AC', 'BD'], // Стартовые диагонали
+        activeDiags: ['AC', 'BD'],
         manualWalls: {} 
       }
     ]);
@@ -540,7 +562,6 @@ function App() {
 
     const updateRoom = (id, field, value) => { setRooms(prevRooms => prevRooms.map(r => r.id === id ? { ...r, [field]: value } : r)); };
     
-    // Перехватчик изменения любого ручного инпута для мгновенного пересчета физики
     useEffect(() => {
         rooms.forEach(room => {
             const newPts = solveGeometry(room.logicalPts, room.manualWalls, room.activeDiags || []);
@@ -550,7 +571,6 @@ function App() {
                 p_sum += Math.sqrt((p2.x-p1.x)**2 + (p2.y-p1.y)**2);
                 area += (p1.x*p2.y - p2.x*p1.y);
             }
-            // Проверка, изменилась ли геометрия, чтобы не зациклить React
             if (Math.abs(p_sum - parseFloat(room.perim)) > 0.05) {
                 updateRoom(room.id, 'logicalPts', newPts);
                 updateRoom(room.id, 'perim', p_sum.toFixed(2));
