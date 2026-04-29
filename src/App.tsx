@@ -11,6 +11,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
   const canvasRef = useRef(null);
 
   const [scale, setScale] = useState(35);
+  const [showDiags, setShowDiags] = useState(true); // НОВОЕ: Переключатель диагоналей
   const offset = { x: 150, y: 130 }; 
 
   const [pts, setPts] = useState(room.logicalPts || [
@@ -26,7 +27,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 1. Рисуем миллиметровую сетку
     ctx.strokeStyle = '#e5e5ea';
     ctx.lineWidth = 1;
     const step = scale; 
@@ -37,53 +37,54 @@ const RoomCanvas = ({ room, updateRoom }) => {
 
     const screenPts = pts.map(toScreen);
 
-    // 2. Рисуем контур комнаты
     ctx.beginPath();
     ctx.moveTo(screenPts[0].x, screenPts[0].y);
     for(let i = 1; i < screenPts.length; i++) ctx.lineTo(screenPts[i].x, screenPts[i].y);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(0, 122, 255, 0.08)'; // Сделали заливку чуть прозрачнее, чтобы не мешала диагоналям
+    ctx.fillStyle = 'rgba(0, 122, 255, 0.08)'; 
     ctx.fill();
     ctx.strokeStyle = '#007aff';
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    // 3. РИСУЕМ ДИАГОНАЛИ (Пунктир)
-    ctx.setLineDash([5, 5]); 
-    ctx.strokeStyle = 'rgba(255, 149, 0, 0.6)'; // Оранжевый цвет
-    ctx.lineWidth = 1.5;
-    ctx.textAlign = 'center';
-    
-    const diagonals = [];
-    if (pts.length === 4) {
-        diagonals.push([0, 2], [1, 3]); // Классика крест-накрест для 4 углов
-    } else if (pts.length > 4) {
-        for (let i = 2; i < pts.length - 1; i++) diagonals.push([0, i]); // Веер из угла A для сложных фигур
+    // 1. РИСУЕМ ДИАГОНАЛИ (ЕСЛИ ВКЛЮЧЕНЫ)
+    if (showDiags) {
+        ctx.setLineDash([5, 5]); 
+        ctx.strokeStyle = 'rgba(255, 149, 0, 0.6)'; 
+        ctx.lineWidth = 1.5;
+        ctx.textAlign = 'center';
+        
+        const diagonals = [];
+        if (pts.length === 4) {
+            diagonals.push([0, 2], [1, 3]); 
+        } else if (pts.length > 4) {
+            for (let i = 2; i < pts.length - 1; i++) diagonals.push([0, i]); 
+        }
+
+        diagonals.forEach(([i, j]) => {
+            let sp1 = screenPts[i], sp2 = screenPts[j];
+            ctx.beginPath();
+            ctx.moveTo(sp1.x, sp1.y);
+            ctx.lineTo(sp2.x, sp2.y);
+            ctx.stroke();
+
+            let dist = Math.sqrt((pts[j].x - pts[i].x)**2 + (pts[j].y - pts[i].y)**2);
+            let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
+            let name = String.fromCharCode(65+i) + String.fromCharCode(65+j); // A-C
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fillRect(mx - 28, my - 10, 56, 18);
+            ctx.fillStyle = '#ff9500';
+            ctx.font = 'bold 11px system-ui';
+            ctx.fillText(`${name}: ${dist.toFixed(2)}м`, mx, my + 3);
+        });
+        ctx.setLineDash([]); 
     }
 
-    diagonals.forEach(([i, j]) => {
-        let sp1 = screenPts[i], sp2 = screenPts[j];
-        ctx.beginPath();
-        ctx.moveTo(sp1.x, sp1.y);
-        ctx.lineTo(sp2.x, sp2.y);
-        ctx.stroke();
-
-        // Считаем метры диагонали и рисуем плашку
-        let dist = Math.sqrt((pts[j].x - pts[i].x)**2 + (pts[j].y - pts[i].y)**2);
-        let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
-        
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.fillRect(mx - 18, my - 10, 36, 18);
-        ctx.fillStyle = '#ff9500';
-        ctx.font = 'bold 11px system-ui';
-        ctx.fillText(dist.toFixed(2) + 'м', mx, my + 3);
-    });
-    
-    ctx.setLineDash([]); // Возвращаем сплошные линии для всего остального!
-
-    // 4. Рисуем длины СТЕН
+    // 2. РИСУЕМ ДЛИНЫ СТЕН (A-B)
     ctx.fillStyle = '#1c1c1e';
     ctx.font = 'bold 12px system-ui';
+    ctx.textAlign = 'center';
 
     for(let i = 0; i < pts.length; i++) {
        let p1 = pts[i], p2 = pts[(i+1) % pts.length];
@@ -91,19 +92,18 @@ const RoomCanvas = ({ room, updateRoom }) => {
 
        let sp1 = screenPts[i], sp2 = screenPts[(i+1) % screenPts.length];
        let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
-       let meters = dist.toFixed(2);
+       let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length); // A-B
 
        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-       ctx.fillRect(mx - 16, my - 12, 32, 18);
+       ctx.fillRect(mx - 32, my - 12, 64, 18); // Плашка пошире для текста
        ctx.fillStyle = '#007aff';
-       ctx.fillText(meters + 'м', mx, my + 2);
+       ctx.fillText(`${name}: ${dist.toFixed(2)}м`, mx, my + 2);
     }
 
-    // 5. Интерактивные точки (углы) + БУКВЫ
+    // 3. ТОЧКИ И БУКВЫ УГЛОВ (A, B, C...)
     for(let i = 0; i < screenPts.length; i++) {
        let sp = screenPts[i];
        
-       // Кружок
        ctx.beginPath();
        ctx.arc(sp.x, sp.y, 10, 0, 2 * Math.PI);
        ctx.fillStyle = draggingIdx === i ? '#ff3b30' : '#ffffff';
@@ -112,13 +112,12 @@ const RoomCanvas = ({ room, updateRoom }) => {
        ctx.strokeStyle = '#ff3b30';
        ctx.stroke();
 
-       // Буква (A, B, C...)
-       const label = String.fromCharCode(65 + i); // 65 - код буквы 'A'
+       const label = String.fromCharCode(65 + i); 
        ctx.fillStyle = '#1c1c1e';
        ctx.font = '900 16px system-ui';
        ctx.fillText(label, sp.x + 18, sp.y - 12);
     }
-  }, [pts, draggingIdx, scale]);
+  }, [pts, draggingIdx, scale, showDiags]);
 
   const getMousePos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
@@ -178,6 +177,14 @@ const RoomCanvas = ({ room, updateRoom }) => {
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
       />
+      {/* КНОПКА ТОГГЛА ДИАГОНАЛЕЙ */}
+      <button 
+        onClick={() => setShowDiags(!showDiags)} 
+        style={{ position: 'absolute', left: '10px', top: '10px', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '12px', color: '#1c1c1e', fontWeight: 'bold' }}>
+        {showDiags ? '👁 Скрыть диагонали' : '👁 Показать диагонали'}
+      </button>
+
+      {/* ЗУМ */}
       <div style={{ position: 'absolute', right: '10px', top: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
          <button onClick={() => setScale(s => Math.min(s + 5, 80))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
          <button onClick={() => setScale(s => Math.max(s - 5, 5))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
@@ -244,14 +251,24 @@ function App() {
 
   const CalculatorScreen = () => {
     const [rooms, setRooms] = useState([
-      { id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '6', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '' }
+      { 
+        id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', 
+        canvas: 'полотно_м2', profile: 'профиль_м', spots: '6', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '',
+        logicalPts: [{ x: -2, y: -2 }, { x: 2, y: -2 }, { x: 2, y: 2 }, { x: -2, y: 2 }],
+        manualWalls: {} // Память для ручного ввода
+      }
     ]);
     const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
     const [expandedSubSec, setExpandedSubSec] = useState('geom'); 
 
     const updateRoom = (id, field, value) => { setRooms(prevRooms => prevRooms.map(r => r.id === id ? { ...r, [field]: value } : r)); };
     const addRoom = () => {
-      const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '' };
+      const nr = { 
+        id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', 
+        canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '',
+        logicalPts: [{ x: -2, y: -2 }, { x: 2, y: -2 }, { x: 2, y: 2 }, { x: -2, y: 2 }],
+        manualWalls: {} 
+      };
       setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom');
     };
 
@@ -297,9 +314,34 @@ function App() {
                   {expandedSubSec === 'geom' && (
                     <div style={styles.subContent}>
                       
-                      {/* НАШ НОВЫЙ ЧЕРТЕЖ */}
                       <RoomCanvas room={room} updateRoom={updateRoom} />
                       <p style={{ textAlign: 'center', fontSize: '11px', color: '#8e8e93', marginTop: '-10px', marginBottom: '15px' }}>{t('dragInfo')}</p>
+
+                      {/* НОВЫЙ БЛОК: РУЧНАЯ КОРРЕКТИРОВКА РАЗМЕРОВ */}
+                      <div style={{ background: '#f9f9fb', padding: '12px', borderRadius: '12px', marginBottom: '15px', border: '1px solid #e5e5ea' }}>
+                        <span style={{...styles.label, marginBottom: '10px'}}>📐 ТОЧНЫЕ РАЗМЕРЫ СТЕН (м):</span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                           {room.logicalPts?.map((p, i) => {
+                              let nextI = (i+1)%room.logicalPts.length;
+                              let name = String.fromCharCode(65+i) + String.fromCharCode(65+nextI);
+                              let dist = Math.sqrt((room.logicalPts[nextI].x - p.x)**2 + (room.logicalPts[nextI].y - p.y)**2).toFixed(2);
+                              // Если пользователь ввел свою цифру, показываем ее, иначе визуальную длину с чертежа
+                              let displayVal = room.manualWalls?.[name] !== undefined ? room.manualWalls[name] : dist;
+
+                              return (
+                                <div key={name} style={{ display: 'flex', alignItems: 'center', background: '#fff', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e5e5ea' }}>
+                                  <span style={{ fontSize: '13px', fontWeight: '800', marginRight: '6px', color: '#007aff' }}>{name}:</span>
+                                  <input 
+                                    type="number" 
+                                    value={displayVal} 
+                                    onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [name]: e.target.value})}
+                                    style={{ width: '55px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '14px', color: '#1c1c1e' }} 
+                                  />
+                                </div>
+                              )
+                           })}
+                        </div>
+                      </div>
 
                       <div style={styles.inputRow}><span>{t('area')}</span><input type="number" value={room.area} onChange={e => updateRoom(room.id, 'area', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('perim')}</span><input type="number" value={room.perim} onChange={e => updateRoom(room.id, 'perim', e.target.value)} style={styles.numInput} placeholder="0" /></div>
