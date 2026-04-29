@@ -656,13 +656,30 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
         )}
       </div>
       
+      {/* ⭐️ ПАНЕЛЬ "УПРАВЛЕНИЕ ВИДОМ" ⭐️ */}
       {viewMode === '2d' && (
-          <div style={{ position: 'absolute', right: '10px', top: '15px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', zIndex: 5 }}>
-              <button onClick={() => setShowDiags(!showDiags)} style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '12px', color: showDiags ? '#1c1c1e' : '#8e8e93', fontWeight: '800', transition: '0.2s' }}>
-                  {showDiags ? '👁 Скрыть' : '👓 Показать'}
-              </button>
-              <button onClick={() => setScale(s => Math.min(s + 5, 80))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
-              <button onClick={() => setScale(s => Math.max(s - 5, 5))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+          <div style={{ position: 'absolute', right: '10px', top: '10px', zIndex: 5, width: '180px', textAlign: 'left' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#1c1c1e', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  ⚙️ Управление видом
+              </div>
+              <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', border: '1px solid #e5e5ea', overflow: 'hidden' }}>
+                  
+                  {/* Кнопка диагоналей */}
+                  <button onClick={() => setShowDiags(!showDiags)} style={{ width: '100%', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', border: 'none', borderBottom: '1px solid #f2f2f7', fontSize: '12px', fontWeight: '700', color: '#1c1c1e', cursor: 'pointer', transition: '0.2s' }}>
+                      <span style={{ fontSize: '16px' }}>{showDiags ? '👁' : '👓'}</span>
+                      {showDiags ? 'Скрыть диагонали' : 'Показ. диагонали'}
+                  </button>
+                  
+                  {/* Блок зума */}
+                  <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fcfcfc' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '800', color: '#8e8e93', textTransform: 'uppercase' }}>🔍 Масштаб:</span>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                          <button onClick={() => setScale(s => Math.min(s + 5, 80))} style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1px solid #e5e5ea', background: '#fff', fontSize: '18px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>+</button>
+                          <button onClick={() => setScale(s => Math.max(s - 5, 5))} style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1px solid #e5e5ea', background: '#fff', fontSize: '18px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>-</button>
+                      </div>
+                  </div>
+
+              </div>
           </div>
       )}
       
@@ -733,21 +750,19 @@ function App() {
   const [activeTab, setActiveTab] = useState('calc')
   const [lang, setLang] = useState('ru');
   const [userId, setUserId] = useState(null);
-  const [isTelegram, setIsTelegram] = useState(true); // ⭐️ НОВОЕ СОСТОЯНИЕ
+  const [isTelegram, setIsTelegram] = useState(true);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
-    // ⭐️ Проверяем, есть ли initData (она есть ТОЛЬКО если открыто внутри Telegram)
     if (tg && tg.initData) {
       tg.ready(); tg.expand();
       const user = tg.initDataUnsafe?.user;
       if (user) { setUserId(user.id); setLang(user.language_code === 'uk' ? 'uk' : 'ru'); }
     } else {
-      setIsTelegram(false); // ⭐️ Блокируем доступ!
+      setIsTelegram(false); 
     }
   }, []);
 
-  // ⭐️ ЕСЛИ ЗАШЛИ ИЗ ОБЫЧНОГО БРАУЗЕРА — ПОКАЗЫВАЕМ ЗАГЛУШКУ
   if (!isTelegram) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', padding: '20px', textAlign: 'center', background: '#f5f5f7' }}>
@@ -880,7 +895,6 @@ function App() {
               <button onClick={(e) => removeRoom(room.id, e)} style={{ background: 'none', border: 'none', color: '#ff3b30', fontSize: '22px' }}>🗑</button>
             </div>
             
-            {/* ⭐️ НОВАЯ ЛОГИКА: ВКЛАДКИ ПРЯЧУТСЯ, НО НЕ УДАЛЯЮТСЯ ИЗ ПАМЯТИ ⭐️ */}
             <div style={{ display: expandedRoomId === room.id ? 'block' : 'none', animation: 'slideDown 0.2s ease-out' }}>
                 <div>
                   <div style={styles.subHeader} onClick={() => setExpandedSubSec(expandedSubSec === 'geom' ? null : 'geom')}>
