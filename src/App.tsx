@@ -22,16 +22,17 @@ function App() {
 
   const t = (key) => T[lang]?.[key] || T['ru'][key];
 
+  // ⭐️ ИСПРАВЛЕНО: Теперь id точно совпадают с ключами твоего прайса в Питоне!
   const options = {
     canvases: [
-      { id: 'matte_white', name: 'Белый Матовый (MSD)' },
-      { id: 'msd_premium_320_м2', name: 'MSD Premium' },
-      { id: 'black', name: 'Черный Матовый' }
+      { id: 'полотно_м2', name: 'Белый Матовый (MSD)' },
+      { id: 'msd_premium_320_м2', name: 'MSD Premium (Глянец)' },
+      { id: 'черный_матовый_м2', name: 'Черный Матовый' }
     ],
     profiles: [
-      { id: 'standard', name: 'Стандартный (ПВХ)' },
-      { id: 'shadow', name: 'Теневой (6 мм)' },
-      { id: 'floating', name: 'Парящий' }
+      { id: 'профиль_м', name: 'Стандартный (ПВХ)' },
+      { id: 'профиль_теневой_мп', name: 'Теневой (6 мм)' },
+      { id: 'профиль_парящий_мп', name: 'Парящий' }
     ],
     cornices: [
       { id: 'none', name: 'Нет' },
@@ -41,9 +42,10 @@ function App() {
     ]
   };
 
+  // ⭐️ Обновили ключи и для локального просчета в приложении
   const [prices] = useState({
-    canvas: { matte_white: 330, msd_premium_320_м2: 350, black: 400 },
-    profile: { standard: 60, shadow: 350, floating: 500 },
+    canvas: { 'полотно_м2': 330, 'msd_premium_320_м2': 350, 'черный_матовый_м2': 400 },
+    profile: { 'профиль_м': 60, 'профиль_теневой_мп': 350, 'профиль_парящий_мп': 500 },
     cornices: { 'none': 0, 'карниз_м': 1200, 'карниз_q5_мп': 1500, 'карниз_q10_мп': 2200 },
     light: 250, chand: 300, corner: 50, pipe: 200, track: 2000
   });
@@ -62,15 +64,16 @@ function App() {
   };
 
   const CalculatorScreen = () => {
+    // ⭐️ Установили дефолтные значения на новые правильные ключи
     const [rooms, setRooms] = useState([
-      { id: Date.now(), name: 'Помещение 1', area: '18', perim: '16', corners: '4', canvas: 'matte_white', profile: 'standard', spots: '6', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '' }
+      { id: Date.now(), name: 'Помещение 1', area: '18', perim: '16', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '6', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '' }
     ]);
     const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
     const [expandedSubSec, setExpandedSubSec] = useState('geom'); 
 
     const updateRoom = (id, field, value) => { setRooms(rooms.map(r => r.id === id ? { ...r, [field]: value } : r)); };
     const addRoom = () => {
-      const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '', perim: '', corners: '4', canvas: 'matte_white', profile: 'standard', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '' };
+      const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '', perim: '', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '' };
       setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom');
     };
 
