@@ -233,7 +233,8 @@ const RoomCanvas = ({ room, updateRoom }) => {
   };
 
   useEffect(() => {
-    if (viewMode !== '2d' || !canvasRef.current) return;
+    // ⭐️ ИСПРАВЛЕНИЕ БАГА: Холст рисуется ВСЕГДА, даже в 3D режиме!
+    if (!canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -343,7 +344,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
        const label = String.fromCharCode(65 + i); 
        ctx.fillStyle = '#1c1c1e'; ctx.font = '900 16px system-ui'; ctx.fillText(label, sp.x + 18, sp.y - 12);
     }
-  }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode, room.activeDiags, selectedDiagPt, viewMode, els, activeTrackPts, draggingElement]);
+  }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode, room.activeDiags, selectedDiagPt, els, activeTrackPts, draggingElement]);
 
   const updateAreaPerimAndSave = (newPts, newDiags = null) => {
     let perim = 0, area = 0;
@@ -556,15 +557,17 @@ const RoomCanvas = ({ room, updateRoom }) => {
       </div>
 
       <div style={{position: 'relative'}}>
-        {viewMode === '2d' ? (
-            // ⭐️ ДОБАВИЛИ ID ДЛЯ СКРИНШОТА ⭐️
-            <canvas id={`canvas-${room.id}`} ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} 
-                style={{ width: '100%', maxWidth: '400px', height: 'auto', background: '#fafafa', borderRadius: '12px', 
-                    border: ['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? '2px solid #34c759' : (mode === 'remove' ? '2px solid #ff3b30' : '1px solid #e5e5ea'), 
-                    touchAction: 'none', cursor: 'default'
-                }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}
-            />
-        ) : (
+        {/* ⭐️ ХОЛСТ РИСУЕТСЯ ВСЕГДА, НО СКРЫВАЕТСЯ В 3D (display: none) ⭐️ */}
+        <canvas id={`canvas-${room.id}`} ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} 
+            style={{ 
+                display: viewMode === '2d' ? 'block' : 'none',
+                width: '100%', maxWidth: '400px', height: 'auto', background: '#fafafa', borderRadius: '12px', 
+                border: ['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? '2px solid #34c759' : (mode === 'remove' ? '2px solid #ff3b30' : '1px solid #e5e5ea'), 
+                touchAction: 'none', cursor: 'default'
+            }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}
+        />
+        
+        {viewMode === '3d' && (
             <ThreeDPreview roomPts={pts} elements={room.elements} />
         )}
         
@@ -746,32 +749,24 @@ function App() {
       else alert("Должно остаться хотя бы одно помещение!");
     };
 
-    // ⭐️ ИЗМЕНЕННАЯ ФУНКЦИЯ ОТПРАВКИ В БОТ (ДЕЛАЕТ СКРИНШОТ ХОЛСТА) ⭐️
     const sendToBot = async () => {
-      // Пробегаемся по комнатам и "фоткаем" каждый холст
       const roomsWithImages = rooms.map(room => {
         const canvas = document.getElementById(`canvas-${room.id}`);
         let imageBase64 = '';
         if (canvas) {
-            // Создаем временный холст, чтобы залить белый фон (иначе в PDF будет прозрачный/черный фон)
             const tmpCanvas = document.createElement('canvas');
             tmpCanvas.width = canvas.width;
             tmpCanvas.height = canvas.height;
             const ctx = tmpCanvas.getContext('2d');
-            ctx.fillStyle = '#ffffff'; // Белый фон
+            ctx.fillStyle = '#ffffff'; 
             ctx.fillRect(0, 0, tmpCanvas.width, tmpCanvas.height);
             ctx.drawImage(canvas, 0, 0);
-            imageBase64 = tmpCanvas.toDataURL('image/png'); // Превращаем в строку Base64
+            imageBase64 = tmpCanvas.toDataURL('image/png');
         }
-        return { ...room, image: imageBase64 }; // Добавляем картинку к данным комнаты
+        return { ...room, image: imageBase64 }; 
       });
 
-      // Отправляем на бэкенд данные ВМЕСТЕ С КАРТИНКОЙ
-      await fetch('https://potolokpro777bot.website/api/calculate', { 
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify({ userId, rooms: roomsWithImages }) 
-      });
+      await fetch('https://potolokpro777bot.website/api/calculate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, rooms: roomsWithImages }) });
       window.Telegram?.WebApp?.close();
     };
 
