@@ -185,9 +185,9 @@ const ThreeDPreview = ({ roomPts, elements }) => {
 };
 
 // ==========================================
-// 🎨 2D ХОЛСТ С ОБОРУДОВАНИЕМ
+// 🎨 2D ХОЛСТ С ОБОРУДОВАНИЕМ (С ДОП. ОПЦИЕЙ options)
 // ==========================================
-const RoomCanvas = ({ room, updateRoom }) => {
+const RoomCanvas = ({ room, updateRoom, options }) => {
   const canvasRef = useRef(null);
   const [scale, setScale] = useState(30); 
   const [showDiags, setShowDiags] = useState(true);
@@ -233,8 +233,14 @@ const RoomCanvas = ({ room, updateRoom }) => {
   };
 
   useEffect(() => {
-    // ⭐️ ИСПРАВЛЕНИЕ БАГА: Холст рисуется ВСЕГДА, даже в 3D режиме!
     if (!canvasRef.current) return;
+    
+    // Получаем красивое название материала для вывода на холст
+    const canvasName = options.canvases.find(c => c.id === room.canvas)?.name || 'Полотно';
+    const screenPts = pts.map(toScreen);
+    const manual = room.manualWalls || {}; 
+
+    // === 1. ГЛАВНЫЙ ХОЛСТ ДЛЯ МОНТАЖНИКОВ (С ОБОРУДОВАНИЕМ) ===
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -243,9 +249,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
     const step = scale; const startX = offset.x % step; const startY = offset.y % step;
     for(let i = startX; i < canvas.width; i += step) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
     for(let i = startY; i < canvas.height; i += step) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
-
-    const screenPts = pts.map(toScreen);
-    const manual = room.manualWalls || {}; 
 
     ctx.beginPath(); ctx.moveTo(screenPts[0].x, screenPts[0].y);
     for(let i = 1; i < screenPts.length; i++) ctx.lineTo(screenPts[i].x, screenPts[i].y);
@@ -344,7 +347,74 @@ const RoomCanvas = ({ room, updateRoom }) => {
        const label = String.fromCharCode(65 + i); 
        ctx.fillStyle = '#1c1c1e'; ctx.font = '900 16px system-ui'; ctx.fillText(label, sp.x + 18, sp.y - 12);
     }
-  }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode, room.activeDiags, selectedDiagPt, els, activeTrackPts, draggingElement]);
+
+    // ⭐️ ПОДПИСЬ НА МОНТАЖНОМ ЧЕРТЕЖЕ
+    ctx.fillStyle = '#1c1c1e'; ctx.font = '900 16px system-ui'; ctx.textAlign = 'left';
+    ctx.fillText(`Монтаж: ${room.name}`, 10, 24);
+    ctx.fillStyle = '#007aff'; ctx.font = 'bold 12px system-ui'; ctx.fillText(canvasName, 10, 42);
+
+
+    // === 2. СКРЫТЫЙ ХОЛСТ ДЛЯ ЗАВОДА (ПРОИЗВОДСТВО) ===
+    const factCanvas = document.getElementById(`canvas-factory-${room.id}`);
+    if (factCanvas) {
+        const fCtx = factCanvas.getContext('2d');
+        fCtx.fillStyle = '#ffffff'; 
+        fCtx.fillRect(0, 0, factCanvas.width, factCanvas.height);
+
+        fCtx.strokeStyle = '#e5e5ea'; fCtx.lineWidth = 1;
+        for(let i = startX; i < factCanvas.width; i += step) { fCtx.beginPath(); fCtx.moveTo(i, 0); fCtx.lineTo(i, factCanvas.height); fCtx.stroke(); }
+        for(let i = startY; i < factCanvas.height; i += step) { fCtx.beginPath(); fCtx.moveTo(0, i); fCtx.lineTo(factCanvas.width, i); fCtx.stroke(); }
+
+        fCtx.beginPath(); fCtx.moveTo(screenPts[0].x, screenPts[0].y);
+        for(let i = 1; i < screenPts.length; i++) fCtx.lineTo(screenPts[i].x, screenPts[i].y);
+        fCtx.closePath();
+        fCtx.fillStyle = 'rgba(0, 122, 255, 0.08)'; fCtx.fill();
+        fCtx.strokeStyle = '#007aff'; fCtx.lineWidth = 3; fCtx.stroke();
+
+        if (showDiags && room.activeDiags) {
+            fCtx.setLineDash([5, 5]); fCtx.strokeStyle = 'rgba(255, 149, 0, 0.6)'; fCtx.lineWidth = 1.5; fCtx.textAlign = 'center';
+            room.activeDiags.forEach((diag) => {
+                let i = diag.charCodeAt(0) - 65; let j = diag.charCodeAt(1) - 65;
+                if (i >= pts.length || j >= pts.length || i < 0 || j < 0) return;
+                let sp1 = screenPts[i], sp2 = screenPts[j];
+                fCtx.beginPath(); fCtx.moveTo(sp1.x, sp1.y); fCtx.lineTo(sp2.x, sp2.y); fCtx.stroke();
+                let dist = Math.sqrt((pts[j].x - pts[i].x)**2 + (pts[j].y - pts[i].y)**2);
+                let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
+                let displayDist = manual[diag] !== undefined && manual[diag] !== '' ? manual[diag] : dist.toFixed(2);
+                fCtx.fillStyle = 'rgba(255, 255, 255, 0.9)'; fCtx.fillRect(mx - 28, my - 10, 56, 18);
+                fCtx.fillStyle = '#ff9500'; fCtx.font = 'bold 11px system-ui'; fCtx.fillText(`${diag}: ${displayDist}м`, mx, my + 3);
+            });
+            fCtx.setLineDash([]); 
+        }
+
+        fCtx.fillStyle = '#1c1c1e'; fCtx.font = 'bold 12px system-ui'; fCtx.textAlign = 'center';
+        for(let i = 0; i < pts.length; i++) {
+           let p1 = pts[i], p2 = pts[(i+1) % pts.length];
+           let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
+           let sp1 = screenPts[i], sp2 = screenPts[(i+1) % screenPts.length];
+           let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
+           let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length); 
+           let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2);
+           fCtx.fillStyle = 'rgba(255,255,255,0.85)'; fCtx.fillRect(mx - 32, my - 12, 64, 18); 
+           fCtx.fillStyle = '#007aff'; fCtx.fillText(`${name}: ${displayDist}м`, mx, my + 2);
+        }
+
+        for(let i = 0; i < screenPts.length; i++) {
+           let sp = screenPts[i];
+           fCtx.beginPath(); fCtx.arc(sp.x, sp.y, 10, 0, 2 * Math.PI);
+           fCtx.fillStyle = '#ffffff'; fCtx.fill(); 
+           fCtx.lineWidth = 3; fCtx.strokeStyle = '#007aff'; fCtx.stroke();
+           const label = String.fromCharCode(65 + i); 
+           fCtx.fillStyle = '#1c1c1e'; fCtx.font = '900 16px system-ui'; fCtx.fillText(label, sp.x + 18, sp.y - 12);
+        }
+
+        // ⭐️ ПОДПИСЬ НА ЗАВОДСКОМ ЧЕРТЕЖЕ
+        fCtx.fillStyle = '#1c1c1e'; fCtx.font = '900 16px system-ui'; fCtx.textAlign = 'left';
+        fCtx.fillText(`Производство: ${room.name}`, 10, 24);
+        fCtx.fillStyle = '#ff9500'; fCtx.font = 'bold 12px system-ui'; fCtx.fillText(canvasName, 10, 42);
+    }
+
+  }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode, room.activeDiags, selectedDiagPt, viewMode, els, activeTrackPts, draggingElement, room.canvas, room.name, options]);
 
   const updateAreaPerimAndSave = (newPts, newDiags = null) => {
     let perim = 0, area = 0;
@@ -557,7 +627,8 @@ const RoomCanvas = ({ room, updateRoom }) => {
       </div>
 
       <div style={{position: 'relative'}}>
-        {/* ⭐️ ХОЛСТ РИСУЕТСЯ ВСЕГДА, НО СКРЫВАЕТСЯ В 3D (display: none) ⭐️ */}
+        
+        {/* ⭐️ ОСНОВНОЙ ХОЛСТ ДЛЯ ИНТЕРФЕЙСА ⭐️ */}
         <canvas id={`canvas-${room.id}`} ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} 
             style={{ 
                 display: viewMode === '2d' ? 'block' : 'none',
@@ -566,6 +637,9 @@ const RoomCanvas = ({ room, updateRoom }) => {
                 touchAction: 'none', cursor: 'default'
             }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}
         />
+
+        {/* ⭐️ СКРЫТЫЙ ХОЛСТ ДЛЯ ЗАВОДА ⭐️ */}
+        <canvas id={`canvas-factory-${room.id}`} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} style={{ display: 'none' }} />
         
         {viewMode === '3d' && (
             <ThreeDPreview roomPts={pts} elements={room.elements} />
@@ -749,24 +823,36 @@ function App() {
       else alert("Должно остаться хотя бы одно помещение!");
     };
 
+    // ⭐️ УЛУЧШЕННАЯ ФУНКЦИЯ: ДЕЛАЕТ 2 СКРИНШОТА СРАЗУ (ИНСТАЛЛЯЦИЯ И ЗАВОД)
     const sendToBot = async () => {
       const roomsWithImages = rooms.map(room => {
-        const canvas = document.getElementById(`canvas-${room.id}`);
-        let imageBase64 = '';
-        if (canvas) {
-            const tmpCanvas = document.createElement('canvas');
-            tmpCanvas.width = canvas.width;
-            tmpCanvas.height = canvas.height;
-            const ctx = tmpCanvas.getContext('2d');
-            ctx.fillStyle = '#ffffff'; 
-            ctx.fillRect(0, 0, tmpCanvas.width, tmpCanvas.height);
-            ctx.drawImage(canvas, 0, 0);
-            imageBase64 = tmpCanvas.toDataURL('image/png');
+        const instCanvas = document.getElementById(`canvas-${room.id}`);
+        const factCanvas = document.getElementById(`canvas-factory-${room.id}`);
+        
+        let installerBase64 = '';
+        let factoryBase64 = '';
+        
+        if (instCanvas) {
+            const tmp1 = document.createElement('canvas');
+            tmp1.width = instCanvas.width; tmp1.height = instCanvas.height;
+            const c1 = tmp1.getContext('2d');
+            c1.fillStyle = '#ffffff'; c1.fillRect(0, 0, tmp1.width, tmp1.height);
+            c1.drawImage(instCanvas, 0, 0);
+            installerBase64 = tmp1.toDataURL('image/png');
         }
-        return { ...room, image: imageBase64 }; 
+        
+        if (factCanvas) {
+            factoryBase64 = factCanvas.toDataURL('image/png');
+        }
+        
+        return { ...room, image_installer: installerBase64, image_factory: factoryBase64 }; 
       });
 
-      await fetch('https://potolokpro777bot.website/api/calculate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, rooms: roomsWithImages }) });
+      await fetch('https://potolokpro777bot.website/api/calculate', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ userId, rooms: roomsWithImages }) 
+      });
       window.Telegram?.WebApp?.close();
     };
 
@@ -794,7 +880,7 @@ function App() {
                   {expandedSubSec === 'geom' && (
                     <div style={styles.subContent}>
                       
-                      <RoomCanvas room={room} updateRoom={updateRoom} />
+                      <RoomCanvas room={room} updateRoom={updateRoom} options={options} />
                       
                       <div style={{...styles.inputRow, marginTop: '20px'}}><span>{t('area')}</span><input type="number" value={room.area} onChange={e => updateRoom(room.id, 'area', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('perim')}</span><input type="number" value={room.perim} onChange={e => updateRoom(room.id, 'perim', e.target.value)} style={styles.numInput} placeholder="0" /></div>
