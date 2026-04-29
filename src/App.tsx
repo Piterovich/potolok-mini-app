@@ -2,14 +2,29 @@ import { useState, useEffect, useRef } from 'react'
 import './App.css'
 
 const T = {
-  ru: { calc: "Расчет", addRoom: "Добавить помещение", toBot: "В бот 🚀", area: "Площадь (м²)", perim: "Периметр (м)", corners: "Углы (шт)", geom: "📏 Геометрия", materials: "🎨 Полотно и Профиль", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", spots: "Точечные (шт)", chands: "Люстры (шт)", track: "Магн. трек (м)", corniceType: "Вид карниза", corniceLen: "Метраж (м)", pipe: "Обход труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФИЛЬ", pre: "ПРЕДВАРИТЕЛЬНО:", dragInfo: "👆 Потяните углы ИЛИ введите цифры ниже" },
-  uk: { calc: "Розрахунок", addRoom: "Додати приміщення", toBot: "В бот 🚀", area: "Площа (м²)", perim: "Периметр (м)", corners: "Кути (шт)", geom: "📏 Геометрія", materials: "🎨 Полотно та Профіль", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", spots: "Точкові (шт)", chands: "Люстри (шт)", track: "Магн. трек (м)", corniceType: "Вид карнизу", corniceLen: "Метраж (м)", pipe: "Обхід труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФІЛЬ", pre: "ПОПЕРЕДНЬО:", dragInfo: "👆 Потягніть кути АБО введіть цифри нижче" }
+  ru: { calc: "Расчет", addRoom: "Добавить помещение", toBot: "В бот 🚀", area: "Площадь (м²)", perim: "Периметр (м)", corners: "Углы (шт)", geom: "📏 Геометрия", materials: "🎨 Полотно и Профиль", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", spots: "Точечные (шт)", chands: "Люстры (шт)", track: "Магн. трек (м)", corniceType: "Вид карниза", corniceLen: "Метраж (м)", pipe: "Обход труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФИЛЬ", pre: "ПРЕДВАРИТЕЛЬНО:" },
+  uk: { calc: "Розрахунок", addRoom: "Додати приміщення", toBot: "В бот 🚀", area: "Площа (м²)", perim: "Периметр (м)", corners: "Кути (шт)", geom: "📏 Геометрія", materials: "🎨 Полотно та Профіль", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", spots: "Точкові (шт)", chands: "Люстри (шт)", track: "Магн. трек (м)", corniceType: "Вид карнизу", corniceLen: "Метраж (м)", pipe: "Обхід труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФІЛЬ", pre: "ПОПЕРЕДНЬО:" }
 };
 
 // ==========================================
-// 🧠 ФИЗИЧЕСКИЙ ДВИЖОК + АВТО-ЦЕНТРИРОВАНИЕ
+// 🧠 МАТЕМАТИКА И ФИЗИЧЕСКИЙ ДВИЖОК
 // ==========================================
 const getDist = (p1, p2) => Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
+
+// Функция поиска расстояния от точки до линии (чтобы знать, какую стену разломить при клике)
+const getDistToSegment = (p, p1, p2) => {
+    let A = p.x - p1.x, B = p.y - p1.y;
+    let C = p2.x - p1.x, D = p2.y - p1.y;
+    let dot = A * C + B * D;
+    let lenSq = C * C + D * D;
+    let param = lenSq !== 0 ? dot / lenSq : -1;
+    let xx, yy;
+    if (param < 0) { xx = p1.x; yy = p1.y; }
+    else if (param > 1) { xx = p2.x; yy = p2.y; }
+    else { xx = p1.x + param * C; yy = p1.y + param * D; }
+    let dx = p.x - xx, dy = p.y - yy;
+    return Math.sqrt(dx * dx + dy * dy);
+};
 
 const centerShape = (pts) => {
     let minX = Math.min(...pts.map(p => p.x));
@@ -39,11 +54,9 @@ const solveGeometry = (pts, manualData) => {
       let isM1 = manualData[d1] !== undefined && manualData[d1] !== '';
       let t1 = isM1 ? parseFloat(manualData[d1]) : getDist(pts[0], pts[2]);
       let w1 = isM1 ? 0.9 : 0.02; 
-      
       let isM2 = manualData[d2] !== undefined && manualData[d2] !== '';
       let t2 = isM2 ? parseFloat(manualData[d2]) : getDist(pts[1], pts[3]);
       let w2 = isM2 ? 0.9 : 0.02;
-      
       if (!isNaN(t1) && t1 > 0) springs.push({i:0, j:2, target: t1, weight: w1});
       if (!isNaN(t2) && t2 > 0) springs.push({i:1, j:3, target: t2, weight: w2});
   } else if (pts.length > 4) {
@@ -88,8 +101,11 @@ const RoomCanvas = ({ room, updateRoom }) => {
   const canvasRef = useRef(null);
   const [scale, setScale] = useState(30); 
   const [showDiags, setShowDiags] = useState(true);
+  
+  // ⭐️ НОВОЕ: Состояние инструмента (режима)
+  const [mode, setMode] = useState('drag'); // 'drag' | 'add' | 'remove'
+  
   const offset = { x: 150, y: 130 }; 
-
   const [pts, setPts] = useState(room.logicalPts || centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]));
   const [draggingIdx, setDraggingIdx] = useState(null);
 
@@ -120,9 +136,11 @@ const RoomCanvas = ({ room, updateRoom }) => {
     ctx.moveTo(screenPts[0].x, screenPts[0].y);
     for(let i = 1; i < screenPts.length; i++) ctx.lineTo(screenPts[i].x, screenPts[i].y);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(0, 122, 255, 0.08)'; 
+    
+    // Если режим добавления - подсвечиваем зону чуть ярче
+    ctx.fillStyle = mode === 'add' ? 'rgba(52, 199, 89, 0.1)' : (mode === 'remove' ? 'rgba(255, 59, 48, 0.05)' : 'rgba(0, 122, 255, 0.08)'); 
     ctx.fill();
-    ctx.strokeStyle = '#007aff';
+    ctx.strokeStyle = mode === 'add' ? '#34c759' : '#007aff';
     ctx.lineWidth = 3;
     ctx.stroke();
 
@@ -179,7 +197,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
 
        ctx.fillStyle = 'rgba(255,255,255,0.85)';
        ctx.fillRect(mx - 32, my - 12, 64, 18); 
-       ctx.fillStyle = '#007aff';
+       ctx.fillStyle = mode === 'add' ? '#34c759' : '#007aff';
        ctx.fillText(`${name}: ${displayDist}м`, mx, my + 2);
     }
 
@@ -188,7 +206,11 @@ const RoomCanvas = ({ room, updateRoom }) => {
        let sp = screenPts[i];
        ctx.beginPath();
        ctx.arc(sp.x, sp.y, 10, 0, 2 * Math.PI);
-       ctx.fillStyle = draggingIdx === i ? '#ff3b30' : '#ffffff';
+       
+       // В режиме удаления красим точки в красный
+       if (mode === 'remove') ctx.fillStyle = '#ff3b30';
+       else ctx.fillStyle = draggingIdx === i ? '#ff3b30' : '#ffffff';
+       
        ctx.fill();
        ctx.lineWidth = 3;
        ctx.strokeStyle = '#ff3b30';
@@ -199,7 +221,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
        ctx.font = '900 16px system-ui';
        ctx.fillText(label, sp.x + 18, sp.y - 12);
     }
-  }, [pts, draggingIdx, scale, showDiags, room.manualWalls]);
+  }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode]);
 
   const updateAreaPerimAndSave = (newPts) => {
     let perim = 0, area = 0;
@@ -211,7 +233,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
     updateRoom(room.id, 'manualWalls', {}); 
     updateRoom(room.id, 'area', Math.abs(area / 2).toFixed(2));
     updateRoom(room.id, 'perim', perim.toFixed(2));
-    updateRoom(room.id, 'corners', newPts.length.toString()); // АВТО-ОБНОВЛЕНИЕ инпута "Углы"
+    updateRoom(room.id, 'corners', newPts.length.toString()); 
     updateRoom(room.id, 'logicalPts', newPts); 
   };
 
@@ -225,6 +247,43 @@ const RoomCanvas = ({ room, updateRoom }) => {
   const handlePointerDown = (e) => {
     const pos = getMousePos(e);
     const screenPts = pts.map(toScreen);
+
+    // ⭐️ РЕЖИМ УДАЛЕНИЯ ⭐️
+    if (mode === 'remove') {
+        const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 25);
+        if (hitIndex !== -1) {
+            if (pts.length <= 3) return alert("Минимум 3 угла!");
+            const newPts = pts.filter((_, idx) => idx !== hitIndex);
+            updateAreaPerimAndSave(centerShape(newPts));
+            setMode('drag'); // Возвращаемся в обычный режим
+        }
+        return;
+    }
+
+    // ⭐️ РЕЖИМ ДОБАВЛЕНИЯ ⭐️
+    if (mode === 'add') {
+        if (pts.length >= 26) return alert("Достигнут предел углов (Z)");
+        const logicalPos = toLogical(pos);
+        
+        // Ищем, к какой стене ближе всего кликнул пользователь
+        let minDist = Infinity;
+        let insertIdx = -1;
+        for(let i=0; i<pts.length; i++) {
+            let p1 = pts[i];
+            let p2 = pts[(i+1)%pts.length];
+            let dist = getDistToSegment(logicalPos, p1, p2);
+            if (dist < minDist) { minDist = dist; insertIdx = i; }
+        }
+        
+        // Вставляем точку
+        const newPts = [...pts];
+        newPts.splice(insertIdx + 1, 0, logicalPos);
+        updateAreaPerimAndSave(centerShape(newPts));
+        setMode('drag'); // Возвращаемся в обычный режим
+        return;
+    }
+
+    // ОБЫЧНЫЙ РЕЖИМ ПЕРЕТАСКИВАНИЯ
     const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 25); 
     if (hitIndex !== -1) {
         setDraggingIdx(hitIndex);
@@ -233,7 +292,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
   };
 
   const handlePointerMove = (e) => {
-    if (draggingIdx === null) return;
+    if (draggingIdx === null || mode !== 'drag') return;
     const pos = getMousePos(e);
     const newPts = [...pts];
     newPts[draggingIdx] = toLogical(pos);
@@ -247,62 +306,54 @@ const RoomCanvas = ({ room, updateRoom }) => {
     updateAreaPerimAndSave(centerShape(pts));
   };
 
-  // ⭐️ ЛОГИКА ДОБАВЛЕНИЯ ТОЧКИ ⭐️
-  const handleAddCorner = () => {
-    if (pts.length >= 26) return alert("Достигнут предел углов (Z)");
-    let maxD = -1, idx = -1;
-    for(let i=0; i<pts.length; i++) {
-        let d = getDist(pts[i], pts[(i+1)%pts.length]);
-        if(d > maxD) { maxD = d; idx = i; }
-    }
-    
-    let p1 = pts[idx], p2 = pts[(idx+1)%pts.length];
-    let dx = p2.x - p1.x, dy = p2.y - p1.y;
-    let len = Math.sqrt(dx*dx + dy*dy);
-    
-    // Создаем новую точку ровно посередине стены, и сдвигаем её наружу на 0.5 метра
-    let nx = (p1.x + p2.x)/2 - (dy/len)*0.5;
-    let ny = (p1.y + p2.y)/2 + (dx/len)*0.5;
-    
-    let newPts = [...pts];
-    newPts.splice(idx+1, 0, {x: nx, y: ny});
-    updateAreaPerimAndSave(centerShape(newPts));
-  };
-
-  // ⭐️ ЛОГИКА УДАЛЕНИЯ ТОЧКИ ⭐️
-  const handleRemoveCorner = () => {
-    if (pts.length <= 3) return alert("У помещения должно быть минимум 3 угла!");
-    let newPts = pts.slice(0, pts.length - 1); // Удаляем последний угол
-    updateAreaPerimAndSave(centerShape(newPts));
-  };
-
   return (
     <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
+      
+      {/* СТРОКА С ПОДСКАЗКОЙ РЕЖИМА */}
+      <div style={{ height: '24px', marginBottom: '8px', fontWeight: '800', fontSize: '13px', color: mode === 'add' ? '#34c759' : (mode === 'remove' ? '#ff3b30' : '#8e8e93') }}>
+          {mode === 'add' ? '👆 Кликните в нужное место чертежа' : (mode === 'remove' ? '👆 Кликните на угол, который нужно удалить' : '👆 Потяните углы ИЛИ введите цифры ниже')}
+      </div>
+
       <canvas 
         ref={canvasRef} 
         width={300} 
         height={260} 
-        style={{ background: '#fafafa', borderRadius: '12px', border: '1px solid #e5e5ea', touchAction: 'none' }}
+        style={{ 
+            background: '#fafafa', 
+            borderRadius: '12px', 
+            border: mode === 'add' ? '2px solid #34c759' : (mode === 'remove' ? '2px solid #ff3b30' : '1px solid #e5e5ea'), 
+            touchAction: 'none',
+            cursor: mode === 'add' ? 'crosshair' : (mode === 'remove' ? 'no-drop' : 'default')
+        }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
       />
+      
       <button 
         onClick={() => setShowDiags(!showDiags)} 
-        style={{ position: 'absolute', left: '10px', top: '10px', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '12px', color: '#1c1c1e', fontWeight: 'bold' }}>
+        style={{ position: 'absolute', left: '10px', top: '40px', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '12px', color: '#1c1c1e', fontWeight: 'bold' }}>
         {showDiags ? '👁 Скрыть диагонали' : '👁 Показать диагонали'}
       </button>
 
-      <div style={{ position: 'absolute', right: '10px', top: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ position: 'absolute', right: '10px', top: '40px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
          <button onClick={() => setScale(s => Math.min(s + 5, 80))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
          <button onClick={() => setScale(s => Math.max(s - 5, 5))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
       </div>
 
-      {/* НОВЫЕ КНОПКИ УГЛОВ */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '12px' }}>
-        <button onClick={handleAddCorner} style={{ flex: 1, padding: '10px', background: '#e5f1ff', color: '#007aff', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '14px' }}>➕ Добавить угол</button>
-        <button onClick={handleRemoveCorner} style={{ flex: 1, padding: '10px', background: '#ffe5e5', color: '#ff3b30', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '14px' }}>➖ Удалить угол</button>
+      {/* ИНТЕРАКТИВНЫЕ КНОПКИ УГЛОВ */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '12px' }}>
+        <button 
+            onClick={() => setMode(mode === 'add' ? 'drag' : 'add')} 
+            style={{ flex: 1, padding: '12px', background: mode === 'add' ? '#34c759' : '#e5f1ff', color: mode === 'add' ? '#fff' : '#007aff', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '14px', transition: '0.2s' }}>
+            {mode === 'add' ? 'Отмена' : '➕ Добавить угол'}
+        </button>
+        <button 
+            onClick={() => setMode(mode === 'remove' ? 'drag' : 'remove')} 
+            style={{ flex: 1, padding: '12px', background: mode === 'remove' ? '#ff3b30' : '#ffe5e5', color: mode === 'remove' ? '#fff' : '#ff3b30', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '14px', transition: '0.2s' }}>
+            {mode === 'remove' ? 'Отмена' : '➖ Удалить угол'}
+        </button>
       </div>
     </div>
   );
@@ -448,7 +499,6 @@ function App() {
                     <div style={styles.subContent}>
                       
                       <RoomCanvas room={room} updateRoom={updateRoom} />
-                      <p style={{ textAlign: 'center', fontSize: '11px', color: '#8e8e93', marginTop: '10px', marginBottom: '15px' }}>{t('dragInfo')}</p>
 
                       <div style={{ background: '#f9f9fb', padding: '12px', borderRadius: '12px', marginBottom: '15px', border: '1px solid #e5e5ea' }}>
                         <span style={{...styles.label, marginBottom: '10px'}}>📐 ТОЧНЫЕ РАЗМЕРЫ (Стены и Диагонали):</span>
@@ -508,7 +558,6 @@ function App() {
                       <div style={styles.inputRow}><span>{t('perim')}</span><input type="number" value={room.perim} onChange={e => updateRoom(room.id, 'perim', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}>
                         <span>{t('corners')}</span>
-                        {/* Инпут теперь readOnly, он обновляется сам через кнопки чертежа */}
                         <input type="number" value={room.corners} readOnly style={{...styles.numInput, background: '#f2f2f7', color: '#8e8e93'}} placeholder="4" />
                       </div>
                     </div>
