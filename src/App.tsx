@@ -11,7 +11,6 @@ const T = {
 // ==========================================
 const getDist = (p1, p2) => Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
 
-// Функция поиска расстояния от точки до линии (чтобы знать, какую стену разломить при клике)
 const getDistToSegment = (p, p1, p2) => {
     let A = p.x - p1.x, B = p.y - p1.y;
     let C = p2.x - p1.x, D = p2.y - p1.y;
@@ -101,11 +100,14 @@ const RoomCanvas = ({ room, updateRoom }) => {
   const canvasRef = useRef(null);
   const [scale, setScale] = useState(30); 
   const [showDiags, setShowDiags] = useState(true);
-  
-  // ⭐️ НОВОЕ: Состояние инструмента (режима)
   const [mode, setMode] = useState('drag'); // 'drag' | 'add' | 'remove'
   
-  const offset = { x: 150, y: 130 }; 
+  // ⭐️ РАСТЯНУТЫЙ ХОЛСТ: Больше ширина и высота
+  const CANVAS_WIDTH = 340;
+  const CANVAS_HEIGHT = 320;
+  // Центр теперь смещен, чтобы фигура всегда была посередине нового холста
+  const offset = { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 }; 
+
   const [pts, setPts] = useState(room.logicalPts || centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]));
   const [draggingIdx, setDraggingIdx] = useState(null);
 
@@ -137,7 +139,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
     for(let i = 1; i < screenPts.length; i++) ctx.lineTo(screenPts[i].x, screenPts[i].y);
     ctx.closePath();
     
-    // Если режим добавления - подсвечиваем зону чуть ярче
     ctx.fillStyle = mode === 'add' ? 'rgba(52, 199, 89, 0.1)' : (mode === 'remove' ? 'rgba(255, 59, 48, 0.05)' : 'rgba(0, 122, 255, 0.08)'); 
     ctx.fill();
     ctx.strokeStyle = mode === 'add' ? '#34c759' : '#007aff';
@@ -207,7 +208,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
        ctx.beginPath();
        ctx.arc(sp.x, sp.y, 10, 0, 2 * Math.PI);
        
-       // В режиме удаления красим точки в красный
        if (mode === 'remove') ctx.fillStyle = '#ff3b30';
        else ctx.fillStyle = draggingIdx === i ? '#ff3b30' : '#ffffff';
        
@@ -237,35 +237,42 @@ const RoomCanvas = ({ room, updateRoom }) => {
     updateRoom(room.id, 'logicalPts', newPts); 
   };
 
+  // ⭐️ УМНАЯ ЛОГИКА КАСАНИЙ ДЛЯ РАСТЯНУТОГО ЭКРАНА
   const getMousePos = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
     const clientX = e.clientX || (e.touches && e.touches[0].clientX);
     const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-    return { x: clientX - rect.left, y: clientY - rect.top };
+    
+    // Если CSS сжал или растянул canvas, корректируем координаты!
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    return { 
+        x: (clientX - rect.left) * scaleX, 
+        y: (clientY - rect.top) * scaleY 
+    };
   };
 
   const handlePointerDown = (e) => {
     const pos = getMousePos(e);
     const screenPts = pts.map(toScreen);
 
-    // ⭐️ РЕЖИМ УДАЛЕНИЯ ⭐️
     if (mode === 'remove') {
         const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 25);
         if (hitIndex !== -1) {
             if (pts.length <= 3) return alert("Минимум 3 угла!");
             const newPts = pts.filter((_, idx) => idx !== hitIndex);
             updateAreaPerimAndSave(centerShape(newPts));
-            setMode('drag'); // Возвращаемся в обычный режим
+            setMode('drag'); 
         }
         return;
     }
 
-    // ⭐️ РЕЖИМ ДОБАВЛЕНИЯ ⭐️
     if (mode === 'add') {
         if (pts.length >= 26) return alert("Достигнут предел углов (Z)");
         const logicalPos = toLogical(pos);
         
-        // Ищем, к какой стене ближе всего кликнул пользователь
         let minDist = Infinity;
         let insertIdx = -1;
         for(let i=0; i<pts.length; i++) {
@@ -275,15 +282,13 @@ const RoomCanvas = ({ room, updateRoom }) => {
             if (dist < minDist) { minDist = dist; insertIdx = i; }
         }
         
-        // Вставляем точку
         const newPts = [...pts];
         newPts.splice(insertIdx + 1, 0, logicalPos);
         updateAreaPerimAndSave(centerShape(newPts));
-        setMode('drag'); // Возвращаемся в обычный режим
+        setMode('drag'); 
         return;
     }
 
-    // ОБЫЧНЫЙ РЕЖИМ ПЕРЕТАСКИВАНИЯ
     const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 25); 
     if (hitIndex !== -1) {
         setDraggingIdx(hitIndex);
@@ -309,16 +314,18 @@ const RoomCanvas = ({ room, updateRoom }) => {
   return (
     <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
       
-      {/* СТРОКА С ПОДСКАЗКОЙ РЕЖИМА */}
       <div style={{ height: '24px', marginBottom: '8px', fontWeight: '800', fontSize: '13px', color: mode === 'add' ? '#34c759' : (mode === 'remove' ? '#ff3b30' : '#8e8e93') }}>
           {mode === 'add' ? '👆 Кликните в нужное место чертежа' : (mode === 'remove' ? '👆 Кликните на угол, который нужно удалить' : '👆 Потяните углы ИЛИ введите цифры ниже')}
       </div>
 
       <canvas 
         ref={canvasRef} 
-        width={300} 
-        height={260} 
+        width={CANVAS_WIDTH} 
+        height={CANVAS_HEIGHT} 
         style={{ 
+            width: '100%',           // Растягиваем на всю доступную ширину карточки!
+            maxWidth: '400px',       // Ограничитель для планшетов, чтобы не было слишком огромным
+            height: 'auto',          // Пропорциональное изменение высоты
             background: '#fafafa', 
             borderRadius: '12px', 
             border: mode === 'add' ? '2px solid #34c759' : (mode === 'remove' ? '2px solid #ff3b30' : '1px solid #e5e5ea'), 
@@ -342,7 +349,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
          <button onClick={() => setScale(s => Math.max(s - 5, 5))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
       </div>
 
-      {/* ИНТЕРАКТИВНЫЕ КНОПКИ УГЛОВ */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '12px' }}>
         <button 
             onClick={() => setMode(mode === 'add' ? 'drag' : 'add')} 
