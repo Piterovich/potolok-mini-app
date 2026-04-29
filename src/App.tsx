@@ -1,10 +1,146 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 
 const T = {
-  ru: { calc: "Расчет", addRoom: "Добавить помещение", toBot: "В бот 🚀", area: "Площадь (м²)", perim: "Периметр (м)", corners: "Углы (шт)", geom: "📏 Геометрия", materials: "🎨 Полотно и Профиль", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", spots: "Точечные (шт)", chands: "Люстры (шт)", track: "Магн. трек (м)", corniceType: "Вид карниза", corniceLen: "Метраж (м)", pipe: "Обход труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФИЛЬ", pre: "ПРЕДВАРИТЕЛЬНО:" },
-  uk: { calc: "Розрахунок", addRoom: "Додати приміщення", toBot: "В бот 🚀", area: "Площа (м²)", perim: "Периметр (м)", corners: "Кути (шт)", geom: "📏 Геометрія", materials: "🎨 Полотно та Профіль", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", spots: "Точкові (шт)", chands: "Люстри (шт)", track: "Магн. трек (м)", corniceType: "Вид карнизу", corniceLen: "Метраж (м)", pipe: "Обхід труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФІЛЬ", pre: "ПОПЕРЕДНЬО:" }
+  ru: { calc: "Расчет", addRoom: "Добавить помещение", toBot: "В бот 🚀", area: "Площадь (м²)", perim: "Периметр (м)", corners: "Углы (шт)", geom: "📏 Геометрия", materials: "🎨 Полотно и Профиль", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", spots: "Точечные (шт)", chands: "Люстры (шт)", track: "Магн. трек (м)", corniceType: "Вид карниза", corniceLen: "Метраж (м)", pipe: "Обход труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФИЛЬ", pre: "ПРЕДВАРИТЕЛЬНО:", dragInfo: "👆 Потяните за красные точки, чтобы изменить геометрию" },
+  uk: { calc: "Розрахунок", addRoom: "Додати приміщення", toBot: "В бот 🚀", area: "Площа (м²)", perim: "Периметр (м)", corners: "Кути (шт)", geom: "📏 Геометрія", materials: "🎨 Полотно та Профіль", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", spots: "Точкові (шт)", chands: "Люстри (шт)", track: "Магн. трек (м)", corniceType: "Вид карнизу", corniceLen: "Метраж (м)", pipe: "Обхід труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФІЛЬ", pre: "ПОПЕРЕДНЬО:", dragInfo: "👆 Потягніть за червоні точки, щоб змінити геометрію" }
 };
+
+// --- КОМПОНЕНТ УМНОГО ХОЛСТА (CANVAS) ---
+const RoomCanvas = ({ room, updateRoom }) => {
+  const canvasRef = useRef(null);
+  
+  // Масштаб: 40 пикселей = 1 метр.
+  const SCALE = 40; 
+  
+  // Дефолтные координаты для новой комнаты 4х4 метра
+  const [pts, setPts] = useState(room.vertices || [
+    { x: 60, y: 60 }, { x: 220, y: 60 }, { x: 220, y: 220 }, { x: 60, y: 220 }
+  ]);
+  const [draggingIdx, setDraggingIdx] = useState(null);
+
+  // Отрисовка чертежа
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 1. Рисуем миллиметровую сетку
+    ctx.strokeStyle = '#f2f2f7';
+    ctx.lineWidth = 1;
+    for(let i = 0; i < canvas.width; i += 20) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
+    for(let i = 0; i < canvas.height; i += 20) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+
+    // 2. Рисуем заливку и контур комнаты
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0, 122, 255, 0.1)';
+    ctx.fill();
+    ctx.strokeStyle = '#007aff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // 3. Вычисляем данные и рисуем длины стен
+    ctx.fillStyle = '#1c1c1e';
+    ctx.font = 'bold 12px system-ui';
+    ctx.textAlign = 'center';
+    
+    let perimPx = 0;
+    let areaPx = 0;
+
+    for(let i = 0; i < pts.length; i++) {
+       let p1 = pts[i], p2 = pts[(i+1) % pts.length];
+       let dx = p2.x - p1.x, dy = p2.y - p1.y;
+       let dist = Math.sqrt(dx*dx + dy*dy);
+       perimPx += dist;
+       areaPx += (p1.x * p2.y - p2.x * p1.y);
+
+       // Текст посередине линии (длина стены)
+       let mx = (p1.x + p2.x)/2, my = (p1.y + p2.y)/2;
+       let meters = (dist / SCALE).toFixed(2); 
+       
+       // Белая подложка под текст, чтобы было читаемо
+       ctx.fillStyle = 'rgba(255,255,255,0.8)';
+       ctx.fillRect(mx - 15, my - 15, 30, 16);
+       
+       ctx.fillStyle = '#007aff';
+       ctx.fillText(meters + 'м', mx, my - 4);
+    }
+
+    // 4. Рисуем интерактивные точки (углы)
+    for(let i = 0; i < pts.length; i++) {
+       ctx.beginPath();
+       ctx.arc(pts[i].x, pts[i].y, 10, 0, 2 * Math.PI);
+       ctx.fillStyle = draggingIdx === i ? '#ff3b30' : '#ffffff';
+       ctx.fill();
+       ctx.lineWidth = 3;
+       ctx.strokeStyle = '#ff3b30';
+       ctx.stroke();
+    }
+  }, [pts, draggingIdx]);
+
+  // Обработчики перетаскивания (Touch + Mouse)
+  const getMousePos = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  };
+
+  const handlePointerDown = (e) => {
+    const pos = getMousePos(e);
+    // Ищем, попал ли палец в радиус одной из точек
+    const hitIndex = pts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 20);
+    if (hitIndex !== -1) setDraggingIdx(hitIndex);
+  };
+
+  const handlePointerMove = (e) => {
+    if (draggingIdx === null) return;
+    const pos = getMousePos(e);
+    const newPts = [...pts];
+    newPts[draggingIdx] = { x: pos.x, y: pos.y };
+    setPts(newPts);
+  };
+
+  const handlePointerUp = () => {
+    if (draggingIdx === null) return;
+    setDraggingIdx(null);
+    
+    // --- ПЕРЕСЧЕТ МАТЕМАТИКИ И ОБНОВЛЕНИЕ КАРТОЧКИ ---
+    let perimPx = 0;
+    let areaPx = 0;
+    for(let i = 0; i < pts.length; i++) {
+       let p1 = pts[i], p2 = pts[(i+1) % pts.length];
+       perimPx += Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
+       areaPx += (p1.x * p2.y - p2.x * p1.y);
+    }
+    
+    const finalArea = (Math.abs(areaPx / 2) / (SCALE * SCALE)).toFixed(2);
+    const finalPerim = (perimPx / SCALE).toFixed(2);
+    
+    updateRoom(room.id, 'area', finalArea);
+    updateRoom(room.id, 'perim', finalPerim);
+    updateRoom(room.id, 'vertices', pts);
+  };
+
+  return (
+    <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+      <canvas 
+        ref={canvasRef} 
+        width={300} 
+        height={260} 
+        style={{ background: '#fafafa', borderRadius: '12px', border: '1px solid #e5e5ea', touchAction: 'none' }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+      />
+    </div>
+  );
+};
+// ----------------------------------------
 
 function App() {
   const [activeTab, setActiveTab] = useState('calc')
@@ -48,7 +184,6 @@ function App() {
     light: 250, chand: 300, corner: 50, pipe: 200, track: 2000
   });
 
-  // ⭐️ ИСПРАВЛЕНО: Растянули на всю ширину экрана (width: 100%, уменьшили padding)
   const styles = {
     appContainer: { width: '100%', maxWidth: '100%', margin: '0 auto', height: '100vh', backgroundColor: '#f5f5f7', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' },
     contentArea: { flex: 1, padding: '12px 8px', overflowY: 'auto', paddingBottom: '140px', boxSizing: 'border-box' },
@@ -59,19 +194,19 @@ function App() {
     label: { fontSize: '11px', fontWeight: '800', color: '#8e8e93', letterSpacing: '0.5px', marginBottom: '8px', display: 'block' },
     select: { width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #e5e5ea', fontSize: '16px', outline: 'none', background: '#f9f9fb', boxSizing: 'border-box' },
     inputRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
-    numInput: { width: '75px', padding: '10px', borderRadius: '8px', border: '1px solid #e5e5ea', textAlign: 'center', fontSize: '16px', fontWeight: '600', boxSizing: 'border-box' }
+    numInput: { width: '85px', padding: '10px', borderRadius: '8px', border: '1px solid #e5e5ea', textAlign: 'center', fontSize: '16px', fontWeight: '600', boxSizing: 'border-box', background: '#fcfcfc' }
   };
 
   const CalculatorScreen = () => {
     const [rooms, setRooms] = useState([
-      { id: Date.now(), name: 'Помещение 1', area: '18', perim: '16', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '6', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '' }
+      { id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '6', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '' }
     ]);
     const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
     const [expandedSubSec, setExpandedSubSec] = useState('geom'); 
 
     const updateRoom = (id, field, value) => { setRooms(rooms.map(r => r.id === id ? { ...r, [field]: value } : r)); };
     const addRoom = () => {
-      const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '', perim: '', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '' };
+      const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '' };
       setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom');
     };
 
@@ -108,7 +243,7 @@ function App() {
             {expandedRoomId === room.id && (
               <div style={{ animation: 'slideDown 0.2s ease-out' }}>
                 
-                {/* 1. ГЕОМЕТРИЯ */}
+                {/* 1. ГЕОМЕТРИЯ + CANVAS */}
                 <div>
                   <div style={styles.subHeader} onClick={() => setExpandedSubSec(expandedSubSec === 'geom' ? null : 'geom')}>
                     <span style={{ fontWeight: '700', fontSize: '15px' }}>{t('geom')}</span>
@@ -116,6 +251,11 @@ function App() {
                   </div>
                   {expandedSubSec === 'geom' && (
                     <div style={styles.subContent}>
+                      
+                      {/* НАШ НОВЫЙ ЧЕРТЕЖ */}
+                      <RoomCanvas room={room} updateRoom={updateRoom} />
+                      <p style={{ textAlign: 'center', fontSize: '11px', color: '#8e8e93', marginTop: '-10px', marginBottom: '15px' }}>{t('dragInfo')}</p>
+
                       <div style={styles.inputRow}><span>{t('area')}</span><input type="number" value={room.area} onChange={e => updateRoom(room.id, 'area', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('perim')}</span><input type="number" value={room.perim} onChange={e => updateRoom(room.id, 'perim', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('corners')}</span><input type="number" value={room.corners} onChange={e => updateRoom(room.id, 'corners', e.target.value)} style={styles.numInput} placeholder="4" /></div>
