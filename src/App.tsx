@@ -35,10 +35,33 @@ const centerShape = (pts) => {
     return pts.map(p => ({ x: p.x - cx, y: p.y - cy }));
 };
 
-const solveGeometry = (pts, manualData) => {
+// Генерация стандартных диагоналей (веер)
+const getDefaultDiags = (count) => {
+    if (count < 4) return [];
+    if (count === 4) return ['AC', 'BD'];
+    let diags = [];
+    for (let i = 2; i < count - 1; i++) diags.push('A' + String.fromCharCode(65 + i));
+    return diags;
+};
+
+// Генерация ВСЕХ ВОЗМОЖНЫХ диагоналей для выпадающего списка
+const getAllPossibleDiags = (count) => {
+    let diags = [];
+    for (let i = 0; i < count; i++) {
+        for (let j = i + 2; j < count; j++) {
+            if (i === 0 && j === count - 1) continue; // Отсекаем последнюю стену
+            diags.push(String.fromCharCode(65 + i) + String.fromCharCode(65 + j));
+        }
+    }
+    return diags;
+};
+
+// Физический движок
+const solveGeometry = (pts, manualData, activeDiags) => {
   let newPts = pts.map(p => ({...p}));
   let springs = [];
 
+  // СТЕНЫ (Жесткие пружины)
   for(let i = 0; i < pts.length; i++) {
       let j = (i + 1) % pts.length;
       let name = String.fromCharCode(65 + i) + String.fromCharCode(65 + j);
@@ -48,26 +71,21 @@ const solveGeometry = (pts, manualData) => {
       if (!isNaN(target) && target > 0) springs.push({i, j, target, weight});
   }
 
-  if (pts.length === 4) {
-      let d1 = "AC", d2 = "BD";
-      let isM1 = manualData[d1] !== undefined && manualData[d1] !== '';
-      let t1 = isM1 ? parseFloat(manualData[d1]) : getDist(pts[0], pts[2]);
-      let w1 = isM1 ? 0.9 : 0.02; 
-      let isM2 = manualData[d2] !== undefined && manualData[d2] !== '';
-      let t2 = isM2 ? parseFloat(manualData[d2]) : getDist(pts[1], pts[3]);
-      let w2 = isM2 ? 0.9 : 0.02;
-      if (!isNaN(t1) && t1 > 0) springs.push({i:0, j:2, target: t1, weight: w1});
-      if (!isNaN(t2) && t2 > 0) springs.push({i:1, j:3, target: t2, weight: w2});
-  } else if (pts.length > 4) {
-       for (let i = 2; i < pts.length - 1; i++) {
-           let name = "A" + String.fromCharCode(65 + i);
-           let isM = manualData[name] !== undefined && manualData[name] !== '';
-           let target = isM ? parseFloat(manualData[name]) : getDist(pts[0], pts[i]);
-           let weight = isM ? 0.9 : 0.02;
-           if (!isNaN(target) && target > 0) springs.push({i:0, j:i, target, weight});
-       }
+  // ДИАГОНАЛИ (Берем только те, что юзер выбрал в списке)
+  for(let diag of activeDiags) {
+      let i = diag.charCodeAt(0) - 65;
+      let j = diag.charCodeAt(1) - 65;
+      if (i >= pts.length || j >= pts.length || i < 0 || j < 0) continue; 
+      
+      let isManual = manualData[diag] !== undefined && manualData[diag] !== '';
+      let target = isManual ? parseFloat(manualData[diag]) : getDist(pts[i], pts[j]);
+      // Если юзер ввел цифру руками - диагональ жесткая (0.9), иначе - мягкая резинка (0.02)
+      let weight = isManual ? 0.9 : 0.02; 
+      
+      if (!isNaN(target) && target > 0) springs.push({i, j, target, weight});
   }
 
+  // Симуляция стягивания
   for(let iter = 0; iter < 1000; iter++) { 
       for(let s of springs) {
           let p1 = newPts[s.i], p2 = newPts[s.j];
@@ -100,12 +118,10 @@ const RoomCanvas = ({ room, updateRoom }) => {
   const canvasRef = useRef(null);
   const [scale, setScale] = useState(30); 
   const [showDiags, setShowDiags] = useState(true);
-  const [mode, setMode] = useState('drag'); // 'drag' | 'add' | 'remove'
+  const [mode, setMode] = useState('drag'); 
   
-  // ⭐️ РАСТЯНУТЫЙ ХОЛСТ: Больше ширина и высота
   const CANVAS_WIDTH = 340;
   const CANVAS_HEIGHT = 320;
-  // Центр теперь смещен, чтобы фигура всегда была посередине нового холста
   const offset = { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 }; 
 
   const [pts, setPts] = useState(room.logicalPts || centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]));
@@ -113,6 +129,9 @@ const RoomCanvas = ({ room, updateRoom }) => {
 
   const toScreen = (p) => ({ x: p.x * scale + offset.x, y: p.y * scale + offset.y });
   const toLogical = (p) => ({ x: (p.x - offset.x) / scale, y: (p.y - offset.y) / scale });
+
+  // Все возможные диагонали для текущего кол-ва углов
+  const allPossibleDiags = getAllPossibleDiags(pts.length);
 
   useEffect(() => {
     if (room.logicalPts) setPts(room.logicalPts);
@@ -145,21 +164,18 @@ const RoomCanvas = ({ room, updateRoom }) => {
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    // 1. ДИАГОНАЛИ
-    if (showDiags) {
+    // 1. РИСУЕМ ТОЛЬКО АКТИВНЫЕ ДИАГОНАЛИ ИЗ СПИСКА
+    if (showDiags && room.activeDiags) {
         ctx.setLineDash([5, 5]); 
         ctx.strokeStyle = 'rgba(255, 149, 0, 0.6)'; 
         ctx.lineWidth = 1.5;
         ctx.textAlign = 'center';
-        
-        const diagonals = [];
-        if (pts.length === 4) {
-            diagonals.push([0, 2], [1, 3]); 
-        } else if (pts.length > 4) {
-            for (let i = 2; i < pts.length - 1; i++) diagonals.push([0, i]); 
-        }
 
-        diagonals.forEach(([i, j]) => {
+        room.activeDiags.forEach((diag) => {
+            let i = diag.charCodeAt(0) - 65;
+            let j = diag.charCodeAt(1) - 65;
+            if (i >= pts.length || j >= pts.length || i < 0 || j < 0) return;
+
             let sp1 = screenPts[i], sp2 = screenPts[j];
             ctx.beginPath();
             ctx.moveTo(sp1.x, sp1.y);
@@ -168,15 +184,13 @@ const RoomCanvas = ({ room, updateRoom }) => {
 
             let dist = Math.sqrt((pts[j].x - pts[i].x)**2 + (pts[j].y - pts[i].y)**2);
             let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
-            let name = String.fromCharCode(65+i) + String.fromCharCode(65+j); 
-            
-            let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2);
+            let displayDist = manual[diag] !== undefined && manual[diag] !== '' ? manual[diag] : dist.toFixed(2);
             
             ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
             ctx.fillRect(mx - 28, my - 10, 56, 18);
             ctx.fillStyle = '#ff9500';
             ctx.font = 'bold 11px system-ui';
-            ctx.fillText(`${name}: ${displayDist}м`, mx, my + 3);
+            ctx.fillText(`${diag}: ${displayDist}м`, mx, my + 3);
         });
         ctx.setLineDash([]); 
     }
@@ -189,7 +203,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
     for(let i = 0; i < pts.length; i++) {
        let p1 = pts[i], p2 = pts[(i+1) % pts.length];
        let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
-
        let sp1 = screenPts[i], sp2 = screenPts[(i+1) % screenPts.length];
        let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
        let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length); 
@@ -207,7 +220,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
        let sp = screenPts[i];
        ctx.beginPath();
        ctx.arc(sp.x, sp.y, 10, 0, 2 * Math.PI);
-       
        if (mode === 'remove') ctx.fillStyle = '#ff3b30';
        else ctx.fillStyle = draggingIdx === i ? '#ff3b30' : '#ffffff';
        
@@ -221,9 +233,9 @@ const RoomCanvas = ({ room, updateRoom }) => {
        ctx.font = '900 16px system-ui';
        ctx.fillText(label, sp.x + 18, sp.y - 12);
     }
-  }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode]);
+  }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode, room.activeDiags]);
 
-  const updateAreaPerimAndSave = (newPts) => {
+  const updateAreaPerimAndSave = (newPts, newDiags = null) => {
     let perim = 0, area = 0;
     for(let i = 0; i < newPts.length; i++) {
        let p1 = newPts[i], p2 = newPts[(i+1) % newPts.length];
@@ -235,23 +247,17 @@ const RoomCanvas = ({ room, updateRoom }) => {
     updateRoom(room.id, 'perim', perim.toFixed(2));
     updateRoom(room.id, 'corners', newPts.length.toString()); 
     updateRoom(room.id, 'logicalPts', newPts); 
+    if (newDiags) updateRoom(room.id, 'activeDiags', newDiags);
   };
 
-  // ⭐️ УМНАЯ ЛОГИКА КАСАНИЙ ДЛЯ РАСТЯНУТОГО ЭКРАНА
   const getMousePos = (e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const clientX = e.clientX || (e.touches && e.touches[0].clientX);
     const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-    
-    // Если CSS сжал или растянул canvas, корректируем координаты!
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-    
-    return { 
-        x: (clientX - rect.left) * scaleX, 
-        y: (clientY - rect.top) * scaleY 
-    };
+    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
   };
 
   const handlePointerDown = (e) => {
@@ -263,7 +269,8 @@ const RoomCanvas = ({ room, updateRoom }) => {
         if (hitIndex !== -1) {
             if (pts.length <= 3) return alert("Минимум 3 угла!");
             const newPts = pts.filter((_, idx) => idx !== hitIndex);
-            updateAreaPerimAndSave(centerShape(newPts));
+            // При удалении угла сбрасываем диагонали на дефолтные
+            updateAreaPerimAndSave(centerShape(newPts), getDefaultDiags(newPts.length));
             setMode('drag'); 
         }
         return;
@@ -284,7 +291,8 @@ const RoomCanvas = ({ room, updateRoom }) => {
         
         const newPts = [...pts];
         newPts.splice(insertIdx + 1, 0, logicalPos);
-        updateAreaPerimAndSave(centerShape(newPts));
+        // При добавлении угла сбрасываем диагонали на дефолтные
+        updateAreaPerimAndSave(centerShape(newPts), getDefaultDiags(newPts.length));
         setMode('drag'); 
         return;
     }
@@ -311,6 +319,28 @@ const RoomCanvas = ({ room, updateRoom }) => {
     updateAreaPerimAndSave(centerShape(pts));
   };
 
+  // --- ОБРАБОТЧИКИ ДЛЯ СПИСКА ДИАГОНАЛЕЙ ---
+  const handleDiagChange = (index, newDiagValue) => {
+      const newDiags = [...room.activeDiags];
+      newDiags[index] = newDiagValue;
+      updateRoom(room.id, 'activeDiags', newDiags);
+  };
+
+  const handleAddDiagRow = () => {
+      const newDiags = [...room.activeDiags];
+      // Берем первую попавшуюся доступную диагональ, которой еще нет в списке
+      const available = allPossibleDiags.find(d => !newDiags.includes(d)) || allPossibleDiags[0];
+      if (available) {
+          newDiags.push(available);
+          updateRoom(room.id, 'activeDiags', newDiags);
+      }
+  };
+
+  const handleRemoveDiagRow = (index) => {
+      const newDiags = room.activeDiags.filter((_, i) => i !== index);
+      updateRoom(room.id, 'activeDiags', newDiags);
+  };
+
   return (
     <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
       
@@ -323,9 +353,9 @@ const RoomCanvas = ({ room, updateRoom }) => {
         width={CANVAS_WIDTH} 
         height={CANVAS_HEIGHT} 
         style={{ 
-            width: '100%',           // Растягиваем на всю доступную ширину карточки!
-            maxWidth: '400px',       // Ограничитель для планшетов, чтобы не было слишком огромным
-            height: 'auto',          // Пропорциональное изменение высоты
+            width: '100%',           
+            maxWidth: '400px',       
+            height: 'auto',          
             background: '#fafafa', 
             borderRadius: '12px', 
             border: mode === 'add' ? '2px solid #34c759' : (mode === 'remove' ? '2px solid #ff3b30' : '1px solid #e5e5ea'), 
@@ -360,6 +390,79 @@ const RoomCanvas = ({ room, updateRoom }) => {
             style={{ flex: 1, padding: '12px', background: mode === 'remove' ? '#ff3b30' : '#ffe5e5', color: mode === 'remove' ? '#fff' : '#ff3b30', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '14px', transition: '0.2s' }}>
             {mode === 'remove' ? 'Отмена' : '➖ Удалить угол'}
         </button>
+      </div>
+
+      {/* --- БЛОК РУЧНЫХ РАЗМЕРОВ (ДИНАМИЧЕСКИЙ) --- */}
+      <div style={{ background: '#f9f9fb', padding: '15px', borderRadius: '12px', marginTop: '15px', border: '1px solid #e5e5ea', textAlign: 'left' }}>
+        
+        {/* СЕКЦИЯ СТЕН */}
+        <span style={{ fontSize: '11px', fontWeight: '800', color: '#8e8e93', display: 'block', marginBottom: '8px' }}>📐 СТЕНЫ (м):</span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '15px' }}>
+            {room.logicalPts?.map((p, i) => {
+                let nextI = (i+1)%room.logicalPts.length;
+                let name = String.fromCharCode(65+i) + String.fromCharCode(65+nextI);
+                let dist = Math.sqrt((room.logicalPts[nextI].x - p.x)**2 + (room.logicalPts[nextI].y - p.y)**2).toFixed(2);
+                let displayVal = room.manualWalls?.[name] !== undefined ? room.manualWalls[name] : dist;
+
+                return (
+                <div key={name} style={{ display: 'flex', alignItems: 'center', background: '#fff', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e5e5ea' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '800', marginRight: '6px', color: '#007aff' }}>{name}:</span>
+                    <input 
+                    type="number" 
+                    value={displayVal} 
+                    onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [name]: e.target.value})}
+                    style={{ width: '55px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '14px', color: '#1c1c1e' }} 
+                    />
+                </div>
+                )
+            })}
+        </div>
+
+        {/* СЕКЦИЯ ДИАГОНАЛЕЙ */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#8e8e93' }}>📏 ДИАГОНАЛИ (м):</span>
+            <button onClick={handleAddDiagRow} style={{ background: 'none', border: 'none', color: '#ff9500', fontWeight: '800', fontSize: '12px', cursor: 'pointer' }}>➕ Добавить</button>
+        </div>
+        
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {room.activeDiags?.map((diagName, index) => {
+                let i = diagName.charCodeAt(0) - 65;
+                let j = diagName.charCodeAt(1) - 65;
+                
+                // Защита, если после удаления угла диагональ сломалась
+                if(i >= room.logicalPts.length || j >= room.logicalPts.length) return null;
+
+                let p1 = room.logicalPts[i], p2 = room.logicalPts[j];
+                let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2).toFixed(2);
+                let displayVal = room.manualWalls?.[diagName] !== undefined ? room.manualWalls[diagName] : dist;
+
+                return (
+                <div key={index} style={{ display: 'flex', alignItems: 'center', background: '#fff', padding: '4px 6px', borderRadius: '8px', border: '1px solid #e5e5ea' }}>
+                    
+                    {/* ⭐️ ВЫПАДАЮЩИЙ СПИСОК ВЫБОРА ДИАГОНАЛИ ⭐️ */}
+                    <select 
+                        value={diagName} 
+                        onChange={(e) => handleDiagChange(index, e.target.value)}
+                        style={{ border: 'none', outline: 'none', fontWeight: '800', color: '#ff9500', background: 'transparent', fontSize: '13px', marginRight: '4px' }}
+                    >
+                        {allPossibleDiags.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                    
+                    <span style={{fontWeight: '800', color: '#ff9500', marginRight: '4px'}}>:</span>
+                    
+                    <input 
+                        type="number" 
+                        value={displayVal} 
+                        onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [diagName]: e.target.value})}
+                        style={{ width: '50px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '14px', color: '#1c1c1e' }} 
+                    />
+                    
+                    <button onClick={() => handleRemoveDiagRow(index)} style={{ background: 'none', border: 'none', color: '#ff3b30', marginLeft: '5px', fontSize: '14px' }}>✕</button>
+                </div>
+                )
+            })}
+        </div>
+
       </div>
     </div>
   );
@@ -422,11 +525,13 @@ function App() {
   };
 
   const CalculatorScreen = () => {
+    // ⭐️ ИНИЦИАЛИЗАЦИЯ ДИАГОНАЛЕЙ ПРИ СТАРТЕ
     const [rooms, setRooms] = useState([
       { 
         id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', 
         canvas: 'полотно_м2', profile: 'профиль_м', spots: '6', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '',
         logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]),
+        activeDiags: ['AC', 'BD'], // Стартовые диагонали
         manualWalls: {} 
       }
     ]);
@@ -435,28 +540,31 @@ function App() {
 
     const updateRoom = (id, field, value) => { setRooms(prevRooms => prevRooms.map(r => r.id === id ? { ...r, [field]: value } : r)); };
     
-    const handleManualInputChange = (room, name, newVal) => {
-        const newManual = {...(room.manualWalls || {}), [name]: newVal};
-        updateRoom(room.id, 'manualWalls', newManual);
-        
-        const newPts = solveGeometry(room.logicalPts, newManual);
-        updateRoom(room.id, 'logicalPts', newPts);
-
-        let p_sum = 0, area = 0;
-        for(let k=0; k<newPts.length; k++) {
-            let p1 = newPts[k], p2 = newPts[(k+1)%newPts.length];
-            p_sum += Math.sqrt((p2.x-p1.x)**2 + (p2.y-p1.y)**2);
-            area += (p1.x*p2.y - p2.x*p1.y);
-        }
-        updateRoom(room.id, 'perim', p_sum.toFixed(2));
-        updateRoom(room.id, 'area', Math.abs(area/2).toFixed(2));
-    };
+    // Перехватчик изменения любого ручного инпута для мгновенного пересчета физики
+    useEffect(() => {
+        rooms.forEach(room => {
+            const newPts = solveGeometry(room.logicalPts, room.manualWalls, room.activeDiags || []);
+            let p_sum = 0, area = 0;
+            for(let k=0; k<newPts.length; k++) {
+                let p1 = newPts[k], p2 = newPts[(k+1)%newPts.length];
+                p_sum += Math.sqrt((p2.x-p1.x)**2 + (p2.y-p1.y)**2);
+                area += (p1.x*p2.y - p2.x*p1.y);
+            }
+            // Проверка, изменилась ли геометрия, чтобы не зациклить React
+            if (Math.abs(p_sum - parseFloat(room.perim)) > 0.05) {
+                updateRoom(room.id, 'logicalPts', newPts);
+                updateRoom(room.id, 'perim', p_sum.toFixed(2));
+                updateRoom(room.id, 'area', Math.abs(area/2).toFixed(2));
+            }
+        });
+    }, [rooms.map(r => JSON.stringify(r.manualWalls)).join(','), rooms.map(r => JSON.stringify(r.activeDiags)).join(',')]);
 
     const addRoom = () => {
       const nr = { 
         id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', 
         canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '',
         logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]),
+        activeDiags: ['AC', 'BD'],
         manualWalls: {} 
       };
       setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom');
@@ -505,60 +613,6 @@ function App() {
                     <div style={styles.subContent}>
                       
                       <RoomCanvas room={room} updateRoom={updateRoom} />
-
-                      <div style={{ background: '#f9f9fb', padding: '12px', borderRadius: '12px', marginBottom: '15px', border: '1px solid #e5e5ea' }}>
-                        <span style={{...styles.label, marginBottom: '10px'}}>📐 ТОЧНЫЕ РАЗМЕРЫ (Стены и Диагонали):</span>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                           
-                           {/* СТЕНЫ */}
-                           {room.logicalPts?.map((p, i) => {
-                              let nextI = (i+1)%room.logicalPts.length;
-                              let name = String.fromCharCode(65+i) + String.fromCharCode(65+nextI);
-                              let dist = Math.sqrt((room.logicalPts[nextI].x - p.x)**2 + (room.logicalPts[nextI].y - p.y)**2).toFixed(2);
-                              let displayVal = room.manualWalls?.[name] !== undefined ? room.manualWalls[name] : dist;
-
-                              return (
-                                <div key={name} style={{ display: 'flex', alignItems: 'center', background: '#fff', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e5e5ea' }}>
-                                  <span style={{ fontSize: '13px', fontWeight: '800', marginRight: '6px', color: '#007aff' }}>{name}:</span>
-                                  <input 
-                                    type="number" 
-                                    value={displayVal} 
-                                    onChange={(e) => handleManualInputChange(room, name, e.target.value)}
-                                    style={{ width: '55px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '14px', color: '#1c1c1e' }} 
-                                  />
-                                </div>
-                              )
-                           })}
-
-                           {/* ДИАГОНАЛИ */}
-                           {(() => {
-                               const diags = [];
-                               if (room.logicalPts?.length === 4) {
-                                   diags.push([0, 2], [1, 3]);
-                               } else if (room.logicalPts?.length > 4) {
-                                   for (let i = 2; i < room.logicalPts.length - 1; i++) diags.push([0, i]);
-                               }
-                               return diags.map(([i, j]) => {
-                                  let name = String.fromCharCode(65+i) + String.fromCharCode(65+j);
-                                  let p1 = room.logicalPts[i], p2 = room.logicalPts[j];
-                                  let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2).toFixed(2);
-                                  let displayVal = room.manualWalls?.[name] !== undefined ? room.manualWalls[name] : dist;
-
-                                  return (
-                                    <div key={name} style={{ display: 'flex', alignItems: 'center', background: '#fff', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e5e5ea' }}>
-                                      <span style={{ fontSize: '13px', fontWeight: '800', marginRight: '6px', color: '#ff9500' }}>{name}:</span>
-                                      <input 
-                                        type="number" 
-                                        value={displayVal} 
-                                        onChange={(e) => handleManualInputChange(room, name, e.target.value)}
-                                        style={{ width: '55px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '14px', color: '#1c1c1e' }} 
-                                      />
-                                    </div>
-                                  )
-                               });
-                           })()}
-                        </div>
-                      </div>
 
                       <div style={styles.inputRow}><span>{t('area')}</span><input type="number" value={room.area} onChange={e => updateRoom(room.id, 'area', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('perim')}</span><input type="number" value={room.perim} onChange={e => updateRoom(room.id, 'perim', e.target.value)} style={styles.numInput} placeholder="0" /></div>
