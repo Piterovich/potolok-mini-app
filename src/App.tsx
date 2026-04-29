@@ -197,9 +197,8 @@ const RoomCanvas = ({ room, updateRoom }) => {
   const [selectedDiagPt, setSelectedDiagPt] = useState(null); 
   const [activeTrackPts, setActiveTrackPts] = useState([]);
   
-  // ⭐️ ЛОКАЛЬНОЕ СОСТОЯНИЕ ОБОРУДОВАНИЯ (ДЛЯ ПЛАВНОГО ПЕРЕТАСКИВАНИЯ)
   const [els, setEls] = useState(room.elements || []);
-  const [draggingElement, setDraggingElement] = useState(null); // { elId, ptIdx }
+  const [draggingElement, setDraggingElement] = useState(null);
   
   const CANVAS_WIDTH = 340;
   const CANVAS_HEIGHT = 320;
@@ -213,7 +212,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
   const allPossibleDiags = getAllPossibleDiags(pts.length);
 
   useEffect(() => { if (room.logicalPts) setPts(room.logicalPts); }, [room.logicalPts]);
-  useEffect(() => { setEls(room.elements || []) }, [room.elements]); // Синхронизируем локальные элементы
+  useEffect(() => { setEls(room.elements || []) }, [room.elements]); 
 
   const syncElementsToInputs = (newEls) => {
       setEls(newEls);
@@ -247,7 +246,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
     const screenPts = pts.map(toScreen);
     const manual = room.manualWalls || {}; 
 
-    // Заливка комнаты
     ctx.beginPath(); ctx.moveTo(screenPts[0].x, screenPts[0].y);
     for(let i = 1; i < screenPts.length; i++) ctx.lineTo(screenPts[i].x, screenPts[i].y);
     ctx.closePath();
@@ -256,7 +254,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
     ctx.strokeStyle = mode === 'add' ? '#34c759' : '#007aff';
     ctx.lineWidth = 3; ctx.stroke();
 
-    // Диагонали
     if (showDiags && room.activeDiags) {
         ctx.setLineDash([5, 5]); ctx.strokeStyle = 'rgba(255, 149, 0, 0.6)'; ctx.lineWidth = 1.5; ctx.textAlign = 'center';
         room.activeDiags.forEach((diag) => {
@@ -273,7 +270,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
         ctx.setLineDash([]); 
     }
 
-    // Стены
     ctx.fillStyle = '#1c1c1e'; ctx.font = 'bold 12px system-ui'; ctx.textAlign = 'center';
     for(let i = 0; i < pts.length; i++) {
        let p1 = pts[i], p2 = pts[(i+1) % pts.length];
@@ -286,16 +282,13 @@ const RoomCanvas = ({ room, updateRoom }) => {
        ctx.fillStyle = '#007aff'; ctx.fillText(`${name}: ${displayDist}м`, mx, my + 2);
     }
 
-    // ⭐️ 3. ОТРИСОВКА ОБОРУДОВАНИЯ (Используем локальный els)
     els.forEach(el => {
         if (el.type === 'track') {
-            // Рисуем линии трека
             ctx.beginPath();
             ctx.moveTo(toScreen(el.points[0]).x, toScreen(el.points[0]).y);
             for(let i=1; i<el.points.length; i++) ctx.lineTo(toScreen(el.points[i]).x, toScreen(el.points[i]).y);
             ctx.strokeStyle = '#1c1c1e'; ctx.lineWidth = 4; ctx.stroke();
             
-            // ⭐️ Рисуем плашки с размерами для каждого отрезка трека
             for(let i=1; i<el.points.length; i++) {
                 let dist = Math.sqrt((el.points[i].x - el.points[i-1].x)**2 + (el.points[i].y - el.points[i-1].y)**2).toFixed(2);
                 let sp1 = toScreen(el.points[i-1]); let sp2 = toScreen(el.points[i]);
@@ -304,7 +297,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
                 ctx.fillStyle = '#1c1c1e'; ctx.font = 'bold 10px system-ui'; ctx.fillText(`${dist}м`, mx, my + 3);
             }
             
-            // Кружочки на стыках трека (с подсветкой при перетаскивании)
             el.points.forEach((p, idx) => {
                 let sp = toScreen(p);
                 ctx.beginPath(); ctx.arc(sp.x, sp.y, 4, 0, 2*Math.PI); 
@@ -321,7 +313,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
         }
     });
 
-    // Рисуем процесс создания нового трека (он тоже с размерами)
     if (mode === 'track' && activeTrackPts.length > 0) {
         ctx.beginPath();
         ctx.moveTo(toScreen(activeTrackPts[0]).x, toScreen(activeTrackPts[0]).y);
@@ -342,7 +333,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
         });
     }
 
-    // Углы комнаты
     for(let i = 0; i < screenPts.length; i++) {
        let sp = screenPts[i];
        ctx.beginPath(); ctx.arc(sp.x, sp.y, 10, 0, 2 * Math.PI);
@@ -386,17 +376,13 @@ const RoomCanvas = ({ room, updateRoom }) => {
     const screenPts = pts.map(toScreen);
     const logicalPos = toLogical(pos);
 
-    // ⭐️ УМНЫЙ ЛАСТИК (Режет треки на куски!)
     if (mode === 'remove') {
         let hitFound = false;
         let newEls = [];
-        
         for (let el of els) {
             if (hitFound) { newEls.push(el); continue; }
-
             if (el.type === 'track') {
                 let segmentHitIdx = -1;
-                // Ищем, по какому отрезку кликнули
                 for(let i=1; i<el.points.length; i++) {
                     if(getDistToSegment(pos, toScreen(el.points[i-1]), toScreen(el.points[i])) < 15) {
                         segmentHitIdx = i; break;
@@ -404,10 +390,8 @@ const RoomCanvas = ({ room, updateRoom }) => {
                 }
                 if (segmentHitIdx !== -1) {
                     hitFound = true;
-                    // Разрезаем трек!
                     let part1 = el.points.slice(0, segmentHitIdx);
                     let part2 = el.points.slice(segmentHitIdx);
-                    // Если кусок состоит из 2+ точек, сохраняем его как новый отдельный трек
                     if (part1.length >= 2) newEls.push({ id: Date.now() + Math.random(), type: 'track', points: part1 });
                     if (part2.length >= 2) newEls.push({ id: Date.now() + Math.random(), type: 'track', points: part2 });
                 } else {
@@ -415,7 +399,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
                 }
             } else {
                 if (Math.sqrt((toScreen(el).x - pos.x)**2 + (toScreen(el).y - pos.y)**2) < 15) {
-                    hitFound = true; // Удаляем точку
+                    hitFound = true; 
                 } else {
                     newEls.push(el);
                 }
@@ -426,7 +410,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
             return;
         }
 
-        // Если не задели оборудование, пробуем удалить угол комнаты
         const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 30);
         if (hitIndex !== -1) {
             if (pts.length <= 3) return alert("Минимум 3 угла!");
@@ -479,15 +462,12 @@ const RoomCanvas = ({ room, updateRoom }) => {
         setMode('drag'); return;
     }
 
-    // ⭐️ ИНТЕРАКТИВНОЕ ПЕРЕТАСКИВАНИЕ ОБОРУДОВАНИЯ (В режиме Drag)
     if (mode === 'drag') {
-        // Проверяем углы
         const hitCornerIdx = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 25); 
         if (hitCornerIdx !== -1) { 
             setDraggingIdx(hitCornerIdx); e.target.setPointerCapture(e.pointerId); return; 
         }
         
-        // Проверяем оборудование
         for (let el of els) {
             if (el.type === 'track') {
                 for(let i=0; i<el.points.length; i++) {
@@ -511,7 +491,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
     const pos = getMousePos(e);
     const logicalPos = toLogical(pos);
 
-    // Тянем оборудование (очень плавно!)
     if (draggingElement) {
         const newEls = els.map(el => {
             if (el.id === draggingElement.elId) {
@@ -525,11 +504,10 @@ const RoomCanvas = ({ room, updateRoom }) => {
             }
             return el;
         });
-        setEls(newEls); // Обновляем локально без задержек
+        setEls(newEls); 
         return;
     }
 
-    // Тянем угол
     if (draggingIdx !== null) {
         const newPts = [...pts];
         newPts[draggingIdx] = logicalPos;
@@ -541,7 +519,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
     e.target.releasePointerCapture(e.pointerId);
     if (draggingElement) {
         setDraggingElement(null);
-        syncElementsToInputs(els); // Сохраняем в смету
+        syncElementsToInputs(els); 
         return;
     }
     if (draggingIdx !== null) {
@@ -589,7 +567,6 @@ const RoomCanvas = ({ room, updateRoom }) => {
             <ThreeDPreview roomPts={pts} elements={room.elements} />
         )}
         
-        {/* КНОПКА ЗАВЕРШЕНИЯ ТРЕКА */}
         {mode === 'track' && activeTrackPts.length > 0 && viewMode === '2d' && (
             <button onClick={() => {
                 if(activeTrackPts.length > 1) {
@@ -636,6 +613,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
           </div>
       )}
 
+      {/* --- БЛОК РУЧНЫХ РАЗМЕРОВ С ЗАЩИТОЙ ОТ ПЕРЕВОДА --- */}
       <div style={{ background: '#f9f9fb', padding: '15px', borderRadius: '12px', marginTop: '15px', border: '1px solid #e5e5ea', textAlign: 'left' }}>
         <span style={{ fontSize: '11px', fontWeight: '800', color: '#8e8e93', display: 'block', marginBottom: '8px' }}>📐 СТЕНЫ (м):</span>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '15px' }}>
@@ -646,7 +624,7 @@ const RoomCanvas = ({ room, updateRoom }) => {
                 let displayVal = room.manualWalls?.[name] !== undefined ? room.manualWalls[name] : dist;
                 return (
                 <div key={name} style={{ display: 'flex', alignItems: 'center', background: '#fff', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e5e5ea' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '800', marginRight: '6px', color: '#007aff' }}>{name}:</span>
+                    <span translate="no" className="notranslate" style={{ fontSize: '13px', fontWeight: '800', marginRight: '6px', color: '#007aff' }}>{name}:</span>
                     <input type="number" value={displayVal} onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [name]: e.target.value})} style={{ width: '55px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '14px', color: '#1c1c1e' }}/>
                 </div>
                 )
@@ -663,8 +641,9 @@ const RoomCanvas = ({ room, updateRoom }) => {
                 let displayVal = room.manualWalls?.[diagName] !== undefined ? room.manualWalls[diagName] : dist;
                 return (
                 <div key={index} style={{ display: 'flex', alignItems: 'center', background: '#fff', padding: '4px 6px', borderRadius: '8px', border: '1px solid #e5e5ea' }}>
-                    <select value={diagName} onChange={(e) => { const newD = [...room.activeDiags]; newD[index] = e.target.value; updateRoom(room.id, 'activeDiags', newD); }} style={{ border: 'none', outline: 'none', fontWeight: '800', color: '#ff9500', background: 'transparent', fontSize: '13px', marginRight: '4px' }}>
-                        {allPossibleDiags.map(d => <option key={d} value={d}>{d}</option>)}
+                    {/* ⭐️ ВОТ ЗДЕСЬ СТОИТ ЗАЩИТА ОТ ПЕРЕВОДЧИКА ⭐️ */}
+                    <select translate="no" className="notranslate" value={diagName} onChange={(e) => { const newD = [...room.activeDiags]; newD[index] = e.target.value; updateRoom(room.id, 'activeDiags', newD); }} style={{ border: 'none', outline: 'none', fontWeight: '800', color: '#ff9500', background: 'transparent', fontSize: '13px', marginRight: '4px' }}>
+                        {allPossibleDiags.map(d => <option translate="no" className="notranslate" key={d} value={d}>{d}</option>)}
                     </select>
                     <span style={{fontWeight: '800', color: '#ff9500', marginRight: '4px'}}>:</span>
                     <input type="number" value={displayVal} onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [diagName]: e.target.value})} style={{ width: '50px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '14px', color: '#1c1c1e' }}/>
