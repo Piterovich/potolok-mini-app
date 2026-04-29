@@ -7,7 +7,7 @@ const T = {
 };
 
 // ==========================================
-// 🧠 ФИЗИЧЕСКИЙ ДВИЖОК + ВЕСА (ЖЕСТКОСТЬ)
+// 🧠 ФИЗИЧЕСКИЙ ДВИЖОК + АВТО-ЦЕНТРИРОВАНИЕ
 // ==========================================
 const getDist = (p1, p2) => Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
 
@@ -25,24 +25,19 @@ const solveGeometry = (pts, manualData) => {
   let newPts = pts.map(p => ({...p}));
   let springs = [];
 
-  // 1. СТЕНЫ
   for(let i = 0; i < pts.length; i++) {
       let j = (i + 1) % pts.length;
       let name = String.fromCharCode(65 + i) + String.fromCharCode(65 + j);
       let isManual = manualData[name] !== undefined && manualData[name] !== '';
       let target = isManual ? parseFloat(manualData[name]) : getDist(pts[i], pts[j]);
-      
-      // Стены всегда жесткие (сохраняют свои размеры). Ручной ввод - абсолютный приоритет.
       let weight = isManual ? 0.9 : 0.6; 
       if (!isNaN(target) && target > 0) springs.push({i, j, target, weight});
   }
 
-  // 2. ДИАГОНАЛИ
   if (pts.length === 4) {
       let d1 = "AC", d2 = "BD";
       let isM1 = manualData[d1] !== undefined && manualData[d1] !== '';
       let t1 = isM1 ? parseFloat(manualData[d1]) : getDist(pts[0], pts[2]);
-      // Если диагональ не задана вручную - делаем ее "резинкой" (0.02), чтобы комната могла искажаться
       let w1 = isM1 ? 0.9 : 0.02; 
       
       let isM2 = manualData[d2] !== undefined && manualData[d2] !== '';
@@ -61,14 +56,13 @@ const solveGeometry = (pts, manualData) => {
        }
   }
 
-  // Запускаем симуляцию (1000 итераций для идеальной точности)
   for(let iter = 0; iter < 1000; iter++) { 
       for(let s of springs) {
           let p1 = newPts[s.i], p2 = newPts[s.j];
           let dx = p2.x - p1.x, dy = p2.y - p1.y;
           let d = Math.sqrt(dx*dx + dy*dy);
           if (d < 0.001) continue;
-          let diff = (d - s.target) / d * s.weight; // Применяем ВЕС
+          let diff = (d - s.target) / d * s.weight; 
           p1.x += dx * diff; p1.y += dy * diff;
           p2.x -= dx * diff; p2.y -= dy * diff;
       }
@@ -207,6 +201,20 @@ const RoomCanvas = ({ room, updateRoom }) => {
     }
   }, [pts, draggingIdx, scale, showDiags, room.manualWalls]);
 
+  const updateAreaPerimAndSave = (newPts) => {
+    let perim = 0, area = 0;
+    for(let i = 0; i < newPts.length; i++) {
+       let p1 = newPts[i], p2 = newPts[(i+1) % newPts.length];
+       perim += Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
+       area += (p1.x * p2.y - p2.x * p1.y);
+    }
+    updateRoom(room.id, 'manualWalls', {}); 
+    updateRoom(room.id, 'area', Math.abs(area / 2).toFixed(2));
+    updateRoom(room.id, 'perim', perim.toFixed(2));
+    updateRoom(room.id, 'corners', newPts.length.toString()); // АВТО-ОБНОВЛЕНИЕ инпута "Углы"
+    updateRoom(room.id, 'logicalPts', newPts); 
+  };
+
   const getMousePos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const clientX = e.clientX || (e.touches && e.touches[0].clientX);
@@ -236,24 +244,36 @@ const RoomCanvas = ({ room, updateRoom }) => {
     if (draggingIdx === null) return;
     setDraggingIdx(null);
     e.target.releasePointerCapture(e.pointerId);
+    updateAreaPerimAndSave(centerShape(pts));
+  };
 
-    const centeredPts = centerShape(pts);
-
-    let perim = 0;
-    let area = 0;
-    for(let i = 0; i < centeredPts.length; i++) {
-       let p1 = centeredPts[i], p2 = centeredPts[(i+1) % centeredPts.length];
-       perim += Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
-       area += (p1.x * p2.y - p2.x * p1.y);
+  // ⭐️ ЛОГИКА ДОБАВЛЕНИЯ ТОЧКИ ⭐️
+  const handleAddCorner = () => {
+    if (pts.length >= 26) return alert("Достигнут предел углов (Z)");
+    let maxD = -1, idx = -1;
+    for(let i=0; i<pts.length; i++) {
+        let d = getDist(pts[i], pts[(i+1)%pts.length]);
+        if(d > maxD) { maxD = d; idx = i; }
     }
+    
+    let p1 = pts[idx], p2 = pts[(idx+1)%pts.length];
+    let dx = p2.x - p1.x, dy = p2.y - p1.y;
+    let len = Math.sqrt(dx*dx + dy*dy);
+    
+    // Создаем новую точку ровно посередине стены, и сдвигаем её наружу на 0.5 метра
+    let nx = (p1.x + p2.x)/2 - (dy/len)*0.5;
+    let ny = (p1.y + p2.y)/2 + (dx/len)*0.5;
+    
+    let newPts = [...pts];
+    newPts.splice(idx+1, 0, {x: nx, y: ny});
+    updateAreaPerimAndSave(centerShape(newPts));
+  };
 
-    const finalArea = Math.abs(area / 2).toFixed(2);
-    const finalPerim = perim.toFixed(2);
-
-    updateRoom(room.id, 'manualWalls', {}); 
-    updateRoom(room.id, 'area', finalArea);
-    updateRoom(room.id, 'perim', finalPerim);
-    updateRoom(room.id, 'logicalPts', centeredPts); 
+  // ⭐️ ЛОГИКА УДАЛЕНИЯ ТОЧКИ ⭐️
+  const handleRemoveCorner = () => {
+    if (pts.length <= 3) return alert("У помещения должно быть минимум 3 угла!");
+    let newPts = pts.slice(0, pts.length - 1); // Удаляем последний угол
+    updateAreaPerimAndSave(centerShape(newPts));
   };
 
   return (
@@ -277,6 +297,12 @@ const RoomCanvas = ({ room, updateRoom }) => {
       <div style={{ position: 'absolute', right: '10px', top: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
          <button onClick={() => setScale(s => Math.min(s + 5, 80))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
          <button onClick={() => setScale(s => Math.max(s - 5, 5))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+      </div>
+
+      {/* НОВЫЕ КНОПКИ УГЛОВ */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '12px' }}>
+        <button onClick={handleAddCorner} style={{ flex: 1, padding: '10px', background: '#e5f1ff', color: '#007aff', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '14px' }}>➕ Добавить угол</button>
+        <button onClick={handleRemoveCorner} style={{ flex: 1, padding: '10px', background: '#ffe5e5', color: '#ff3b30', borderRadius: '8px', border: 'none', fontWeight: '800', fontSize: '14px' }}>➖ Удалить угол</button>
       </div>
     </div>
   );
@@ -422,7 +448,7 @@ function App() {
                     <div style={styles.subContent}>
                       
                       <RoomCanvas room={room} updateRoom={updateRoom} />
-                      <p style={{ textAlign: 'center', fontSize: '11px', color: '#8e8e93', marginTop: '-10px', marginBottom: '15px' }}>{t('dragInfo')}</p>
+                      <p style={{ textAlign: 'center', fontSize: '11px', color: '#8e8e93', marginTop: '10px', marginBottom: '15px' }}>{t('dragInfo')}</p>
 
                       <div style={{ background: '#f9f9fb', padding: '12px', borderRadius: '12px', marginBottom: '15px', border: '1px solid #e5e5ea' }}>
                         <span style={{...styles.label, marginBottom: '10px'}}>📐 ТОЧНЫЕ РАЗМЕРЫ (Стены и Диагонали):</span>
@@ -480,7 +506,11 @@ function App() {
 
                       <div style={styles.inputRow}><span>{t('area')}</span><input type="number" value={room.area} onChange={e => updateRoom(room.id, 'area', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('perim')}</span><input type="number" value={room.perim} onChange={e => updateRoom(room.id, 'perim', e.target.value)} style={styles.numInput} placeholder="0" /></div>
-                      <div style={styles.inputRow}><span>{t('corners')}</span><input type="number" value={room.corners} onChange={e => updateRoom(room.id, 'corners', e.target.value)} style={styles.numInput} placeholder="4" /></div>
+                      <div style={styles.inputRow}>
+                        <span>{t('corners')}</span>
+                        {/* Инпут теперь readOnly, он обновляется сам через кнопки чертежа */}
+                        <input type="number" value={room.corners} readOnly style={{...styles.numInput, background: '#f2f2f7', color: '#8e8e93'}} placeholder="4" />
+                      </div>
                     </div>
                   )}
                 </div>
