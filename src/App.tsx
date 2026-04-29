@@ -657,15 +657,13 @@ const RoomCanvas = ({ room, updateRoom, options }) => {
       </div>
       
       {viewMode === '2d' && (
-          <>
-            <button onClick={() => setShowDiags(!showDiags)} style={{ position: 'absolute', left: '10px', top: '40px', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '12px', color: '#1c1c1e', fontWeight: 'bold', zIndex: 5 }}>
-                {showDiags ? '👁 Скрыть диагонали' : '👁 Показать диагонали'}
-            </button>
-            <div style={{ position: 'absolute', right: '10px', top: '40px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 5 }}>
-                <button onClick={() => setScale(s => Math.min(s + 5, 80))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
-                <button onClick={() => setScale(s => Math.max(s - 5, 5))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
-            </div>
-          </>
+          <div style={{ position: 'absolute', right: '10px', top: '15px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', zIndex: 5 }}>
+              <button onClick={() => setShowDiags(!showDiags)} style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '12px', color: showDiags ? '#1c1c1e' : '#8e8e93', fontWeight: '800', transition: '0.2s' }}>
+                  {showDiags ? '👁 Скрыть' : '👓 Показать'}
+              </button>
+              <button onClick={() => setScale(s => Math.min(s + 5, 80))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+              <button onClick={() => setScale(s => Math.max(s - 5, 5))} style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e5e5ea', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontSize: '20px', color: '#007aff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+          </div>
       )}
       
       <button onClick={() => setViewMode(viewMode === '2d' ? '3d' : '2d')} style={{ position: 'absolute', bottom: '130px', right: '10px', padding: '10px 15px', borderRadius: '20px', background: viewMode === '2d' ? '#ff3b30' : '#8e8e93', color: 'white', border: 'none', fontWeight: '900', fontSize: '14px', boxShadow: '0 4px 15px rgba(255,59,48,0.4)', zIndex: 10, transition: '0.3s' }}>
