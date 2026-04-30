@@ -563,7 +563,37 @@ function App() {
       window.Telegram?.WebApp?.close();
   };
 
-  const localTotalSum = rooms.reduce((total, r) => total + ((Number(r.area) || 0) * (prices.canvas[r.canvas] || 0)) + ((Number(r.perim) || 0) * (prices.profile[r.profile] || 0)) + ((Number(r.spots) || 0) * prices.light) + ((Number(r.chands) || 0) * prices.chand) + ((Number(r.track) || 0) * prices.track) + ((Number(r.corners) || 0) * prices.corner) + ((Number(r.cornice) || 0) * (prices.cornices[r.corniceType] || 0)) + ((Number(r.pipe) || 0) * prices.pipe), 0);
+  // ⭐️ УМНЫЙ ПОДСЧЕТ ИТОГО (С АВТОПОДБОРОМ СПЕЦ-УГЛОВ) ⭐️
+  const localTotalSum = rooms.reduce((total, r) => {
+      let p_canvas = prices.canvas[r.canvas] || 0;
+      let p_profile = prices.profile[r.profile] || 0;
+      
+      // Ищем спец-угол для выбранного профиля
+      let p_corner = prices.corner; // по умолчанию базовая цена угла
+      if (r.profile) {
+          const keywords = r.profile.split('_').filter(k => k.length > 3);
+          for (let cat of priceData) {
+              for (let item of cat.items) {
+                  if (item.id.includes('угол') && keywords.some(kw => item.id.includes(kw))) {
+                      p_corner = parseFloat(item.price) || 0;
+                      break;
+                  }
+              }
+          }
+      }
+      
+      let p_cornice = prices.cornices[r.corniceType] || 0;
+
+      return total + 
+          ((Number(r.area) || 0) * p_canvas) + 
+          ((Number(r.perim) || 0) * p_profile) + 
+          ((Number(r.corners) || 0) * p_corner) + 
+          ((Number(r.spots) || 0) * prices.light) + 
+          ((Number(r.chands) || 0) * prices.chand) + 
+          ((Number(r.track) || 0) * prices.track) + 
+          ((Number(r.cornice) || 0) * p_cornice) + 
+          ((Number(r.pipe) || 0) * prices.pipe);
+  }, 0);
 
   const styles = {
     appContainer: { width: '100%', maxWidth: '100%', margin: '0 auto', height: '100vh', backgroundColor: ts.bg, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', fontFamily: 'system-ui, -apple-system, sans-serif' },
