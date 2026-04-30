@@ -5,12 +5,12 @@ import * as THREE from 'three'
 import './App.css'
 
 const T = {
-  ru: { calc: "Умный Расчет", dash: "Главная", archive: "Архив", settings: "Настройки", addRoom: "Добавить комнату", toBot: "Оформить смету 🚀", area: "Площадь", perim: "Периметр", corners: "Углы", geom: "📏 Геометрия и замеры", materials: "🎨 Выбор материалов", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", pre: "ИТОГО ПРЕДВАРИТЕЛЬНО:", contacts: "👤 Данные клиента", clientName: "Имя", clientPhone: "Телефон", clientAddress: "Адрес объекта", savePrice: "💾 Сохранить прайс", priceSaved: "✅ Прайс сохранен!", addPosition: "➕ Добавить позицию", addCategory: "➕ Добавить категорию", deleteConfirm: "Удалить эту категорию полностью?", newCategory: "Новая категория", newItem: "Новая позиция" },
-  uk: { calc: "Розумний Розрахунок", dash: "Головна", archive: "Архів", settings: "Налаштування", addRoom: "Додати кімнату", toBot: "Оформити кошторис 🚀", area: "Площа", perim: "Периметр", corners: "Кути", geom: "📏 Геометрія та заміри", materials: "🎨 Вибір матеріалів", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", pre: "РАЗОМ ПОПЕРЕДНЬО:", contacts: "👤 Дані клієнта", clientName: "Ім'я", clientPhone: "Телефон", clientAddress: "Адреса об'єкта", savePrice: "💾 Зберегти прайс", priceSaved: "✅ Прайс збережено!", addPosition: "➕ Додати позицію", addCategory: "➕ Додати категорію", deleteConfirm: "Видалити цю категорію повністю?", newCategory: "Нова категорія", newItem: "Нова позиція" },
-  en: { calc: "Smart Calc", dash: "Home", archive: "Archive", settings: "Settings", addRoom: "Add Room", toBot: "Send to Bot 🚀", area: "Area", perim: "Perimeter", corners: "Corners", geom: "📏 Geometry", materials: "🎨 Materials", lighting: "💡 Lighting", corniceSec: "🏁 Cornices", dops: "🔧 Extras", pre: "ESTIMATED TOTAL:", contacts: "👤 Client Data", clientName: "Name", clientPhone: "Phone", clientAddress: "Address", savePrice: "💾 Save Pricing", priceSaved: "✅ Saved!", addPosition: "➕ Add item", addCategory: "➕ Add category", deleteConfirm: "Delete this category entirely?", newCategory: "New category", newItem: "New item" },
-  es: { calc: "Cálculo Inteligente", dash: "Inicio", archive: "Archivo", settings: "Ajustes", addRoom: "Añadir sala", toBot: "Enviar al Bot 🚀", area: "Área", perim: "Perímetro", corners: "Esquinas", geom: "📏 Geometría", materials: "🎨 Materiales", lighting: "💡 Iluminación", corniceSec: "🏁 Cornisas", dops: "🔧 Extras", pre: "TOTAL ESTIMADO:", contacts: "👤 Datos del cliente", clientName: "Nombre", clientPhone: "Teléfono", clientAddress: "Dirección", savePrice: "💾 Guardar Precios", priceSaved: "✅ ¡Guardado!", addPosition: "➕ Añadir elemento", addCategory: "➕ Añadir categoría", deleteConfirm: "¿Eliminar esta categoría por completo?", newCategory: "Nueva categoría", newItem: "Nuevo elemento" },
-  pl: { calc: "Inteligentny Kalkulator", dash: "Główna", archive: "Archiwum", settings: "Ustawienia", addRoom: "Dodaj pokój", toBot: "Wyślij do Bota 🚀", area: "Powierzchnia", perim: "Obwód", corners: "Kąty", geom: "📏 Geometria", materials: "🎨 Materiały", lighting: "💡 Oświetlenie", corniceSec: "🏁 Karnisze", dops: "🔧 Dodatki", pre: "WSTĘPNA SUMA:", contacts: "👤 Dane klienta", clientName: "Imię", clientPhone: "Telefon", clientAddress: "Adres", savePrice: "💾 Zapisz Cennik", priceSaved: "✅ Zapisano!", addPosition: "➕ Dodaj pozycję", addCategory: "➕ Dodaj kategorię", deleteConfirm: "Usunąć tę kategorię całkowicie?", newCategory: "Nowa kategoria", newItem: "Nowa pozycja" },
-  kk: { calc: "Ақылды есептеу", dash: "Басты", archive: "Мұрағат", settings: "Параметрлер", addRoom: "Бөлме қосу", toBot: "Ботқа жіберу 🚀", area: "Аудан", perim: "Периметр", corners: "Бұрыштар", geom: "📏 Геометрия", materials: "🎨 Материалдар", lighting: "💡 Жарықтандыру", corniceSec: "🏁 Карниздер", dops: "🔧 Қосымша жұмыстар", pre: "АЛДЫН АЛА БАҒАСЫ:", contacts: "👤 Клиент деректері", clientName: "Аты", clientPhone: "Телефон", clientAddress: "Мекенжайы", savePrice: "💾 Бағаны сақтау", priceSaved: "✅ Сақталды!", addPosition: "➕ Позиция қосу", addCategory: "➕ Санат қосу", deleteConfirm: "Бұл санатты толығымен жою керек пе?", newCategory: "Жаңа санат", newItem: "Жаңа позиция" }
+  ru: { calc: "Умный Расчет", dash: "Главная", archive: "Архив", settings: "Настройки", addRoom: "Добавить комнату", toBot: "Оформить смету 🚀", area: "Площадь", perim: "Периметр", corners: "Углы", geom: "📏 Геометрия и замеры", materials: "🎨 Выбор материалов", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", pre: "ИТОГО ПРЕДВАРИТЕЛЬНО:", contacts: "👤 Данные клиента", clientName: "Имя", clientPhone: "Телефон", clientAddress: "Адрес объекта", savePrice: "💾 Сохранить прайс", priceSaved: "✅ Прайс сохранен!", addPosition: "➕ Добавить позицию", addCategory: "➕ Добавить категорию", deleteConfirm: "Удалить эту категорию полностью?", newCategory: "Новая категория", newItem: "Новая позиция", canvas: "Полотно", profile: "Профиль", spots: "Точечные (шт)", chands: "Люстры (шт)", track: "Трек (м.п.)", pipe: "Обход трубы (шт)", corniceType: "Тип карниза", corniceLen: "Длина карниза (м)", select: "Выберите..." },
+  uk: { calc: "Розумний Розрахунок", dash: "Головна", archive: "Архів", settings: "Налаштування", addRoom: "Додати кімнату", toBot: "Оформити кошторис 🚀", area: "Площа", perim: "Периметр", corners: "Кути", geom: "📏 Геометрія та заміри", materials: "🎨 Вибір матеріалів", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", pre: "РАЗОМ ПОПЕРЕДНЬО:", contacts: "👤 Дані клієнта", clientName: "Ім'я", clientPhone: "Телефон", clientAddress: "Адреса об'єкта", savePrice: "💾 Зберегти прайс", priceSaved: "✅ Прайс збережено!", addPosition: "➕ Додати позицію", addCategory: "➕ Додати категорію", deleteConfirm: "Видалити цю категорію повністю?", newCategory: "Нова категорія", newItem: "Нова позиція", canvas: "Полотно", profile: "Профіль", spots: "Точкові (шт)", chands: "Люстри (шт)", track: "Трек (м.п.)", pipe: "Обхід труби (шт)", corniceType: "Тип карниза", corniceLen: "Довжина карниза (м)", select: "Оберіть..." },
+  en: { calc: "Smart Calc", dash: "Home", archive: "Archive", settings: "Settings", addRoom: "Add Room", toBot: "Send to Bot 🚀", area: "Area", perim: "Perimeter", corners: "Corners", geom: "📏 Geometry", materials: "🎨 Materials", lighting: "💡 Lighting", corniceSec: "🏁 Cornices", dops: "🔧 Extras", pre: "ESTIMATED TOTAL:", contacts: "👤 Client Data", clientName: "Name", clientPhone: "Phone", clientAddress: "Address", savePrice: "💾 Save Pricing", priceSaved: "✅ Saved!", addPosition: "➕ Add item", addCategory: "➕ Add category", deleteConfirm: "Delete this category entirely?", newCategory: "New category", newItem: "New item", canvas: "Canvas", profile: "Profile", spots: "Spots (pcs)", chands: "Chands (pcs)", track: "Track (m)", pipe: "Pipe (pcs)", corniceType: "Cornice type", corniceLen: "Length (m)", select: "Select..." },
+  es: { calc: "Cálculo Inteligente", dash: "Inicio", archive: "Archivo", settings: "Ajustes", addRoom: "Añadir sala", toBot: "Enviar al Bot 🚀", area: "Área", perim: "Perímetro", corners: "Esquinas", geom: "📏 Geometría", materials: "🎨 Materiales", lighting: "💡 Iluminación", corniceSec: "🏁 Cornisas", dops: "🔧 Extras", pre: "TOTAL ESTIMADO:", contacts: "👤 Datos del cliente", clientName: "Nombre", clientPhone: "Teléfono", clientAddress: "Dirección", savePrice: "💾 Guardar Precios", priceSaved: "✅ ¡Guardado!", addPosition: "➕ Añadir elemento", addCategory: "➕ Añadir categoría", deleteConfirm: "¿Eliminar esta categoría por completo?", newCategory: "Nueva categoría", newItem: "Nuevo elemento", canvas: "Lona", profile: "Perfil", spots: "Focos (uds)", chands: "Lámparas (uds)", track: "Riel (m)", pipe: "Tubo (uds)", corniceType: "Tipo de cornisa", corniceLen: "Longitud (m)", select: "Seleccionar..." },
+  pl: { calc: "Inteligentny Kalkulator", dash: "Główna", archive: "Archiwum", settings: "Ustawienia", addRoom: "Dodaj pokój", toBot: "Wyślij do Bota 🚀", area: "Powierzchnia", perim: "Obwód", corners: "Kąty", geom: "📏 Geometria", materials: "🎨 Materiały", lighting: "💡 Oświetlenie", corniceSec: "🏁 Karnisze", dops: "🔧 Dodatki", pre: "WSTĘPNA SUMA:", contacts: "👤 Dane klienta", clientName: "Imię", clientPhone: "Telefon", clientAddress: "Adres", savePrice: "💾 Zapisz Cennik", priceSaved: "✅ Zapisano!", addPosition: "➕ Dodaj pozycję", addCategory: "➕ Dodaj kategorię", deleteConfirm: "Usunąć tę kategorię całkowicie?", newCategory: "Nowa kategoria", newItem: "Nowa pozycja", canvas: "Płótno", profile: "Profil", spots: "Spoty (szt)", chands: "Żyrandole (szt)", track: "Szyna (m)", pipe: "Rura (szt)", corniceType: "Typ karnisza", corniceLen: "Długość (m)", select: "Wybierz..." },
+  kk: { calc: "Ақылды есептеу", dash: "Басты", archive: "Мұрағат", settings: "Параметрлер", addRoom: "Бөлме қосу", toBot: "Ботқа жіберу 🚀", area: "Аудан", perim: "Периметр", corners: "Бұрыштар", geom: "📏 Геометрия", materials: "🎨 Материалдар", lighting: "💡 Жарықтандыру", corniceSec: "🏁 Карниздер", dops: "🔧 Қосымша жұмыстар", pre: "АЛДЫН АЛА БАҒАСЫ:", contacts: "👤 Клиент деректері", clientName: "Аты", clientPhone: "Телефон", clientAddress: "Мекенжайы", savePrice: "💾 Бағаны сақтау", priceSaved: "✅ Сақталды!", addPosition: "➕ Позиция қосу", addCategory: "➕ Санат қосу", deleteConfirm: "Бұл санатты толығымен жою керек пе?", newCategory: "Жаңа санат", newItem: "Жаңа позиция", canvas: "Кенеп", profile: "Профиль", spots: "Шамдар (дана)", chands: "Люстралар (дана)", track: "Трек (м)", pipe: "Құбыр (дана)", corniceType: "Карниз түрі", corniceLen: "Ұзындығы (м)", select: "Таңдаңыз..." }
 };
 
 const cleanNum = (val) => {
@@ -357,7 +357,7 @@ const ArchiveScreen = ({ t, ts }) => (
     </div>
 );
 
-// ⭐️ ЭКРАН НАСТРОЕК (ПРАЙС-ЛИСТ СО СТРЕЛОЧКАМИ СОРТИРОВКИ) ⭐️
+// ⭐️ ЭКРАН НАСТРОЕК (ПРАЙС-ЛИСТ) ⭐️
 const SettingsScreen = ({ t, ts, priceData, setPriceData, userId }) => {
     const [expandedCat, setExpandedCat] = useState(null);
     const [isSaved, setIsSaved] = useState(false);
@@ -370,7 +370,6 @@ const SettingsScreen = ({ t, ts, priceData, setPriceData, userId }) => {
     const removeItem = (catId, itemId) => { triggerHaptic('medium'); setPriceData(priceData.map(c => c.id === catId ? { ...c, items: c.items.filter(i => i.id !== itemId) } : c)); };
     const addItem = (catId) => { triggerHaptic('light'); setPriceData(priceData.map(c => c.id === catId ? { ...c, items: [...c.items, { id: 'item_' + Date.now(), name: t('newItem'), price: 0 }] } : c)); };
     
-    // ⭐️ ЛОГИКА ОТПРАВКИ ПРАЙСА В ПИТОН ⭐️
     const handleSave = async () => { 
         triggerHaptic('heavy'); 
         setIsSaved(true); 
@@ -420,6 +419,7 @@ const SettingsScreen = ({ t, ts, priceData, setPriceData, userId }) => {
                         <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                             <button disabled={catIndex === 0} onClick={(e) => moveCat(e, catIndex, 'up')} style={{ opacity: catIndex === 0 ? 0.2 : 1, background: 'none', border: 'none', color: ts.text, fontSize: '18px', padding: '4px' }}>▲</button>
                             <button disabled={catIndex === priceData.length - 1} onClick={(e) => moveCat(e, catIndex, 'down')} style={{ opacity: catIndex === priceData.length - 1 ? 0.2 : 1, background: 'none', border: 'none', color: ts.text, fontSize: '18px', padding: '4px' }}>▼</button>
+                            {/* ⭐️ КОРЗИНА ТЕПЕРЬ ДОСТУПНА ВЕЗДЕ ⭐️ */}
                             <button onClick={(e) => removeCat(e, cat.id)} style={{ background: 'none', border: 'none', color: ts.danger, fontSize: '20px', padding: '4px', marginLeft: '4px' }}>🗑</button>
                         </div>
                     </div>
@@ -435,7 +435,8 @@ const SettingsScreen = ({ t, ts, priceData, setPriceData, userId }) => {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                                         {itemIndex > 0 ? <button onClick={() => moveItem(cat.id, itemIndex, 'up')} style={{ background: ts.card, border: `1px solid ${ts.border}`, borderRadius: '6px', color: ts.text, fontSize: '10px', padding: '4px 6px' }}>▲</button> : <div style={{width:'22px'}}></div>}
                                         {itemIndex < cat.items.length - 1 ? <button onClick={() => moveItem(cat.id, itemIndex, 'down')} style={{ background: ts.card, border: `1px solid ${ts.border}`, borderRadius: '6px', color: ts.text, fontSize: '10px', padding: '4px 6px' }}>▼</button> : <div style={{width:'22px'}}></div>}
-                                        <button onClick={() => removeItem(cat.id, item.id)} style={{ background: 'none', border: 'none', color: ts.danger, fontSize: '20px', padding: '0 4px', marginLeft: '4px' }}>🗑</button>
+                                        {/* ⭐️ МИНУС ЗАМЕНЕН НА КОРЗИНУ ⭐️ */}
+                                        <button onClick={() => removeItem(cat.id, item.id)} style={{ background: 'none', border: 'none', color: ts.danger, fontSize: '20px', padding: '0 4px', marginLeft: '2px' }}>🗑</button>
                                     </div>
                                 </div>
                             ))}
@@ -463,7 +464,6 @@ function App() {
   const [theme, setTheme] = useState('light');
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
-  // ⭐️ ДИНАМИЧЕСКИЙ ПРАЙС-ЛИСТ (ИСТОЧНИК ПРАВДЫ) ⭐️
   const [priceData, setPriceData] = useState([
       { id: 'canvas', name: 'Полотна (за м²)', isBase: true, items: [ 
           {id: 'matte_32', name: 'Белый Матовый (до 3.2м)', price: 330}, 
@@ -486,7 +486,6 @@ function App() {
   const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
   const [expandedSubSec, setExpandedSubSec] = useState('geom');
 
-  // ⭐️ ЛОГИКА ЗАГРУЗКИ ПРАЙСА ИЗ ПИТОНА ПРИ СТАРТЕ ⭐️
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
     if (tg && tg.initData) {
@@ -496,7 +495,6 @@ function App() {
           setUserId(user.id); 
           setLang(T[user.language_code] ? user.language_code : 'ru'); 
 
-          // 🚀 СКАЧИВАЕМ ПРАЙС ИЗ БАЗЫ БОТА
           fetch(`https://potolokpro777bot.website/api/prices?userId=${user.id}`)
             .then(res => res.json())
             .then(data => {
@@ -661,8 +659,9 @@ function App() {
                               <span style={{ fontWeight: '700', fontSize: '16px', color: ts.text }}>{t('materials')}</span><span style={{ color: ts.subText, fontSize: '14px' }}>{expandedSubSec === 'mat' ? '▲' : '▼'}</span>
                             </div>
                             <div style={{ display: expandedSubSec === 'mat' ? 'block' : 'none', ...styles.subContent }}>
-                                <span style={styles.label}>{t('canvas')}</span><SearchableSelect options={options.canvases} value={room.canvas} onChange={(val) => updateRoom(room.id, 'canvas', val)} theme={theme} />
-                                <div style={{ marginTop: '20px' }}><span style={styles.label}>{t('profile')}</span><SearchableSelect options={options.profiles} value={room.profile} onChange={(val) => updateRoom(room.id, 'profile', val)} theme={theme} /></div>
+                                {/* ⭐️ ПЕРЕДАЕМ ПЛЕЙСХОЛДЕР ⭐️ */}
+                                <span style={styles.label}>{t('canvas')}</span><SearchableSelect options={options.canvases} value={room.canvas} onChange={(val) => updateRoom(room.id, 'canvas', val)} theme={theme} placeholder={t('select')} />
+                                <div style={{ marginTop: '20px' }}><span style={styles.label}>{t('profile')}</span><SearchableSelect options={options.profiles} value={room.profile} onChange={(val) => updateRoom(room.id, 'profile', val)} theme={theme} placeholder={t('select')} /></div>
                             </div>
                           </div>
                           <div>
@@ -681,7 +680,8 @@ function App() {
                             </div>
                             <div style={{ display: expandedSubSec === 'corniceSec' ? 'block' : 'none', ...styles.subContent }}>
                                 <span style={styles.label}>{t('corniceType')}</span>
-                                <SearchableSelect options={options.cornices} value={room.corniceType} onChange={(val) => updateRoom(room.id, 'corniceType', val)} theme={theme} openUp={true} />
+                                {/* ⭐️ ПЕРЕДАЕМ ПЛЕЙСХОЛДЕР ⭐️ */}
+                                <SearchableSelect options={options.cornices} value={room.corniceType} onChange={(val) => updateRoom(room.id, 'corniceType', val)} theme={theme} openUp={true} placeholder={t('select')} />
                                 {room.corniceType !== 'none' && ( <div style={{...styles.inputRow, marginTop: '20px'}}><span>{t('corniceLen')}</span><input type="number" value={room.cornice} onChange={e => updateRoom(room.id, 'cornice', cleanNum(e.target.value))} style={styles.numInput} placeholder="0" /></div> )}
                             </div>
                           </div>
