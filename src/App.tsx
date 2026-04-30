@@ -9,7 +9,7 @@ const T = {
   uk: { calc: "Розумний Розрахунок", dash: "Головна", archive: "Архів", settings: "Налаштування", addRoom: "Додати кімнату", toBot: "Оформити кошторис 🚀", area: "Площа", perim: "Периметр", corners: "Кути", geom: "📏 Геометрія та заміри", materials: "🎨 Вибір матеріалів", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", pre: "РАЗОМ ПОПЕРЕДНЬО:" }
 };
 
-// --- Геометрическое ядро (без изменений) ---
+// --- Геометрическое ядро ---
 const getDist = (p1, p2) => Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
 const getDistToSegment = (p, p1, p2) => {
     let A = p.x - p1.x, B = p.y - p1.y, C = p2.x - p1.x, D = p2.y - p1.y;
@@ -86,7 +86,7 @@ const solveGeometry = (pts, manualData, activeDiags) => {
   return centerShape(alignedPts);
 };
 
-// --- 🧊 3D Preview (без изменений) ---
+// --- 🧊 3D Preview ---
 const createThreeShape = (pts) => {
     const shape = new THREE.Shape();
     if (!pts || pts.length < 3) return shape;
@@ -137,18 +137,10 @@ const CeilingGeometry3D = ({ roomPts, elements }) => {
                   let len = Math.sqrt((pt.x - prev.x)**2 + (pt.y - prev.y)**2);
                   let angle = Math.atan2(pt.y - prev.y, pt.x - prev.x);
                   let mx = (prev.x + pt.x)/2; let my = (prev.y + pt.y)/2;
-                  
                   return (
                       <group key={`${el.id}-${i}`} position={[mx, my, -0.02]} rotation={[0, 0, angle]}>
-                          <mesh>
-                              <boxGeometry args={[len + 0.035, 0.035, 0.02]} /> 
-                              <meshBasicMaterial color="#1c1c1e" />
-                          </mesh>
-                          <mesh position={[0, 0, -0.015]}>
-                              <boxGeometry args={[len, 0.02, 0.01]} />
-                              <meshBasicMaterial color="#ffffff" />
-                              <pointLight distance={1.5} intensity={0.2} color="#ffffff" />
-                          </mesh>
+                          <mesh><boxGeometry args={[len + 0.035, 0.035, 0.02]} /><meshBasicMaterial color="#1c1c1e" /></mesh>
+                          <mesh position={[0, 0, -0.015]}><boxGeometry args={[len, 0.02, 0.01]} /><meshBasicMaterial color="#ffffff" /><pointLight distance={1.5} intensity={0.2} color="#ffffff" /></mesh>
                       </group>
                   )
               });
@@ -190,11 +182,20 @@ const getTheme = (mode) => ({
     inputBg: mode === 'dark' ? '#2C2C2E' : '#F9F9FB',
 });
 
-const triggerHaptic = (type = 'light') => window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type);
-const triggerHapticSelection = () => window.Telegram?.WebApp?.HapticFeedback?.selectionChanged();
+// ⭐️ ИСПРАВЛЕННЫЙ ТАКТИЛЬНЫЙ ОТКЛИК (Защита от крашей)
+const triggerHaptic = (type = 'light') => {
+    try {
+        if (type === 'selection') {
+            window.Telegram?.WebApp?.HapticFeedback?.selectionChanged();
+        } else {
+            window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type);
+        }
+    } catch(e) {}
+};
 
 // --- 📱 Дизайнерский SearchableSelect ---
-const SearchableSelect = ({ options, value, onChange, theme, placeholder }) => {
+// ⭐️ ДОБАВЛЕН ПАРАМЕТР openUp ДЛЯ ОТКРЫТИЯ ВВЕРХ
+const SearchableSelect = ({ options, value, onChange, theme, placeholder, openUp = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const t = getTheme(theme);
@@ -204,7 +205,7 @@ const SearchableSelect = ({ options, value, onChange, theme, placeholder }) => {
   return (
     <div style={{ position: 'relative', width: '100%', marginBottom: '8px' }}>
       <div 
-        onClick={() => { triggerHapticSelection(); setIsOpen(!isOpen); setSearch(""); }}
+        onClick={() => { triggerHaptic('selection'); setIsOpen(!isOpen); setSearch(""); }}
         style={{ background: t.inputBg, border: `1px solid ${t.border}`, padding: '14px 16px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
       >
         {isOpen ? (
@@ -217,14 +218,18 @@ const SearchableSelect = ({ options, value, onChange, theme, placeholder }) => {
                 {selected ? selected.name : placeholder}
             </span>
         )}
-        <span style={{ color: t.subText, fontSize: '12px' }}>{isOpen ? '▲' : '▼'}</span>
+        <span style={{ color: t.subText, fontSize: '12px' }}>{isOpen ? (openUp ? '▼' : '▲') : (openUp ? '▲' : '▼')}</span>
       </div>
       {isOpen && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: t.card, borderRadius: '14px', marginTop: '8px', border: `1px solid ${t.border}`, boxShadow: '0 12px 24px rgba(0,0,0,0.2)', maxHeight: '250px', overflowY: 'auto' }}>
+        <div style={{ 
+            position: 'absolute', 
+            ...(openUp ? { bottom: '100%', marginBottom: '6px' } : { top: '100%', marginTop: '6px' }), // ⭐️ ЛОГИКА ОТКРЫТИЯ ВВЕРХ/ВНИЗ
+            left: 0, right: 0, zIndex: 1000, background: t.card, borderRadius: '14px', border: `1px solid ${t.border}`, boxShadow: '0 12px 24px rgba(0,0,0,0.2)', maxHeight: '250px', overflowY: 'auto' 
+        }}>
           {filtered.length > 0 ? filtered.map(o => (
             <div 
               key={o.id} 
-              onMouseDown={(e) => { e.preventDefault(); triggerHapticSelection(); onChange(o.id); setIsOpen(false); }}
+              onMouseDown={(e) => { e.preventDefault(); triggerHaptic('selection'); onChange(o.id); setIsOpen(false); }}
               style={{ padding: '14px 16px', borderBottom: `1px solid ${t.border}`, color: value === o.id ? t.accent : t.text, fontWeight: value === o.id ? 'bold' : '500', cursor: 'pointer', background: value === o.id ? (t.isDark ? '#2C2C2E' : '#F0F8FF') : 'transparent' }}
             >
               <span translate="no" className="notranslate">{o.name}</span>
@@ -747,11 +752,18 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
 // 🚀 ГЛАВНОЕ ПРИЛОЖЕНИЕ СО ВКЛАДКАМИ (ROUTING)
 // ==========================================
 function App() {
-  const [activeTab, setActiveTab] = useState('calc'); // ⭐️ Роутинг: dash, calc, archive, settings
+  const [activeTab, setActiveTab] = useState('calc'); 
   const [lang, setLang] = useState('ru');
   const [userId, setUserId] = useState(null);
   const [isTelegram, setIsTelegram] = useState(true);
   const [theme, setTheme] = useState('light');
+
+  // ⭐️ ЧТОБЫ СОХРАНЯТЬ ДАННЫЕ ПРИ ПЕРЕКЛЮЧЕНИИ ВКЛАДОК, ПЕРЕНОСИМ СТЕЙТ СЮДА ⭐️
+  const [rooms, setRooms] = useState([
+    { id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }
+  ]);
+  const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
+  const [expandedSubSec, setExpandedSubSec] = useState('geom');
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -766,7 +778,9 @@ function App() {
     }
   }, []);
 
-  const triggerHaptic = (type = 'light') => window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type);
+  const triggerHaptic = (type = 'light') => {
+      try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type); } catch(e){}
+  };
   const ts = getTheme(theme);
   const t = (key) => T[lang]?.[key] || T['ru'][key];
 
@@ -785,7 +799,7 @@ function App() {
 
   const styles = {
     appContainer: { width: '100%', maxWidth: '100%', margin: '0 auto', height: '100vh', backgroundColor: ts.bg, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', fontFamily: 'system-ui, -apple-system, sans-serif' },
-    contentArea: { flex: 1, padding: '16px 12px', overflowY: 'auto', paddingBottom: '200px', boxSizing: 'border-box' }, // ⭐️ Увеличили нижний отступ для меню
+    contentArea: { flex: 1, padding: '16px 12px', overflowY: 'auto', paddingBottom: '200px', boxSizing: 'border-box' }, 
     card: { background: ts.card, borderRadius: '20px', marginBottom: '16px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', width: '100%', position: 'relative', border: `1px solid ${ts.border}` },
     header: { padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' },
     subHeader: { padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderTop: `1px solid ${ts.border}` },
@@ -796,12 +810,6 @@ function App() {
   };
 
   const CalculatorScreen = () => {
-    const [rooms, setRooms] = useState([
-      { id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }
-    ]);
-    const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
-    const [expandedSubSec, setExpandedSubSec] = useState('geom'); 
-
     const updateRoom = (id, field, value) => { setRooms(prevRooms => prevRooms.map(r => r.id === id ? { ...r, [field]: value } : r)); };
     
     useEffect(() => {
@@ -915,7 +923,10 @@ function App() {
                   </div>
                   <div style={{ display: expandedSubSec === 'corniceSec' ? 'block' : 'none', ...styles.subContent }}>
                       <span style={styles.label}>{t('corniceType')}</span>
-                      <SearchableSelect options={options.cornices} value={room.corniceType} onChange={(val) => updateRoom(room.id, 'corniceType', val)} theme={theme} />
+                      
+                      {/* ⭐️ ИСПОЛЬЗУЕМ ПАРАМЕТР openUp ДЛЯ КАРНИЗОВ ⭐️ */}
+                      <SearchableSelect options={options.cornices} value={room.corniceType} onChange={(val) => updateRoom(room.id, 'corniceType', val)} theme={theme} openUp={true} />
+                      
                       {room.corniceType !== 'none' && (
                         <div style={{...styles.inputRow, marginTop: '20px'}}>
                           <span>{t('corniceLen')}</span>
@@ -939,7 +950,7 @@ function App() {
         
         <button onClick={addRoom} style={{ width: '100%', padding: '18px', background: 'transparent', color: ts.accent, border: `2px dashed ${ts.accent}`, borderRadius: '16px', fontSize: '16px', fontWeight: '800', marginBottom: '20px' }}>➕ {t('addRoom')}</button>
         
-        {/* ⭐️ КРАСИВАЯ GLASSMORPHISM ПАНЕЛЬ (ПОДНЯТА ВЫШЕ ТАБ-БАРА) ⭐️ */}
+        {/* ⭐️ КРАСИВАЯ GLASSMORPHISM ПАНЕЛЬ ⭐️ */}
         <div style={{ position: 'fixed', bottom: '100px', left: '12px', right: '12px', background: ts.glass, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', padding: '16px 20px', borderRadius: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 12px 40px rgba(0,0,0,0.15)', border: `1px solid ${theme === 'dark' ? '#48484A' : '#FFFFFF'}`, zIndex: 100 }}>
            <div>
              <span style={{ color: ts.subText, fontSize: '12px', fontWeight: '800', display: 'block', textTransform: 'uppercase', marginBottom: '2px' }}>{t('pre')}</span>
@@ -1023,14 +1034,12 @@ function App() {
   return (
       <div style={styles.appContainer}>
           <div style={styles.contentArea}>
-              {/* РОУТИНГ ЭКРАНОВ */}
-              {activeTab === 'dash' && <DashboardScreen />}
-              {activeTab === 'calc' && <CalculatorScreen />}
-              {activeTab === 'archive' && <ArchiveScreen />}
-              {activeTab === 'settings' && <SettingsScreen />}
+              {/* ⭐️ РОУТИНГ ЭКРАНОВ: СКРЫВАЕМ НЕАКТИВНЫЕ, ЧТОБЫ СОХРАНИТЬ ПАМЯТЬ ⭐️ */}
+              <div style={{ display: activeTab === 'dash' ? 'block' : 'none' }}><DashboardScreen /></div>
+              <div style={{ display: activeTab === 'calc' ? 'block' : 'none' }}><CalculatorScreen /></div>
+              <div style={{ display: activeTab === 'archive' ? 'block' : 'none' }}><ArchiveScreen /></div>
+              <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}><SettingsScreen /></div>
           </div>
-          
-          {/* НИЖНЕЕ НАВИГАЦИОННОЕ МЕНЮ */}
           <TabBar />
       </div>
   );
