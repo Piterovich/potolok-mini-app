@@ -13,7 +13,6 @@ const T = {
   kk: { calc: "Ақылды есептеу", dash: "Басты", archive: "Мұрағат", settings: "Параметрлер", addRoom: "Бөлме қосу", toBot: "Ботқа жіберу 🚀", area: "Аудан", perim: "Периметр", corners: "Бұрыштар", geom: "📏 Геометрия", materials: "🎨 Материалдар", lighting: "💡 Жарықтандыру", corniceSec: "🏁 Карниздер", dops: "🔧 Қосымша жұмыстар", pre: "АЛДЫН АЛА БАҒАСЫ:", contacts: "👤 Клиент деректері", clientName: "Аты", clientPhone: "Телефон", clientAddress: "Мекенжайы", savePrice: "💾 Бағаны сақтау", priceSaved: "✅ Сақталды!", addPosition: "➕ Позиция қосу", addCategory: "➕ Санат қосу", deleteConfirm: "Бұл санатты толығымен жою керек пе?", newCategory: "Жаңа санат", newItem: "Жаңа позиция" }
 };
 
-// ⭐️ ФИЛЬТР ВЕДУЩИХ НУЛЕЙ ⭐️
 const cleanNum = (val) => {
     let str = String(val);
     if (str.length > 1 && str.startsWith('0') && str[1] !== '.') return str.replace(/^0+/, '');
@@ -262,18 +261,8 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
 
   const handleModeSwitch = (newMode) => { triggerHaptic('light'); setMode(mode === newMode ? 'drag' : newMode); setSelectedDiagPt(null); setActiveTrackPts([]); setDraggingElement(null); };
 
-  const getHelperText = () => {
-      if (viewMode === '3d') return '👀 3D Режим. Стены: 2.7м. Можно крутить пальцем.';
-      if (mode === 'add') return '👆 Кликните на линию стены для создания угла'; if (mode === 'remove') return '👆 Кликните на объект (угол, точку, трек), чтобы удалить';
-      if (mode === 'add_diag') return selectedDiagPt === null ? '👆 Выберите первый угол для диагонали' : '👆 Кликните на противоположный угол';
-      if (mode === 'spot') return '👆 Кликайте по чертежу, чтобы расставить Точечные'; if (mode === 'chand') return '👆 Кликните, чтобы повесить Люстру';
-      if (mode === 'pipe') return '👆 Кликните у стены, чтобы отметить Обход трубы'; if (mode === 'track') return activeTrackPts.length === 0 ? '👆 Кликните на чертеж, чтобы начать рисовать трек' : '👆 Кликайте дальше. Чтобы завершить, нажмите ✅';
-      return '👆 Выберите инструмент';
-  };
-
   return (
     <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
-      <div style={{ height: '24px', marginBottom: '4px', fontWeight: '800', fontSize: '13px', color: viewMode === '3d' ? t.danger : (['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? t.success : (mode === 'remove' ? t.danger : t.subText)) }}>{getHelperText()}</div>
       
       {viewMode === '2d' && (
           <div style={{ background: t.card, borderRadius: '16px', padding: '12px', marginBottom: '12px', border: `1px solid ${t.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
@@ -359,7 +348,7 @@ const ArchiveScreen = ({ t, ts }) => (
 );
 
 // ⭐️ ЭКРАН НАСТРОЕК (ПРАЙС-ЛИСТ СО СТРЕЛОЧКАМИ СОРТИРОВКИ) ⭐️
-const SettingsScreen = ({ t, ts, priceData, setPriceData }) => {
+const SettingsScreen = ({ t, ts, priceData, setPriceData, userId }) => {
     const [expandedCat, setExpandedCat] = useState(null);
     const [isSaved, setIsSaved] = useState(false);
 
@@ -371,7 +360,23 @@ const SettingsScreen = ({ t, ts, priceData, setPriceData }) => {
     const removeItem = (catId, itemId) => { triggerHaptic('medium'); setPriceData(priceData.map(c => c.id === catId ? { ...c, items: c.items.filter(i => i.id !== itemId) } : c)); };
     const addItem = (catId) => { triggerHaptic('light'); setPriceData(priceData.map(c => c.id === catId ? { ...c, items: [...c.items, { id: 'item_' + Date.now(), name: t('newItem'), price: 0 }] } : c)); };
     
-    const handleSave = () => { triggerHaptic('heavy'); setIsSaved(true); setTimeout(() => setIsSaved(false), 2000); };
+    // ⭐️ ЛОГИКА ОТПРАВКИ ПРАЙСА В ПИТОН ⭐️
+    const handleSave = async () => { 
+        triggerHaptic('heavy'); 
+        setIsSaved(true); 
+        
+        try {
+            await fetch('https://potolokpro777bot.website/api/prices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, priceData })
+            });
+        } catch(e) {
+            console.error("Ошибка сохранения прайса:", e);
+        }
+
+        setTimeout(() => setIsSaved(false), 2000); 
+    };
 
     const moveCat = (e, idx, dir) => {
         e.stopPropagation(); triggerHaptic('light');
@@ -448,7 +453,7 @@ function App() {
   const [theme, setTheme] = useState('light');
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
-  // ⭐️ ДИНАМИЧЕСКИЙ ПРАЙС-ЛИСТ (ТЕПЕРЬ С РАЗНОЙ ШИРИНОЙ ПОЛОТНА) ⭐️
+  // ⭐️ ДИНАМИЧЕСКИЙ ПРАЙС-ЛИСТ (ИСТОЧНИК ПРАВДЫ) ⭐️
   const [priceData, setPriceData] = useState([
       { id: 'canvas', name: 'Полотна (за м²)', isBase: true, items: [ 
           {id: 'matte_32', name: 'Белый Матовый (до 3.2м)', price: 330}, 
@@ -465,19 +470,32 @@ function App() {
   const [customer, setCustomer] = useState({ name: '', phone: '', address: '' });
   const [isContactExpanded, setIsContactExpanded] = useState(true);
 
-  // ⭐️ ROOMS ТЕПЕРЬ ПО УМОЛЧАНИЮ БЕРУТ matte_32 ⭐️
   const [rooms, setRooms] = useState([
     { id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', canvas: 'matte_32', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }
   ]);
   const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
   const [expandedSubSec, setExpandedSubSec] = useState('geom');
 
+  // ⭐️ ЛОГИКА ЗАГРУЗКИ ПРАЙСА ИЗ ПИТОНА ПРИ СТАРТЕ ⭐️
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
     if (tg && tg.initData) {
       tg.ready(); tg.expand();
       const user = tg.initDataUnsafe?.user;
-      if (user) { setUserId(user.id); setLang(T[user.language_code] ? user.language_code : 'ru'); }
+      if (user) { 
+          setUserId(user.id); 
+          setLang(T[user.language_code] ? user.language_code : 'ru'); 
+
+          // 🚀 СКАЧИВАЕМ ПРАЙС ИЗ БАЗЫ БОТА
+          fetch(`https://potolokpro777bot.website/api/prices?userId=${user.id}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.priceData) {
+                    setPriceData(data.priceData);
+                }
+            })
+            .catch(err => console.error("Ошибка загрузки прайса:", err));
+      }
       setTheme(tg.colorScheme === 'dark' ? 'dark' : 'light');
       tg.onEvent('themeChanged', () => setTheme(tg.colorScheme));
     } else { setIsTelegram(false); }
@@ -674,7 +692,7 @@ function App() {
               <div style={{ display: activeTab === 'archive' ? 'block' : 'none' }}><ArchiveScreen t={t} ts={ts} /></div>
               
               <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}>
-                  <SettingsScreen t={t} ts={ts} priceData={priceData} setPriceData={setPriceData} />
+                  <SettingsScreen t={t} ts={ts} priceData={priceData} setPriceData={setPriceData} userId={userId} />
               </div>
           </div>
           
