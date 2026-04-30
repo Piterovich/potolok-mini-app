@@ -188,7 +188,8 @@ const SearchableSelect = ({ options, value, onChange, theme, placeholder, openUp
 const RoomCanvas = ({ room, updateRoom, options, theme }) => {
   const canvasRef = useRef(null);
   const [scale, setScale] = useState(30); 
-  const [showDiags, setShowDiags] = useState(true);
+  // ⭐️ ИЗМЕНЕНИЕ ЗДЕСЬ: диагонали скрыты по умолчанию (false)
+  const [showDiags, setShowDiags] = useState(false);
   const [viewMode, setViewMode] = useState('2d'); 
   const [mode, setMode] = useState('drag'); 
   const [selectedDiagPt, setSelectedDiagPt] = useState(null); 
@@ -424,8 +425,18 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
 
   const handleModeSwitch = (newMode) => { triggerHaptic('light'); setMode(mode === newMode ? 'drag' : newMode); setSelectedDiagPt(null); setActiveTrackPts([]); setDraggingElement(null); };
 
+  const getHelperText = () => {
+      if (viewMode === '3d') return '👀 3D Режим. Стены: 2.7м. Можно крутить пальцем.';
+      if (mode === 'add') return '👆 Кликните на линию стены для создания угла'; if (mode === 'remove') return '👆 Кликните на объект (угол, точку, трек), чтобы удалить';
+      if (mode === 'add_diag') return selectedDiagPt === null ? '👆 Выберите первый угол для диагонали' : '👆 Кликните на противоположный угол';
+      if (mode === 'spot') return '👆 Кликайте по чертежу, чтобы расставить Точечные'; if (mode === 'chand') return '👆 Кликните, чтобы повесить Люстру';
+      if (mode === 'pipe') return '👆 Кликните у стены, чтобы отметить Обход трубы'; if (mode === 'track') return activeTrackPts.length === 0 ? '👆 Кликните на чертеж, чтобы начать рисовать трек' : '👆 Кликайте дальше. Чтобы завершить, нажмите ✅';
+      return '👆 Выберите инструмент';
+  };
+
   return (
     <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
+      <div style={{ height: '24px', marginBottom: '4px', fontWeight: '800', fontSize: '13px', color: viewMode === '3d' ? t.danger : (['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? t.success : (mode === 'remove' ? t.danger : t.subText)) }}>{getHelperText()}</div>
       
       {/* ⭐️ НОВАЯ ЭРГОНОМИЧНАЯ ПАНЕЛЬ ИНСТРУМЕНТОВ (СВЕРХУ) ⭐️ */}
       {viewMode === '2d' && (
