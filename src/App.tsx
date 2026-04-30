@@ -5,12 +5,12 @@ import * as THREE from 'three'
 import './App.css'
 
 const T = {
-  ru: { calc: "Умный Расчет", dash: "Главная", archive: "Архив", settings: "Настройки", addRoom: "Добавить комнату", toBot: "Оформить смету 🚀", area: "Площадь", perim: "Периметр", corners: "Углы", geom: "📏 Геометрия и замеры", materials: "🎨 Выбор материалов", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", pre: "ИТОГО ПРЕДВАРИТЕЛЬНО:", contacts: "👤 Данные клиента", clientName: "Имя", clientPhone: "Телефон", clientAddress: "Адрес объекта", savePrice: "💾 Сохранить прайс", priceSaved: "✅ Прайс сохранен!", addPosition: "➕ Добавить позицию", addCategory: "➕ Добавить категорию", deleteConfirm: "Удалить эту категорию полностью?", newCategory: "Новая категория", newItem: "Новая позиция", canvas: "Полотно", profile: "Профиль", spots: "Точечные (шт)", chands: "Люстры (шт)", track: "Трек (м.п.)", pipe: "Обход трубы (шт)", corniceType: "Тип карниза", corniceLen: "Длина карниза (м)", select: "Выберите..." },
-  uk: { calc: "Розумний Розрахунок", dash: "Головна", archive: "Архів", settings: "Налаштування", addRoom: "Додати кімнату", toBot: "Оформити кошторис 🚀", area: "Площа", perim: "Периметр", corners: "Кути", geom: "📏 Геометрія та заміри", materials: "🎨 Вибір матеріалів", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", pre: "РАЗОМ ПОПЕРЕДНЬО:", contacts: "👤 Дані клієнта", clientName: "Ім'я", clientPhone: "Телефон", clientAddress: "Адреса об'єкта", savePrice: "💾 Зберегти прайс", priceSaved: "✅ Прайс збережено!", addPosition: "➕ Додати позицію", addCategory: "➕ Додати категорію", deleteConfirm: "Видалити цю категорію повністю?", newCategory: "Нова категорія", newItem: "Нова позиція", canvas: "Полотно", profile: "Профіль", spots: "Точкові (шт)", chands: "Люстри (шт)", track: "Трек (м.п.)", pipe: "Обхід труби (шт)", corniceType: "Тип карниза", corniceLen: "Довжина карниза (м)", select: "Оберіть..." },
-  en: { calc: "Smart Calc", dash: "Home", archive: "Archive", settings: "Settings", addRoom: "Add Room", toBot: "Send to Bot 🚀", area: "Area", perim: "Perimeter", corners: "Corners", geom: "📏 Geometry", materials: "🎨 Materials", lighting: "💡 Lighting", corniceSec: "🏁 Cornices", dops: "🔧 Extras", pre: "ESTIMATED TOTAL:", contacts: "👤 Client Data", clientName: "Name", clientPhone: "Phone", clientAddress: "Address", savePrice: "💾 Save Pricing", priceSaved: "✅ Saved!", addPosition: "➕ Add item", addCategory: "➕ Add category", deleteConfirm: "Delete this category entirely?", newCategory: "New category", newItem: "New item", canvas: "Canvas", profile: "Profile", spots: "Spots (pcs)", chands: "Chands (pcs)", track: "Track (m)", pipe: "Pipe (pcs)", corniceType: "Cornice type", corniceLen: "Length (m)", select: "Select..." },
-  es: { calc: "Cálculo Inteligente", dash: "Inicio", archive: "Archivo", settings: "Ajustes", addRoom: "Añadir sala", toBot: "Enviar al Bot 🚀", area: "Área", perim: "Perímetro", corners: "Esquinas", geom: "📏 Geometría", materials: "🎨 Materiales", lighting: "💡 Iluminación", corniceSec: "🏁 Cornisas", dops: "🔧 Extras", pre: "TOTAL ESTIMADO:", contacts: "👤 Datos del cliente", clientName: "Nombre", clientPhone: "Teléfono", clientAddress: "Dirección", savePrice: "💾 Guardar Precios", priceSaved: "✅ ¡Guardado!", addPosition: "➕ Añadir elemento", addCategory: "➕ Añadir categoría", deleteConfirm: "¿Eliminar esta categoría por completo?", newCategory: "Nueva categoría", newItem: "Nuevo elemento", canvas: "Lona", profile: "Perfil", spots: "Focos (uds)", chands: "Lámparas (uds)", track: "Riel (m)", pipe: "Tubo (uds)", corniceType: "Tipo de cornisa", corniceLen: "Longitud (m)", select: "Seleccionar..." },
-  pl: { calc: "Inteligentny Kalkulator", dash: "Główna", archive: "Archiwum", settings: "Ustawienia", addRoom: "Dodaj pokój", toBot: "Wyślij do Bota 🚀", area: "Powierzchnia", perim: "Obwód", corners: "Kąty", geom: "📏 Geometria", materials: "🎨 Materiały", lighting: "💡 Oświetlenie", corniceSec: "🏁 Karnisze", dops: "🔧 Dodatki", pre: "WSTĘPNA SUMA:", contacts: "👤 Dane klienta", clientName: "Imię", clientPhone: "Telefon", clientAddress: "Adres", savePrice: "💾 Zapisz Cennik", priceSaved: "✅ Zapisano!", addPosition: "➕ Dodaj pozycję", addCategory: "➕ Dodaj kategorię", deleteConfirm: "Usunąć tę kategorię całkowicie?", newCategory: "Nowa kategoria", newItem: "Nowa pozycja", canvas: "Płótno", profile: "Profil", spots: "Spoty (szt)", chands: "Żyrandole (szt)", track: "Szyna (m)", pipe: "Rura (szt)", corniceType: "Typ karnisza", corniceLen: "Długość (m)", select: "Wybierz..." },
-  kk: { calc: "Ақылды есептеу", dash: "Басты", archive: "Мұрағат", settings: "Параметрлер", addRoom: "Бөлме қосу", toBot: "Ботқа жіберу 🚀", area: "Аудан", perim: "Периметр", corners: "Бұрыштар", geom: "📏 Геометрия", materials: "🎨 Материалдар", lighting: "💡 Жарықтандыру", corniceSec: "🏁 Карниздер", dops: "🔧 Қосымша жұмыстар", pre: "АЛДЫН АЛА БАҒАСЫ:", contacts: "👤 Клиент деректері", clientName: "Аты", clientPhone: "Телефон", clientAddress: "Мекенжайы", savePrice: "💾 Бағаны сақтау", priceSaved: "✅ Сақталды!", addPosition: "➕ Позиция қосу", addCategory: "➕ Санат қосу", deleteConfirm: "Бұл санатты толығымен жою керек пе?", newCategory: "Жаңа санат", newItem: "Жаңа позиция", canvas: "Кенеп", profile: "Профиль", spots: "Шамдар (дана)", chands: "Люстралар (дана)", track: "Трек (м)", pipe: "Құбыр (дана)", corniceType: "Карниз түрі", corniceLen: "Ұзындығы (м)", select: "Таңдаңыз..." }
+  ru: { calc: "Умный Расчет", dash: "Главная", archive: "Архив", settings: "Настройки", addRoom: "Добавить комнату", toBot: "Оформить смету 🚀", area: "Площадь", perim: "Периметр", corners: "Углы", geom: "📏 Геометрия и замеры", materials: "🎨 Выбор материалов", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", pre: "ИТОГО ПРЕДВАРИТЕЛЬНО:", contacts: "👤 Данные клиента", clientName: "Имя", clientPhone: "Телефон", clientAddress: "Адрес объекта", savePrice: "💾 Сохранить прайс", priceSaved: "✅ Прайс сохранен!", addPosition: "➕ Добавить позицию", addCategory: "➕ Добавить категорию", deleteConfirm: "Удалить эту категорию полностью?", newCategory: "Новая категория", newItem: "Новая позиция", canvas: "Полотно", profile: "Профиль", insert: "Вставка", none: "Нет", spots: "Точечные (шт)", chands: "Люстры (шт)", track: "Трек (м.п.)", pipe: "Обход трубы (шт)", corniceType: "Тип карниза", corniceLen: "Длина карниза (м)", select: "Выберите..." },
+  uk: { calc: "Розумний Розрахунок", dash: "Головна", archive: "Архів", settings: "Налаштування", addRoom: "Додати кімнату", toBot: "Оформити кошторис 🚀", area: "Площа", perim: "Периметр", corners: "Кути", geom: "📏 Геометрія та заміри", materials: "🎨 Вибір матеріалів", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", pre: "РАЗОМ ПОПЕРЕДНЬО:", contacts: "👤 Дані клієнта", clientName: "Ім'я", clientPhone: "Телефон", clientAddress: "Адреса об'єкта", savePrice: "💾 Зберегти прайс", priceSaved: "✅ Прайс збережено!", addPosition: "➕ Додати позицію", addCategory: "➕ Додати категорію", deleteConfirm: "Видалити цю категорію повністю?", newCategory: "Нова категорія", newItem: "Нова позиція", canvas: "Полотно", profile: "Профіль", insert: "Вставка", none: "Ні", spots: "Точкові (шт)", chands: "Люстри (шт)", track: "Трек (м.п.)", pipe: "Обхід труби (шт)", corniceType: "Тип карниза", corniceLen: "Довжина карниза (м)", select: "Оберіть..." },
+  en: { calc: "Smart Calc", dash: "Home", archive: "Archive", settings: "Settings", addRoom: "Add Room", toBot: "Send to Bot 🚀", area: "Area", perim: "Perimeter", corners: "Corners", geom: "📏 Geometry", materials: "🎨 Materials", lighting: "💡 Lighting", corniceSec: "🏁 Cornices", dops: "🔧 Extras", pre: "ESTIMATED TOTAL:", contacts: "👤 Client Data", clientName: "Name", clientPhone: "Phone", clientAddress: "Address", savePrice: "💾 Save Pricing", priceSaved: "✅ Saved!", addPosition: "➕ Add item", addCategory: "➕ Add category", deleteConfirm: "Delete this category entirely?", newCategory: "New category", newItem: "New item", canvas: "Canvas", profile: "Profile", insert: "Insert profile", none: "None", spots: "Spots (pcs)", chands: "Chands (pcs)", track: "Track (m)", pipe: "Pipe (pcs)", corniceType: "Cornice type", corniceLen: "Length (m)", select: "Select..." },
+  es: { calc: "Cálculo Inteligente", dash: "Inicio", archive: "Archivo", settings: "Ajustes", addRoom: "Añadir sala", toBot: "Enviar al Bot 🚀", area: "Área", perim: "Perímetro", corners: "Esquinas", geom: "📏 Geometría", materials: "🎨 Materiales", lighting: "💡 Iluminación", corniceSec: "🏁 Cornisas", dops: "🔧 Extras", pre: "TOTAL ESTIMADO:", contacts: "👤 Datos del cliente", clientName: "Nombre", clientPhone: "Teléfono", clientAddress: "Dirección", savePrice: "💾 Guardar Precios", priceSaved: "✅ ¡Guardado!", addPosition: "➕ Añadir elemento", addCategory: "➕ Añadir categoría", deleteConfirm: "¿Eliminar esta categoría por completo?", newCategory: "Nueva categoría", newItem: "Nuevo elemento", canvas: "Lona", profile: "Perfil", insert: "Inserto", none: "Ninguno", spots: "Focos (uds)", chands: "Lámparas (uds)", track: "Riel (m)", pipe: "Tubo (uds)", corniceType: "Tipo de cornisa", corniceLen: "Longitud (m)", select: "Seleccionar..." },
+  pl: { calc: "Inteligentny Kalkulator", dash: "Główna", archive: "Archiwum", settings: "Ustawienia", addRoom: "Dodaj pokój", toBot: "Wyślij do Bota 🚀", area: "Powierzchnia", perim: "Obwód", corners: "Kąty", geom: "📏 Geometria", materials: "🎨 Materiały", lighting: "💡 Oświetlenie", corniceSec: "🏁 Karnisze", dops: "🔧 Dodatki", pre: "WSTĘPNA SUMA:", contacts: "👤 Dane klienta", clientName: "Imię", clientPhone: "Telefon", clientAddress: "Adres", savePrice: "💾 Zapisz Cennik", priceSaved: "✅ Zapisano!", addPosition: "➕ Dodaj pozycję", addCategory: "➕ Dodaj kategorię", deleteConfirm: "Usunąć tę kategorię całkowicie?", newCategory: "Nowa kategoria", newItem: "Nowa pozycja", canvas: "Płótno", profile: "Profil", insert: "Wkładka", none: "Brak", spots: "Spoty (szt)", chands: "Żyrandole (szt)", track: "Szyna (m)", pipe: "Rura (szt)", corniceType: "Typ karnisza", corniceLen: "Długość (m)", select: "Wybierz..." },
+  kk: { calc: "Ақылды есептеу", dash: "Басты", archive: "Мұрағат", settings: "Параметрлер", addRoom: "Бөлме қосу", toBot: "Ботқа жіберу 🚀", area: "Аудан", perim: "Периметр", corners: "Бұрыштар", geom: "📏 Геометрия", materials: "🎨 Материалдар", lighting: "💡 Жарықтандыру", corniceSec: "🏁 Карниздер", dops: "🔧 Қосымша жұмыстар", pre: "АЛДЫН АЛА БАҒАСЫ:", contacts: "👤 Клиент деректері", clientName: "Аты", clientPhone: "Телефон", clientAddress: "Мекенжайы", savePrice: "💾 Бағаны сақтау", priceSaved: "✅ Сақталды!", addPosition: "➕ Позиция қосу", addCategory: "➕ Санат қосу", deleteConfirm: "Бұл санатты толығымен жою керек пе?", newCategory: "Жаңа санат", newItem: "Жаңа позиция", canvas: "Кенеп", profile: "Профиль", insert: "Кірістіру", none: "Жоқ", spots: "Шамдар (дана)", chands: "Люстралар (дана)", track: "Трек (м)", pipe: "Құбыр (дана)", corniceType: "Карниз түрі", corniceLen: "Ұзындығы (м)", select: "Таңдаңыз..." }
 };
 
 const cleanNum = (val) => {
@@ -478,9 +478,9 @@ function App() {
   const [customer, setCustomer] = useState({ name: '', phone: '', address: '' });
   const [isContactExpanded, setIsContactExpanded] = useState(true);
 
-  // ⭐️ ДОБАВЛЕНО ПОЛЕ customDops ДЛЯ СОХРАНЕНИЯ ЛЮБЫХ ДОПОВ ИЗ КАТАЛОГА ⭐️
+  // ⭐️ ДОБАВЛЕНО ПОЛЕ insert ДЛЯ ВСТАВКИ ⭐️
   const [rooms, setRooms] = useState([
-    { id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', canvas: 'matte_32', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', customDops: {}, logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }
+    { id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', canvas: 'matte_32', profile: 'профиль_м', insert: 'none', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', customDops: {}, logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }
   ]);
   const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
   const [expandedSubSec, setExpandedSubSec] = useState('geom');
@@ -528,14 +528,18 @@ function App() {
   const ts = getTheme(theme);
   const t = (key) => T[lang]?.[key] || T['ru'][key];
 
+  // ⭐️ ДОБАВЛЕНА ГЕНЕРАЦИЯ ОПЦИЙ ДЛЯ ВСТАВКИ (ИЩЕМ СЛОВО 'ВСТАВКА') ⭐️
+  const insertItems = priceData.find(c => c.id === 'dops')?.items.filter(i => i.id.toLowerCase().includes('вставка')) || [];
+  
   const options = {
     canvases: priceData.find(c => c.id === 'canvas')?.items || [],
     profiles: priceData.find(c => c.id === 'profile')?.items || [],
     cornices: priceData.find(c => c.id === 'cornices')?.items || [],
+    inserts: [{id: 'none', name: t('none'), price: 0}, ...insertItems], // Добавляем "Нет" в начало
     dops: priceData.reduce((acc, cat) => {
         if (['canvas', 'profile', 'cornices'].includes(cat.id)) return acc;
-        return [...acc, ...cat.items];
-    }, []) // ⭐️ ТЕПЕРЬ МЫ БЕРЕМ ВСЕ ДОПЫ ИЗ ПРАЙСА ⭐️
+        return [...acc, ...cat.items.filter(i => !i.id.toLowerCase().includes('вставка'))]; // Исключаем вставки из общих допов
+    }, []) 
   };
 
   const getDopPrice = (id) => parseFloat(options.dops.find(i => i.id === id)?.price) || 0;
@@ -544,6 +548,7 @@ function App() {
     canvas: Object.fromEntries((options.canvases).map(i => [i.id, parseFloat(i.price) || 0])),
     profile: Object.fromEntries((options.profiles).map(i => [i.id, parseFloat(i.price) || 0])),
     cornices: Object.fromEntries((options.cornices).map(i => [i.id, parseFloat(i.price) || 0])),
+    inserts: Object.fromEntries((options.inserts).map(i => [i.id, parseFloat(i.price) || 0])),
     light: getDopPrice('light'),
     chand: getDopPrice('chand'),
     corner: getDopPrice('corner'),
@@ -551,7 +556,7 @@ function App() {
     track: getDopPrice('track'),
   };
 
-  const addRoom = () => { triggerHaptic(); const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', canvas: options.canvases[0]?.id || '', profile: options.profiles[0]?.id || '', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', customDops: {}, logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }; setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom'); setIsContactExpanded(false); };
+  const addRoom = () => { triggerHaptic(); const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', canvas: options.canvases[0]?.id || '', profile: options.profiles[0]?.id || '', insert: 'none', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', customDops: {}, logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }; setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom'); setIsContactExpanded(false); };
   const removeRoom = (id, e) => { e.stopPropagation(); triggerHaptic('heavy'); if (rooms.length > 1) setRooms(rooms.filter(room => room.id !== id)); else alert("Должно остаться хотя бы одно помещение!"); };
   
   const sendToBot = async () => {
@@ -566,7 +571,6 @@ function App() {
       window.Telegram?.WebApp?.close();
   };
 
-  // ⭐️ УМНЫЙ ПОДСЧЕТ ИТОГО (С АВТОПОДБОРОМ СПЕЦ-УГЛОВ И ДИНАМИЧЕСКИМИ ДОПАМИ) ⭐️
   const localTotalSum = rooms.reduce((total, r) => {
       let p_canvas = prices.canvas[r.canvas] || 0;
       let p_profile = prices.profile[r.profile] || 0;
@@ -585,8 +589,8 @@ function App() {
       }
       
       let p_cornice = prices.cornices[r.corniceType] || 0;
+      let p_insert = prices.inserts[r.insert] || 0; // ⭐️ ДОБАВЛЕН ПОДСЧЕТ ВСТАВКИ ⭐️
 
-      // Считаем все добавленные вручную допы из каталога
       let customDopsSum = 0;
       if (r.customDops) {
           for (let [dopId, qty] of Object.entries(r.customDops)) {
@@ -598,13 +602,14 @@ function App() {
       return total + 
           ((Number(r.area) || 0) * p_canvas) + 
           ((Number(r.perim) || 0) * p_profile) + 
+          ((Number(r.perim) || 0) * p_insert) +  // ⭐️ УМНОЖАЕМ ВСТАВКУ НА ПЕРИМЕТР ⭐️
           ((Number(r.corners) || 0) * p_corner) + 
           ((Number(r.spots) || 0) * prices.light) + 
           ((Number(r.chands) || 0) * prices.chand) + 
           ((Number(r.track) || 0) * prices.track) + 
           ((Number(r.cornice) || 0) * p_cornice) + 
           ((Number(r.pipe) || 0) * prices.pipe) + 
-          customDopsSum; // Прибавляем к общей сумме!
+          customDopsSum; 
   }, 0);
 
   const styles = {
@@ -702,7 +707,9 @@ function App() {
                             </div>
                             <div style={{ display: expandedSubSec === 'mat' ? 'block' : 'none', ...styles.subContent }}>
                                 <span style={styles.label}>{t('canvas')}</span><SearchableSelect options={options.canvases} value={room.canvas} onChange={(val) => updateRoom(room.id, 'canvas', val)} theme={theme} placeholder={t('select')} />
-                                <div style={{ marginTop: '20px' }}><span style={styles.label}>{t('profile')}</span><SearchableSelect options={options.profiles} value={room.profile} onChange={(val) => updateRoom(room.id, 'profile', val)} theme={theme} placeholder={t('select')} /></div>
+                                <div style={{ marginTop: '16px' }}><span style={styles.label}>{t('profile')}</span><SearchableSelect options={options.profiles} value={room.profile} onChange={(val) => updateRoom(room.id, 'profile', val)} theme={theme} placeholder={t('select')} /></div>
+                                {/* ⭐️ НОВОЕ ПОЛЕ "ВСТАВКА" ⭐️ */}
+                                <div style={{ marginTop: '16px' }}><span style={styles.label}>{t('insert')}</span><SearchableSelect options={options.inserts} value={room.insert} onChange={(val) => updateRoom(room.id, 'insert', val)} theme={theme} placeholder={t('select')} /></div>
                             </div>
                           </div>
                           <div>
@@ -732,7 +739,6 @@ function App() {
                             <div style={{ display: expandedSubSec === 'dops' ? 'block' : 'none', ...styles.subContent }}>
                                 <div style={styles.inputRow}><span>{t('pipe')}</span><input type="number" value={room.pipe} onChange={e => updateRoom(room.id, 'pipe', cleanNum(e.target.value))} style={styles.numInput} placeholder="0" /></div>
                                 
-                                {/* ⭐️ ОТОБРАЖЕНИЕ ВЫБРАННЫХ ДИНАМИЧЕСКИХ ДОПОВ ⭐️ */}
                                 {Object.entries(room.customDops || {}).map(([dopId, dopQty]) => {
                                     const dopItem = options.dops.find(d => d.id === dopId);
                                     if (!dopItem) return null;
@@ -756,7 +762,6 @@ function App() {
                                     )
                                 })}
 
-                                {/* ⭐️ ВЫПАДАЮЩИЙ СПИСОК "ДОБАВИТЬ ИЗ КАТАЛОГА" ⭐️ */}
                                 <div style={{ marginTop: '16px' }}>
                                     <SearchableSelect 
                                         options={options.dops.filter(d => !['light', 'chand', 'track', 'pipe', 'corner'].includes(d.id) && !(room.customDops || {})[d.id])} 
