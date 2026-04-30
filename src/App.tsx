@@ -259,10 +259,21 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
   };
 
   const handlePointerUp = (e) => { e.target.releasePointerCapture(e.pointerId); if (draggingElement) { setDraggingElement(null); syncElementsToInputs(els); return; } if (draggingIdx !== null) { setDraggingIdx(null); updateAreaPerimAndSave(centerShape(pts)); } };
+
   const handleModeSwitch = (newMode) => { triggerHaptic('light'); setMode(mode === newMode ? 'drag' : newMode); setSelectedDiagPt(null); setActiveTrackPts([]); setDraggingElement(null); };
+
+  const getHelperText = () => {
+      if (viewMode === '3d') return '👀 3D Режим. Стены: 2.7м. Можно крутить пальцем.';
+      if (mode === 'add') return '👆 Кликните на линию стены для создания угла'; if (mode === 'remove') return '👆 Кликните на объект (угол, точку, трек), чтобы удалить';
+      if (mode === 'add_diag') return selectedDiagPt === null ? '👆 Выберите первый угол для диагонали' : '👆 Кликните на противоположный угол';
+      if (mode === 'spot') return '👆 Кликайте по чертежу, чтобы расставить Точечные'; if (mode === 'chand') return '👆 Кликните, чтобы повесить Люстру';
+      if (mode === 'pipe') return '👆 Кликните у стены, чтобы отметить Обход трубы'; if (mode === 'track') return activeTrackPts.length === 0 ? '👆 Кликните на чертеж, чтобы начать рисовать трек' : '👆 Кликайте дальше. Чтобы завершить, нажмите ✅';
+      return '👆 Выберите инструмент';
+  };
 
   return (
     <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
+      <div style={{ height: '24px', marginBottom: '4px', fontWeight: '800', fontSize: '13px', color: viewMode === '3d' ? t.danger : (['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? t.success : (mode === 'remove' ? t.danger : t.subText)) }}>{getHelperText()}</div>
       
       {viewMode === '2d' && (
           <div style={{ background: t.card, borderRadius: '16px', padding: '12px', marginBottom: '12px', border: `1px solid ${t.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
@@ -362,7 +373,6 @@ const SettingsScreen = ({ t, ts, priceData, setPriceData }) => {
     
     const handleSave = () => { triggerHaptic('heavy'); setIsSaved(true); setTimeout(() => setIsSaved(false), 2000); };
 
-    // ⭐️ ЛОГИКА ПЕРЕМЕЩЕНИЯ КАТЕГОРИЙ ⭐️
     const moveCat = (e, idx, dir) => {
         e.stopPropagation(); triggerHaptic('light');
         const newData = [...priceData];
@@ -371,7 +381,6 @@ const SettingsScreen = ({ t, ts, priceData, setPriceData }) => {
         setPriceData(newData);
     };
 
-    // ⭐️ ЛОГИКА ПЕРЕМЕЩЕНИЯ ПОЗИЦИЙ ВНУТРИ КАТЕГОРИИ ⭐️
     const moveItem = (catId, idx, dir) => {
         triggerHaptic('light');
         setPriceData(priceData.map(c => {
@@ -393,7 +402,6 @@ const SettingsScreen = ({ t, ts, priceData, setPriceData }) => {
                             <span style={{ color: ts.accent, fontSize: '18px' }}>{expandedCat === cat.id ? '▼' : '▶'}</span>
                             <input type="text" value={cat.name} onChange={e => updateCatName(cat.id, e.target.value)} onClick={e => e.stopPropagation()} style={{ fontWeight: '800', border: 'none', outline: 'none', fontSize: '16px', width: '100%', background: 'transparent', color: ts.text }} />
                         </div>
-                        {/* ⭐️ СТРЕЛОЧКИ КАТЕГОРИЙ ⭐️ */}
                         <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                             <button disabled={catIndex === 0} onClick={(e) => moveCat(e, catIndex, 'up')} style={{ opacity: catIndex === 0 ? 0.2 : 1, background: 'none', border: 'none', color: ts.text, fontSize: '18px', padding: '4px' }}>▲</button>
                             <button disabled={catIndex === priceData.length - 1} onClick={(e) => moveCat(e, catIndex, 'down')} style={{ opacity: catIndex === priceData.length - 1 ? 0.2 : 1, background: 'none', border: 'none', color: ts.text, fontSize: '18px', padding: '4px' }}>▼</button>
@@ -409,7 +417,6 @@ const SettingsScreen = ({ t, ts, priceData, setPriceData }) => {
                                       <input type="number" value={item.price} onChange={e => updateItem(cat.id, item.id, 'price', cleanNum(e.target.value))} style={{ width: '55px', padding: '10px', borderRadius: '10px', border: `1px solid ${ts.border}`, background: ts.inputBg, color: ts.text, fontSize: '14px', textAlign: 'center', outline: 'none', fontWeight: 'bold' }} />
                                       <span style={{ color: ts.subText, fontSize: '14px', fontWeight: '600', marginRight: '4px' }}>₴</span>
                                     </div>
-                                    {/* ⭐️ СТРЕЛОЧКИ ПОЗИЦИЙ ⭐️ */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                                         {itemIndex > 0 ? <button onClick={() => moveItem(cat.id, itemIndex, 'up')} style={{ background: ts.card, border: `1px solid ${ts.border}`, borderRadius: '6px', color: ts.text, fontSize: '10px', padding: '4px 6px' }}>▲</button> : <div style={{width:'22px'}}></div>}
                                         {itemIndex < cat.items.length - 1 ? <button onClick={() => moveItem(cat.id, itemIndex, 'down')} style={{ background: ts.card, border: `1px solid ${ts.border}`, borderRadius: '6px', color: ts.text, fontSize: '10px', padding: '4px 6px' }}>▼</button> : <div style={{width:'22px'}}></div>}
@@ -441,8 +448,15 @@ function App() {
   const [theme, setTheme] = useState('light');
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
+  // ⭐️ ДИНАМИЧЕСКИЙ ПРАЙС-ЛИСТ (ТЕПЕРЬ С РАЗНОЙ ШИРИНОЙ ПОЛОТНА) ⭐️
   const [priceData, setPriceData] = useState([
-      { id: 'canvas', name: 'Полотна (за м²)', isBase: true, items: [ {id: 'полотно_м2', name: 'Белый Матовый (MSD)', price: 330}, {id: 'msd_premium_320_м2', name: 'MSD Premium (Глянец)', price: 350}, {id: 'черный_матовый_м2', name: 'Черный Матовый', price: 400} ] },
+      { id: 'canvas', name: 'Полотна (за м²)', isBase: true, items: [ 
+          {id: 'matte_32', name: 'Белый Матовый (до 3.2м)', price: 330}, 
+          {id: 'matte_50', name: 'Белый Матовый (до 5.0м)', price: 380}, 
+          {id: 'premium_32', name: 'MSD Premium (до 3.2м)', price: 350},
+          {id: 'premium_50', name: 'MSD Premium (до 5.0м)', price: 410},
+          {id: 'black_matte', name: 'Черный Матовый (3.2м)', price: 400}
+      ] },
       { id: 'profile', name: 'Профили (за м.п.)', isBase: true, items: [ {id: 'профиль_м', name: 'Стандартный (ПВХ)', price: 60}, {id: 'профиль_теневой_6мм_мп', name: 'Теневой (6 мм)', price: 350}, {id: 'профиль_парящий_мп', name: 'Парящий', price: 500} ] },
       { id: 'cornices', name: 'Карнизы (за м.п.)', isBase: true, items: [ {id: 'none', name: 'Нет', price: 0}, {id: 'карниз_м', name: 'Стандартный скрытый', price: 1200}, {id: 'карниз_q5_мп', name: 'Карниз Q5', price: 1500}, {id: 'карниз_q10_мп', name: 'Карниз Q10', price: 2200} ] },
       { id: 'dops', name: 'Монтаж и Допы', isBase: true, items: [ {id: 'light', name: 'Точечные светильники (шт)', price: 250}, {id: 'chand', name: 'Люстры (шт)', price: 300}, {id: 'corner', name: 'Доп. углы (шт)', price: 50}, {id: 'pipe', name: 'Обход труб (шт)', price: 200}, {id: 'track', name: 'Треки / Свет. линии (м.п.)', price: 2000} ] }
@@ -451,8 +465,9 @@ function App() {
   const [customer, setCustomer] = useState({ name: '', phone: '', address: '' });
   const [isContactExpanded, setIsContactExpanded] = useState(true);
 
+  // ⭐️ ROOMS ТЕПЕРЬ ПО УМОЛЧАНИЮ БЕРУТ matte_32 ⭐️
   const [rooms, setRooms] = useState([
-    { id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }
+    { id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', canvas: 'matte_32', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }
   ]);
   const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
   const [expandedSubSec, setExpandedSubSec] = useState('geom');
