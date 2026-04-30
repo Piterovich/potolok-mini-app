@@ -13,6 +13,13 @@ const T = {
   kk: { calc: "Ақылды есептеу", dash: "Басты", archive: "Мұрағат", settings: "Параметрлер", addRoom: "Бөлме қосу", toBot: "Ботқа жіберу 🚀", area: "Аудан", perim: "Периметр", corners: "Бұрыштар", geom: "📏 Геометрия", materials: "🎨 Материалдар", lighting: "💡 Жарықтандыру", corniceSec: "🏁 Карниздер", dops: "🔧 Қосымша жұмыстар", pre: "АЛДЫН АЛА БАҒАСЫ:", contacts: "👤 Клиент деректері", clientName: "Аты", clientPhone: "Телефон", clientAddress: "Мекенжайы", savePrice: "💾 Бағаны сақтау", priceSaved: "✅ Сақталды!", addPosition: "➕ Позиция қосу", addCategory: "➕ Санат қосу", deleteConfirm: "Бұл санатты толығымен жою керек пе?", newCategory: "Жаңа санат", newItem: "Жаңа позиция" }
 };
 
+// ⭐️ ФИЛЬТР ВЕДУЩИХ НУЛЕЙ ⭐️
+const cleanNum = (val) => {
+    let str = String(val);
+    if (str.length > 1 && str.startsWith('0') && str[1] !== '.') return str.replace(/^0+/, '');
+    return str;
+};
+
 // --- Геометрия ---
 const getDist = (p1, p2) => Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
 const getDistToSegment = (p, p1, p2) => {
@@ -255,8 +262,18 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
 
   const handleModeSwitch = (newMode) => { triggerHaptic('light'); setMode(mode === newMode ? 'drag' : newMode); setSelectedDiagPt(null); setActiveTrackPts([]); setDraggingElement(null); };
 
+  const getHelperText = () => {
+      if (viewMode === '3d') return '👀 3D Режим. Стены: 2.7м. Можно крутить пальцем.';
+      if (mode === 'add') return '👆 Кликните на линию стены для создания угла'; if (mode === 'remove') return '👆 Кликните на объект (угол, точку, трек), чтобы удалить';
+      if (mode === 'add_diag') return selectedDiagPt === null ? '👆 Выберите первый угол для диагонали' : '👆 Кликните на противоположный угол';
+      if (mode === 'spot') return '👆 Кликайте по чертежу, чтобы расставить Точечные'; if (mode === 'chand') return '👆 Кликните, чтобы повесить Люстру';
+      if (mode === 'pipe') return '👆 Кликните у стены, чтобы отметить Обход трубы'; if (mode === 'track') return activeTrackPts.length === 0 ? '👆 Кликните на чертеж, чтобы начать рисовать трек' : '👆 Кликайте дальше. Чтобы завершить, нажмите ✅';
+      return '👆 Выберите инструмент';
+  };
+
   return (
     <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
+      <div style={{ height: '24px', marginBottom: '4px', fontWeight: '800', fontSize: '13px', color: viewMode === '3d' ? t.danger : (['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? t.success : (mode === 'remove' ? t.danger : t.subText)) }}>{getHelperText()}</div>
       
       {viewMode === '2d' && (
           <div style={{ background: t.card, borderRadius: '16px', padding: '12px', marginBottom: '12px', border: `1px solid ${t.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
@@ -303,7 +320,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
                 return (
                 <div key={name} style={{ display: 'flex', alignItems: 'center', background: t.card, padding: '8px 12px', borderRadius: '10px', border: `1px solid ${t.border}`, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                     <span translate="no" className="notranslate" style={{ fontSize: '13px', fontWeight: '800', marginRight: '8px', color: t.accent }}>{name}:</span>
-                    <input type="number" value={displayVal} onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [name]: e.target.value})} style={{ width: '55px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '15px', color: t.text }}/>
+                    <input type="number" value={displayVal} onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [name]: cleanNum(e.target.value)})} style={{ width: '55px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '15px', color: t.text }}/>
                 </div>
                 )
             })}
@@ -316,7 +333,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
                 <div key={index} style={{ display: 'flex', alignItems: 'center', background: t.card, padding: '6px 8px', borderRadius: '10px', border: `1px solid ${t.border}`, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                     <select translate="no" className="notranslate" value={diagName} onChange={(e) => { const newD = [...room.activeDiags]; newD[index] = e.target.value; updateRoom(room.id, 'activeDiags', newD); }} style={{ border: 'none', outline: 'none', fontWeight: '800', color: t.warning, background: 'transparent', fontSize: '14px', marginRight: '4px' }}>{allPossibleDiags.map(d => <option translate="no" className="notranslate" key={d} value={d}>{d}</option>)}</select>
                     <span style={{fontWeight: '800', color: t.warning, marginRight: '4px'}}>:</span>
-                    <input type="number" value={displayVal} onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [diagName]: e.target.value})} style={{ width: '50px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '15px', color: t.text }}/>
+                    <input type="number" value={displayVal} onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [diagName]: cleanNum(e.target.value)})} style={{ width: '50px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '15px', color: t.text }}/>
                     <button onClick={() => { triggerHaptic('heavy'); const newD = room.activeDiags.filter((_, i) => i !== index); updateRoom(room.id, 'activeDiags', newD); }} style={{ background: 'none', border: 'none', color: t.danger, marginLeft: '5px', fontSize: '16px', fontWeight: 'bold' }}>✕</button>
                 </div>
                 )
@@ -341,7 +358,7 @@ const ArchiveScreen = ({ t, ts }) => (
     </div>
 );
 
-// ⭐️ НОВЫЙ ЭКРАН НАСТРОЕК (ПРАЙС-ЛИСТ) ⭐️
+// ⭐️ ЭКРАН НАСТРОЕК (ПРАЙС-ЛИСТ) С ОЧИСТКОЙ НУЛЕЙ ⭐️
 const SettingsScreen = ({ t, ts, priceData, setPriceData }) => {
     const [expandedCat, setExpandedCat] = useState(null);
     const [isSaved, setIsSaved] = useState(false);
@@ -374,7 +391,8 @@ const SettingsScreen = ({ t, ts, priceData, setPriceData }) => {
                                 <div key={item.id} style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '12px' }}>
                                     <input type="text" value={item.name} onChange={e => updateItem(cat.id, item.id, 'name', e.target.value)} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: `1px solid ${ts.border}`, background: ts.inputBg, color: ts.text, fontSize: '14px', outline: 'none' }} placeholder={t('clientName')} />
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                      <input type="number" value={item.price} onChange={e => updateItem(cat.id, item.id, 'price', parseFloat(e.target.value) || 0)} style={{ width: '60px', padding: '10px', borderRadius: '10px', border: `1px solid ${ts.border}`, background: ts.inputBg, color: ts.text, fontSize: '14px', textAlign: 'center', outline: 'none', fontWeight: 'bold' }} />
+                                      {/* ⭐️ ИСПОЛЬЗУЕМ cleanNum ⭐️ */}
+                                      <input type="number" value={item.price} onChange={e => updateItem(cat.id, item.id, 'price', cleanNum(e.target.value))} style={{ width: '60px', padding: '10px', borderRadius: '10px', border: `1px solid ${ts.border}`, background: ts.inputBg, color: ts.text, fontSize: '14px', textAlign: 'center', outline: 'none', fontWeight: 'bold' }} />
                                       <span style={{ color: ts.subText, fontSize: '14px', fontWeight: '600' }}>₴</span>
                                     </div>
                                     <button onClick={() => removeItem(cat.id, item.id)} style={{ background: 'none', border: 'none', color: ts.danger, fontSize: '22px', padding: '0 4px' }}>➖</button>
@@ -404,7 +422,6 @@ function App() {
   const [theme, setTheme] = useState('light');
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
-  // ⭐️ ДИНАМИЧЕСКИЙ ПРАЙС-ЛИСТ (ИСТОЧНИК ПРАВДЫ ДЛЯ ВСЕГО ПРИЛОЖЕНИЯ) ⭐️
   const [priceData, setPriceData] = useState([
       { id: 'canvas', name: 'Полотна (за м²)', isBase: true, items: [ {id: 'полотно_м2', name: 'Белый Матовый (MSD)', price: 330}, {id: 'msd_premium_320_м2', name: 'MSD Premium (Глянец)', price: 350}, {id: 'черный_матовый_м2', name: 'Черный Матовый', price: 400} ] },
       { id: 'profile', name: 'Профили (за м.п.)', isBase: true, items: [ {id: 'профиль_м', name: 'Стандартный (ПВХ)', price: 60}, {id: 'профиль_теневой_6мм_мп', name: 'Теневой (6 мм)', price: 350}, {id: 'профиль_парящий_мп', name: 'Парящий', price: 500} ] },
@@ -452,19 +469,18 @@ function App() {
   const ts = getTheme(theme);
   const t = (key) => T[lang]?.[key] || T['ru'][key];
 
-  // ⭐️ ГЕНЕРАЦИЯ OPTIONS И PRICES ИЗ PRICEDATA ⭐️
   const options = {
     canvases: priceData.find(c => c.id === 'canvas')?.items || [],
     profiles: priceData.find(c => c.id === 'profile')?.items || [],
     cornices: priceData.find(c => c.id === 'cornices')?.items || []
   };
 
-  const getDopPrice = (id) => priceData.find(c => c.id === 'dops')?.items.find(i => i.id === id)?.price || 0;
+  const getDopPrice = (id) => parseFloat(priceData.find(c => c.id === 'dops')?.items.find(i => i.id === id)?.price) || 0;
 
   const prices = {
-    canvas: Object.fromEntries((options.canvases).map(i => [i.id, i.price])),
-    profile: Object.fromEntries((options.profiles).map(i => [i.id, i.price])),
-    cornices: Object.fromEntries((options.cornices).map(i => [i.id, i.price])),
+    canvas: Object.fromEntries((options.canvases).map(i => [i.id, parseFloat(i.price) || 0])),
+    profile: Object.fromEntries((options.profiles).map(i => [i.id, parseFloat(i.price) || 0])),
+    cornices: Object.fromEntries((options.cornices).map(i => [i.id, parseFloat(i.price) || 0])),
     light: getDopPrice('light'),
     chand: getDopPrice('chand'),
     corner: getDopPrice('corner'),
@@ -574,8 +590,9 @@ function App() {
                             </div>
                             <div style={{ display: expandedSubSec === 'geom' ? 'block' : 'none', ...styles.subContent }}>
                                 <RoomCanvas room={room} updateRoom={updateRoom} options={options} theme={theme} />
-                                <div style={{...styles.inputRow, marginTop: '24px'}}><span>{t('area')}</span><input type="number" value={room.area} onChange={e => updateRoom(room.id, 'area', e.target.value)} style={styles.numInput} placeholder="0" /></div>
-                                <div style={styles.inputRow}><span>{t('perim')}</span><input type="number" value={room.perim} onChange={e => updateRoom(room.id, 'perim', e.target.value)} style={styles.numInput} placeholder="0" /></div>
+                                {/* ⭐️ ИСПОЛЬЗУЕМ cleanNum ⭐️ */}
+                                <div style={{...styles.inputRow, marginTop: '24px'}}><span>{t('area')}</span><input type="number" value={room.area} onChange={e => updateRoom(room.id, 'area', cleanNum(e.target.value))} style={styles.numInput} placeholder="0" /></div>
+                                <div style={styles.inputRow}><span>{t('perim')}</span><input type="number" value={room.perim} onChange={e => updateRoom(room.id, 'perim', cleanNum(e.target.value))} style={styles.numInput} placeholder="0" /></div>
                                 <div style={styles.inputRow}><span>{t('corners')}</span><input type="number" value={room.corners} readOnly style={{...styles.numInput, background: ts.border, color: ts.subText, border: 'none'}} placeholder="4" /></div>
                             </div>
                           </div>
@@ -593,9 +610,10 @@ function App() {
                               <span style={{ fontWeight: '700', fontSize: '16px', color: ts.text }}>{t('lighting')}</span><span style={{ color: ts.subText, fontSize: '14px' }}>{expandedSubSec === 'light' ? '▲' : '▼'}</span>
                             </div>
                             <div style={{ display: expandedSubSec === 'light' ? 'block' : 'none', ...styles.subContent }}>
-                                <div style={styles.inputRow}><span>{t('spots')}</span><input type="number" value={room.spots} onChange={e => updateRoom(room.id, 'spots', e.target.value)} style={styles.numInput} placeholder="0" /></div>
-                                <div style={styles.inputRow}><span>{t('chands')}</span><input type="number" value={room.chands} onChange={e => updateRoom(room.id, 'chands', e.target.value)} style={styles.numInput} placeholder="0" /></div>
-                                <div style={styles.inputRow}><span>{t('track')}</span><input type="number" value={room.track} onChange={e => updateRoom(room.id, 'track', e.target.value)} style={styles.numInput} placeholder="0" /></div>
+                                {/* ⭐️ ИСПОЛЬЗУЕМ cleanNum ⭐️ */}
+                                <div style={styles.inputRow}><span>{t('spots')}</span><input type="number" value={room.spots} onChange={e => updateRoom(room.id, 'spots', cleanNum(e.target.value))} style={styles.numInput} placeholder="0" /></div>
+                                <div style={styles.inputRow}><span>{t('chands')}</span><input type="number" value={room.chands} onChange={e => updateRoom(room.id, 'chands', cleanNum(e.target.value))} style={styles.numInput} placeholder="0" /></div>
+                                <div style={styles.inputRow}><span>{t('track')}</span><input type="number" value={room.track} onChange={e => updateRoom(room.id, 'track', cleanNum(e.target.value))} style={styles.numInput} placeholder="0" /></div>
                             </div>
                           </div>
                           <div>
@@ -605,7 +623,8 @@ function App() {
                             <div style={{ display: expandedSubSec === 'corniceSec' ? 'block' : 'none', ...styles.subContent }}>
                                 <span style={styles.label}>{t('corniceType')}</span>
                                 <SearchableSelect options={options.cornices} value={room.corniceType} onChange={(val) => updateRoom(room.id, 'corniceType', val)} theme={theme} openUp={true} />
-                                {room.corniceType !== 'none' && ( <div style={{...styles.inputRow, marginTop: '20px'}}><span>{t('corniceLen')}</span><input type="number" value={room.cornice} onChange={e => updateRoom(room.id, 'cornice', e.target.value)} style={styles.numInput} placeholder="0" /></div> )}
+                                {/* ⭐️ ИСПОЛЬЗУЕМ cleanNum ⭐️ */}
+                                {room.corniceType !== 'none' && ( <div style={{...styles.inputRow, marginTop: '20px'}}><span>{t('corniceLen')}</span><input type="number" value={room.cornice} onChange={e => updateRoom(room.id, 'cornice', cleanNum(e.target.value))} style={styles.numInput} placeholder="0" /></div> )}
                             </div>
                           </div>
                           <div>
@@ -613,7 +632,8 @@ function App() {
                               <span style={{ fontWeight: '700', fontSize: '16px', color: ts.text }}>{t('dops')}</span><span style={{ color: ts.subText, fontSize: '14px' }}>{expandedSubSec === 'dops' ? '▲' : '▼'}</span>
                             </div>
                             <div style={{ display: expandedSubSec === 'dops' ? 'block' : 'none', ...styles.subContent }}>
-                                <div style={styles.inputRow}><span>{t('pipe')}</span><input type="number" value={room.pipe} onChange={e => updateRoom(room.id, 'pipe', e.target.value)} style={styles.numInput} placeholder="0" /></div>
+                                {/* ⭐️ ИСПОЛЬЗУЕМ cleanNum ⭐️ */}
+                                <div style={styles.inputRow}><span>{t('pipe')}</span><input type="number" value={room.pipe} onChange={e => updateRoom(room.id, 'pipe', cleanNum(e.target.value))} style={styles.numInput} placeholder="0" /></div>
                             </div>
                           </div>
                       </div>
@@ -624,7 +644,6 @@ function App() {
 
               <div style={{ display: activeTab === 'archive' ? 'block' : 'none' }}><ArchiveScreen t={t} ts={ts} /></div>
               
-              {/* === ЭКРАН 4: НАСТРОЙКИ (ПРАЙС) === */}
               <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}>
                   <SettingsScreen t={t} ts={ts} priceData={priceData} setPriceData={setPriceData} />
               </div>
