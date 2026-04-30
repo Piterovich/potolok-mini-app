@@ -424,18 +424,8 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
 
   const handleModeSwitch = (newMode) => { triggerHaptic('light'); setMode(mode === newMode ? 'drag' : newMode); setSelectedDiagPt(null); setActiveTrackPts([]); setDraggingElement(null); };
 
-  const getHelperText = () => {
-      if (viewMode === '3d') return '👀 3D Режим. Стены: 2.7м. Можно крутить пальцем.';
-      if (mode === 'add') return '👆 Кликните на стену для создания угла'; if (mode === 'remove') return '👆 Кликните на объект (угол, точку, трек), чтобы удалить';
-      if (mode === 'add_diag') return selectedDiagPt === null ? '👆 Выберите первый угол для диагонали' : '👆 Кликните на противоположный угол';
-      if (mode === 'spot') return '👆 Кликайте по чертежу, чтобы расставить Точечные'; if (mode === 'chand') return '👆 Кликните, чтобы повесить Люстру';
-      if (mode === 'pipe') return '👆 Кликните у стены, чтобы отметить Обход трубы'; if (mode === 'track') return activeTrackPts.length === 0 ? '👆 Кликните на чертеж, чтобы начать рисовать трек' : '👆 Кликайте дальше. Чтобы завершить, нажмите ✅';
-      return '👆 Потяните углы, оборудование, ИЛИ выберите инструмент';
-  };
-
   return (
     <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
-      <div style={{ height: '24px', marginBottom: '4px', fontWeight: '800', fontSize: '13px', color: viewMode === '3d' ? t.danger : (['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? t.success : (mode === 'remove' ? t.danger : t.subText)) }}>{getHelperText()}</div>
       
       {/* ⭐️ НОВАЯ ЭРГОНОМИЧНАЯ ПАНЕЛЬ ИНСТРУМЕНТОВ (СВЕРХУ) ⭐️ */}
       {viewMode === '2d' && (
@@ -690,7 +680,6 @@ function App() {
                             </div>
                             <div style={{ display: expandedSubSec === 'corniceSec' ? 'block' : 'none', ...styles.subContent }}>
                                 <span style={styles.label}>{t('corniceType')}</span>
-                                {/* ⭐️ ИСПОЛЬЗУЕМ ПАРАМЕТР openUp ДЛЯ КАРНИЗОВ ⭐️ */}
                                 <SearchableSelect options={options.cornices} value={room.corniceType} onChange={(val) => updateRoom(room.id, 'corniceType', val)} theme={theme} openUp={true} />
                                 {room.corniceType !== 'none' && ( <div style={{...styles.inputRow, marginTop: '20px'}}><span>{t('corniceLen')}</span><input type="number" value={room.cornice} onChange={e => updateRoom(room.id, 'cornice', e.target.value)} style={styles.numInput} placeholder="0" /></div> )}
                             </div>
@@ -713,7 +702,6 @@ function App() {
               <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}><SettingsScreen t={t} ts={ts} /></div>
           </div>
           
-          {/* ⭐️ ПРЯЧЕМ ИТОГО И МЕНЮ, КОГДА ОТКРЫТА КЛАВИАТУРА ⭐️ */}
           {!isKeyboardOpen && activeTab === 'calc' && (
               <div style={{ position: 'fixed', bottom: '100px', left: '12px', right: '12px', background: ts.glass, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', padding: '16px 20px', borderRadius: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 12px 40px rgba(0,0,0,0.15)', border: `1px solid ${theme === 'dark' ? '#48484A' : '#FFFFFF'}`, zIndex: 100 }}>
                  <div>
