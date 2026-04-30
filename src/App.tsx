@@ -419,7 +419,6 @@ const SettingsScreen = ({ t, ts, priceData, setPriceData, userId }) => {
                         <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                             <button disabled={catIndex === 0} onClick={(e) => moveCat(e, catIndex, 'up')} style={{ opacity: catIndex === 0 ? 0.2 : 1, background: 'none', border: 'none', color: ts.text, fontSize: '18px', padding: '4px' }}>▲</button>
                             <button disabled={catIndex === priceData.length - 1} onClick={(e) => moveCat(e, catIndex, 'down')} style={{ opacity: catIndex === priceData.length - 1 ? 0.2 : 1, background: 'none', border: 'none', color: ts.text, fontSize: '18px', padding: '4px' }}>▼</button>
-                            {/* ⭐️ КОРЗИНА ТЕПЕРЬ ДОСТУПНА ВЕЗДЕ ⭐️ */}
                             <button onClick={(e) => removeCat(e, cat.id)} style={{ background: 'none', border: 'none', color: ts.danger, fontSize: '20px', padding: '4px', marginLeft: '4px' }}>🗑</button>
                         </div>
                     </div>
@@ -435,7 +434,6 @@ const SettingsScreen = ({ t, ts, priceData, setPriceData, userId }) => {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                                         {itemIndex > 0 ? <button onClick={() => moveItem(cat.id, itemIndex, 'up')} style={{ background: ts.card, border: `1px solid ${ts.border}`, borderRadius: '6px', color: ts.text, fontSize: '10px', padding: '4px 6px' }}>▲</button> : <div style={{width:'22px'}}></div>}
                                         {itemIndex < cat.items.length - 1 ? <button onClick={() => moveItem(cat.id, itemIndex, 'down')} style={{ background: ts.card, border: `1px solid ${ts.border}`, borderRadius: '6px', color: ts.text, fontSize: '10px', padding: '4px 6px' }}>▼</button> : <div style={{width:'22px'}}></div>}
-                                        {/* ⭐️ МИНУС ЗАМЕНЕН НА КОРЗИНУ ⭐️ */}
                                         <button onClick={() => removeItem(cat.id, item.id)} style={{ background: 'none', border: 'none', color: ts.danger, fontSize: '20px', padding: '0 4px', marginLeft: '2px' }}>🗑</button>
                                     </div>
                                 </div>
@@ -480,8 +478,9 @@ function App() {
   const [customer, setCustomer] = useState({ name: '', phone: '', address: '' });
   const [isContactExpanded, setIsContactExpanded] = useState(true);
 
+  // ⭐️ ДОБАВЛЕНО ПОЛЕ customDops ДЛЯ СОХРАНЕНИЯ ЛЮБЫХ ДОПОВ ИЗ КАТАЛОГА ⭐️
   const [rooms, setRooms] = useState([
-    { id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', canvas: 'matte_32', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }
+    { id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', canvas: 'matte_32', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', customDops: {}, logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }
   ]);
   const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
   const [expandedSubSec, setExpandedSubSec] = useState('geom');
@@ -532,10 +531,14 @@ function App() {
   const options = {
     canvases: priceData.find(c => c.id === 'canvas')?.items || [],
     profiles: priceData.find(c => c.id === 'profile')?.items || [],
-    cornices: priceData.find(c => c.id === 'cornices')?.items || []
+    cornices: priceData.find(c => c.id === 'cornices')?.items || [],
+    dops: priceData.reduce((acc, cat) => {
+        if (['canvas', 'profile', 'cornices'].includes(cat.id)) return acc;
+        return [...acc, ...cat.items];
+    }, []) // ⭐️ ТЕПЕРЬ МЫ БЕРЕМ ВСЕ ДОПЫ ИЗ ПРАЙСА ⭐️
   };
 
-  const getDopPrice = (id) => parseFloat(priceData.find(c => c.id === 'dops')?.items.find(i => i.id === id)?.price) || 0;
+  const getDopPrice = (id) => parseFloat(options.dops.find(i => i.id === id)?.price) || 0;
 
   const prices = {
     canvas: Object.fromEntries((options.canvases).map(i => [i.id, parseFloat(i.price) || 0])),
@@ -548,7 +551,7 @@ function App() {
     track: getDopPrice('track'),
   };
 
-  const addRoom = () => { triggerHaptic(); const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', canvas: options.canvases[0]?.id || '', profile: options.profiles[0]?.id || '', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }; setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom'); setIsContactExpanded(false); };
+  const addRoom = () => { triggerHaptic(); const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', canvas: options.canvases[0]?.id || '', profile: options.profiles[0]?.id || '', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', customDops: {}, logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }; setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom'); setIsContactExpanded(false); };
   const removeRoom = (id, e) => { e.stopPropagation(); triggerHaptic('heavy'); if (rooms.length > 1) setRooms(rooms.filter(room => room.id !== id)); else alert("Должно остаться хотя бы одно помещение!"); };
   
   const sendToBot = async () => {
@@ -563,13 +566,12 @@ function App() {
       window.Telegram?.WebApp?.close();
   };
 
-  // ⭐️ УМНЫЙ ПОДСЧЕТ ИТОГО (С АВТОПОДБОРОМ СПЕЦ-УГЛОВ) ⭐️
+  // ⭐️ УМНЫЙ ПОДСЧЕТ ИТОГО (С АВТОПОДБОРОМ СПЕЦ-УГЛОВ И ДИНАМИЧЕСКИМИ ДОПАМИ) ⭐️
   const localTotalSum = rooms.reduce((total, r) => {
       let p_canvas = prices.canvas[r.canvas] || 0;
       let p_profile = prices.profile[r.profile] || 0;
       
-      // Ищем спец-угол для выбранного профиля
-      let p_corner = prices.corner; // по умолчанию базовая цена угла
+      let p_corner = prices.corner; 
       if (r.profile) {
           const keywords = r.profile.split('_').filter(k => k.length > 3);
           for (let cat of priceData) {
@@ -584,6 +586,15 @@ function App() {
       
       let p_cornice = prices.cornices[r.corniceType] || 0;
 
+      // Считаем все добавленные вручную допы из каталога
+      let customDopsSum = 0;
+      if (r.customDops) {
+          for (let [dopId, qty] of Object.entries(r.customDops)) {
+              const dopPrice = parseFloat(options.dops.find(d => d.id === dopId)?.price) || 0;
+              customDopsSum += (Number(qty) || 0) * dopPrice;
+          }
+      }
+
       return total + 
           ((Number(r.area) || 0) * p_canvas) + 
           ((Number(r.perim) || 0) * p_profile) + 
@@ -592,7 +603,8 @@ function App() {
           ((Number(r.chands) || 0) * prices.chand) + 
           ((Number(r.track) || 0) * prices.track) + 
           ((Number(r.cornice) || 0) * p_cornice) + 
-          ((Number(r.pipe) || 0) * prices.pipe);
+          ((Number(r.pipe) || 0) * prices.pipe) + 
+          customDopsSum; // Прибавляем к общей сумме!
   }, 0);
 
   const styles = {
@@ -689,7 +701,6 @@ function App() {
                               <span style={{ fontWeight: '700', fontSize: '16px', color: ts.text }}>{t('materials')}</span><span style={{ color: ts.subText, fontSize: '14px' }}>{expandedSubSec === 'mat' ? '▲' : '▼'}</span>
                             </div>
                             <div style={{ display: expandedSubSec === 'mat' ? 'block' : 'none', ...styles.subContent }}>
-                                {/* ⭐️ ПЕРЕДАЕМ ПЛЕЙСХОЛДЕР ⭐️ */}
                                 <span style={styles.label}>{t('canvas')}</span><SearchableSelect options={options.canvases} value={room.canvas} onChange={(val) => updateRoom(room.id, 'canvas', val)} theme={theme} placeholder={t('select')} />
                                 <div style={{ marginTop: '20px' }}><span style={styles.label}>{t('profile')}</span><SearchableSelect options={options.profiles} value={room.profile} onChange={(val) => updateRoom(room.id, 'profile', val)} theme={theme} placeholder={t('select')} /></div>
                             </div>
@@ -710,7 +721,6 @@ function App() {
                             </div>
                             <div style={{ display: expandedSubSec === 'corniceSec' ? 'block' : 'none', ...styles.subContent }}>
                                 <span style={styles.label}>{t('corniceType')}</span>
-                                {/* ⭐️ ПЕРЕДАЕМ ПЛЕЙСХОЛДЕР ⭐️ */}
                                 <SearchableSelect options={options.cornices} value={room.corniceType} onChange={(val) => updateRoom(room.id, 'corniceType', val)} theme={theme} openUp={true} placeholder={t('select')} />
                                 {room.corniceType !== 'none' && ( <div style={{...styles.inputRow, marginTop: '20px'}}><span>{t('corniceLen')}</span><input type="number" value={room.cornice} onChange={e => updateRoom(room.id, 'cornice', cleanNum(e.target.value))} style={styles.numInput} placeholder="0" /></div> )}
                             </div>
@@ -721,6 +731,47 @@ function App() {
                             </div>
                             <div style={{ display: expandedSubSec === 'dops' ? 'block' : 'none', ...styles.subContent }}>
                                 <div style={styles.inputRow}><span>{t('pipe')}</span><input type="number" value={room.pipe} onChange={e => updateRoom(room.id, 'pipe', cleanNum(e.target.value))} style={styles.numInput} placeholder="0" /></div>
+                                
+                                {/* ⭐️ ОТОБРАЖЕНИЕ ВЫБРАННЫХ ДИНАМИЧЕСКИХ ДОПОВ ⭐️ */}
+                                {Object.entries(room.customDops || {}).map(([dopId, dopQty]) => {
+                                    const dopItem = options.dops.find(d => d.id === dopId);
+                                    if (!dopItem) return null;
+                                    return (
+                                        <div key={dopId} style={{...styles.inputRow, marginTop: '12px'}}>
+                                            <span translate="no" className="notranslate" style={{flex: 1, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: '8px', color: ts.text}}>{dopItem.name}</span>
+                                            <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                                <input type="number" value={dopQty as string} onChange={e => {
+                                                    const newDops = {...(room.customDops || {})};
+                                                    newDops[dopId] = cleanNum(e.target.value);
+                                                    updateRoom(room.id, 'customDops', newDops);
+                                                }} style={{...styles.numInput, width: '60px', padding: '10px'}} placeholder="0" />
+                                                <button onClick={() => {
+                                                    triggerHaptic('medium');
+                                                    const newDops = {...(room.customDops || {})};
+                                                    delete newDops[dopId];
+                                                    updateRoom(room.id, 'customDops', newDops);
+                                                }} style={{background: 'none', border: 'none', color: ts.danger, fontSize: '20px', padding: '0 4px'}}>🗑</button>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+
+                                {/* ⭐️ ВЫПАДАЮЩИЙ СПИСОК "ДОБАВИТЬ ИЗ КАТАЛОГА" ⭐️ */}
+                                <div style={{ marginTop: '16px' }}>
+                                    <SearchableSelect 
+                                        options={options.dops.filter(d => !['light', 'chand', 'track', 'pipe', 'corner'].includes(d.id) && !(room.customDops || {})[d.id])} 
+                                        value="" 
+                                        onChange={(val) => { 
+                                            const newDops = {...(room.customDops || {})}; 
+                                            newDops[val] = 1; 
+                                            updateRoom(room.id, 'customDops', newDops); 
+                                        }} 
+                                        theme={theme} 
+                                        placeholder="➕ Добавить из каталога..." 
+                                        openUp={true} 
+                                    />
+                                </div>
+
                             </div>
                           </div>
                       </div>
