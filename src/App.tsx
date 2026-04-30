@@ -5,8 +5,8 @@ import * as THREE from 'three'
 import './App.css'
 
 const T = {
-  ru: { calc: "Умный Расчет", dash: "Главная", archive: "Архив", settings: "Настройки", addRoom: "Добавить комнату", toBot: "Оформить смету 🚀", area: "Площадь", perim: "Периметр", corners: "Углы", geom: "📏 Геометрия и замеры", materials: "🎨 Выбор материалов", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", pre: "ИТОГО ПРЕДВАРИТЕЛЬНО:" },
-  uk: { calc: "Розумний Розрахунок", dash: "Головна", archive: "Архів", settings: "Налаштування", addRoom: "Додати кімнату", toBot: "Оформити кошторис 🚀", area: "Площа", perim: "Периметр", corners: "Кути", geom: "📏 Геометрія та заміри", materials: "🎨 Вибір матеріалів", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", pre: "РАЗОМ ПОПЕРЕДНЬО:" }
+  ru: { calc: "Умный Расчет", dash: "Главная", archive: "Архив", settings: "Настройки", addRoom: "Добавить комнату", toBot: "Оформить смету 🚀", area: "Площадь", perim: "Периметр", corners: "Углы", geom: "📏 Геометрия и замеры", materials: "🎨 Выбор материалов", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", pre: "ИТОГО ПРЕДВАРИТЕЛЬНО:", contacts: "👤 Данные клиента", clientName: "Имя", clientPhone: "Телефон", clientAddress: "Адрес объекта" },
+  uk: { calc: "Розумний Розрахунок", dash: "Головна", archive: "Архів", settings: "Налаштування", addRoom: "Додати кімнату", toBot: "Оформити кошторис 🚀", area: "Площа", perim: "Периметр", corners: "Кути", geom: "📏 Геометрія та заміри", materials: "🎨 Вибір матеріалів", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", pre: "РАЗОМ ПОПЕРЕДНЬО:", contacts: "👤 Дані клієнта", clientName: "Ім'я", clientPhone: "Телефон", clientAddress: "Адреса об'єкта" }
 };
 
 // --- Геометрическое ядро ---
@@ -230,9 +230,9 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // ⭐️ СЕТКА 50 СМ (0.5м) ⭐️
+    // Сетка 50 см
     ctx.strokeStyle = t.border; ctx.lineWidth = 1;
-    const step = scale / 2; // Шаг сетки теперь в 2 раза меньше масштаба!
+    const step = scale / 2; 
     const startX = offset.x % step; const startY = offset.y % step;
     for(let i = startX; i < canvas.width; i += step) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
     for(let i = startY; i < canvas.height; i += step) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
@@ -321,7 +321,6 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     const factCanvas = document.getElementById(`canvas-factory-${room.id}`);
     if (factCanvas) {
         const fCtx = factCanvas.getContext('2d'); fCtx.fillStyle = '#ffffff'; fCtx.fillRect(0, 0, factCanvas.width, factCanvas.height); fCtx.strokeStyle = '#e5e5ea'; fCtx.lineWidth = 1;
-        // Заводской холст тоже с сеткой 50 см
         for(let i = startX; i < factCanvas.width; i += step) { fCtx.beginPath(); fCtx.moveTo(i, 0); fCtx.lineTo(i, factCanvas.height); fCtx.stroke(); }
         for(let i = startY; i < factCanvas.height; i += step) { fCtx.beginPath(); fCtx.moveTo(0, i); fCtx.lineTo(factCanvas.width, i); fCtx.stroke(); }
         fCtx.beginPath(); fCtx.moveTo(screenPts[0].x, screenPts[0].y); for(let i = 1; i < screenPts.length; i++) fCtx.lineTo(screenPts[i].x, screenPts[i].y); fCtx.closePath();
@@ -535,6 +534,10 @@ function App() {
   
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
+  // ⭐️ НОВЫЙ СТЕЙТ ДЛЯ ДАННЫХ КЛИЕНТА ⭐️
+  const [customer, setCustomer] = useState({ name: '', phone: '', address: '' });
+  const [isContactExpanded, setIsContactExpanded] = useState(true);
+
   const [rooms, setRooms] = useState([
     { id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }
   ]);
@@ -579,8 +582,9 @@ function App() {
   };
   const [prices] = useState({ canvas: { 'полотно_м2': 330, 'msd_premium_320_м2': 350, 'черный_матовый_м2': 400 }, profile: { 'профиль_м': 60, 'профиль_теневой_6мм_мп': 350, 'профиль_парящий_мп': 500 }, cornices: { 'none': 0, 'карниз_м': 1200, 'карниз_q5_мп': 1500, 'карниз_q10_мп': 2200 }, light: 250, chand: 300, corner: 50, pipe: 200, track: 2000 });
 
-  const addRoom = () => { triggerHaptic(); const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }; setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom'); };
+  const addRoom = () => { triggerHaptic(); const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }; setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom'); setIsContactExpanded(false); };
   const removeRoom = (id, e) => { e.stopPropagation(); triggerHaptic('heavy'); if (rooms.length > 1) setRooms(rooms.filter(room => room.id !== id)); else alert("Должно остаться хотя бы одно помещение!"); };
+  
   const sendToBot = async () => {
       triggerHaptic('heavy');
       const roomsWithImages = rooms.map(room => {
@@ -589,7 +593,8 @@ function App() {
         if (factCanvas) factoryBase64 = factCanvas.toDataURL('image/png');
         return { ...room, image_installer: installerBase64, image_factory: factoryBase64 }; 
       });
-      await fetch('https://potolokpro777bot.website/api/calculate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, rooms: roomsWithImages }) });
+      // ⭐️ ДОБАВЛЕНО ОТПРАВКУ ДАННЫХ КЛИЕНТА (customer) В БОТ ⭐️
+      await fetch('https://potolokpro777bot.website/api/calculate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, customer, rooms: roomsWithImages }) });
       window.Telegram?.WebApp?.close();
   };
 
@@ -639,9 +644,34 @@ function App() {
                       <h2 style={{ fontSize: '28px', margin: 0, fontWeight: '900', color: ts.text }}>{t('calc')}</h2>
                       <button onClick={() => { triggerHaptic(); setTheme(theme === 'light' ? 'dark' : 'light'); }} style={{ background: ts.card, border: `1px solid ${ts.border}`, width: '44px', height: '44px', borderRadius: '14px', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', cursor: 'pointer' }}>{theme === 'light' ? '🌙' : '☀️'}</button>
                   </div>
+
+                  {/* ⭐️ НОВЫЙ БЛОК: ДАННЫЕ КЛИЕНТА ⭐️ */}
+                  <div style={{ ...styles.card, border: `2px solid ${ts.accent}40` }}>
+                    <div style={styles.header} onClick={() => { triggerHaptic(); setIsContactExpanded(!isContactExpanded); setExpandedRoomId(null); }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ color: ts.accent, fontSize: '18px' }}>{isContactExpanded ? '▼' : '▶'}</span>
+                        <span style={{ fontWeight: '800', fontSize: '20px', color: ts.text }}>{t('contacts')}</span>
+                      </div>
+                    </div>
+                    <div style={{ display: isContactExpanded ? 'block' : 'none', animation: 'slideDown 0.2s ease-out', padding: '0 20px 24px' }}>
+                        <div style={{...styles.inputRow, marginBottom: '12px', marginTop: '10px'}}>
+                          <span style={{color: ts.subText, fontSize: '14px', fontWeight: '700'}}>{t('clientName')}</span>
+                          <input type="text" value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} style={{...styles.numInput, width: '65%', textAlign: 'left'}} placeholder="Иван Иванов" />
+                        </div>
+                        <div style={{...styles.inputRow, marginBottom: '12px'}}>
+                          <span style={{color: ts.subText, fontSize: '14px', fontWeight: '700'}}>{t('clientPhone')}</span>
+                          <input type="tel" value={customer.phone} onChange={e => setCustomer({...customer, phone: e.target.value})} style={{...styles.numInput, width: '65%', textAlign: 'left'}} placeholder="+380..." />
+                        </div>
+                        <div style={{...styles.inputRow, marginBottom: '0'}}>
+                          <span style={{color: ts.subText, fontSize: '14px', fontWeight: '700'}}>{t('clientAddress')}</span>
+                          <input type="text" value={customer.address} onChange={e => setCustomer({...customer, address: e.target.value})} style={{...styles.numInput, width: '65%', textAlign: 'left'}} placeholder="ул. Строителей, 1" />
+                        </div>
+                    </div>
+                  </div>
+
                   {rooms.map(room => (
                     <div key={room.id} style={styles.card}>
-                      <div style={styles.header} onClick={() => { triggerHaptic(); setExpandedRoomId(expandedRoomId === room.id ? null : room.id)}}>
+                      <div style={styles.header} onClick={() => { triggerHaptic(); setExpandedRoomId(expandedRoomId === room.id ? null : room.id); setIsContactExpanded(false); }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <span style={{ color: ts.accent, fontSize: '18px' }}>{expandedRoomId === room.id ? '▼' : '▶'}</span>
                           <input type="text" value={room.name} onChange={e => updateRoom(room.id, 'name', e.target.value)} onClick={e => e.stopPropagation()} style={{ fontWeight: '800', border: 'none', outline: 'none', fontSize: '20px', width: '180px', background: 'transparent', color: ts.text }} />
