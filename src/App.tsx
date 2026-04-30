@@ -567,7 +567,12 @@ function App() {
         if (factCanvas) factoryBase64 = factCanvas.toDataURL('image/png');
         return { ...room, image_installer: installerBase64, image_factory: factoryBase64 }; 
       });
-      await fetch('https://potolokpro777bot.website/api/calculate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, customer, rooms: roomsWithImages }) });
+      // ⭐️ СУПЕР-ФИКС: ТЕПЕРЬ МЫ ОТПРАВЛЯЕМ priceData СРАЗУ ВМЕСТЕ СО СМЕТОЙ ⭐️
+      await fetch('https://potolokpro777bot.website/api/calculate', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ userId, customer, rooms: roomsWithImages, priceData }) 
+      });
       window.Telegram?.WebApp?.close();
   };
 
