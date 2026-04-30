@@ -261,8 +261,18 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
 
   const handleModeSwitch = (newMode) => { triggerHaptic('light'); setMode(mode === newMode ? 'drag' : newMode); setSelectedDiagPt(null); setActiveTrackPts([]); setDraggingElement(null); };
 
+  const getHelperText = () => {
+      if (viewMode === '3d') return '👀 3D Режим. Стены: 2.7м. Можно крутить пальцем.';
+      if (mode === 'add') return '👆 Кликните на линию стены для создания угла'; if (mode === 'remove') return '👆 Кликните на объект (угол, точку, трек), чтобы удалить';
+      if (mode === 'add_diag') return selectedDiagPt === null ? '👆 Выберите первый угол для диагонали' : '👆 Кликните на противоположный угол';
+      if (mode === 'spot') return '👆 Кликайте по чертежу, чтобы расставить Точечные'; if (mode === 'chand') return '👆 Кликните, чтобы повесить Люстру';
+      if (mode === 'pipe') return '👆 Кликните у стены, чтобы отметить Обход трубы'; if (mode === 'track') return activeTrackPts.length === 0 ? '👆 Кликните на чертеж, чтобы начать рисовать трек' : '👆 Кликайте дальше. Чтобы завершить, нажмите ✅';
+      return '👆 Выберите инструмент';
+  };
+
   return (
     <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
+      <div style={{ height: '24px', marginBottom: '4px', fontWeight: '800', fontSize: '13px', color: viewMode === '3d' ? t.danger : (['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? t.success : (mode === 'remove' ? t.danger : t.subText)) }}>{getHelperText()}</div>
       
       {viewMode === '2d' && (
           <div style={{ background: t.card, borderRadius: '16px', padding: '12px', marginBottom: '12px', border: `1px solid ${t.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
@@ -410,7 +420,7 @@ const SettingsScreen = ({ t, ts, priceData, setPriceData, userId }) => {
                         <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                             <button disabled={catIndex === 0} onClick={(e) => moveCat(e, catIndex, 'up')} style={{ opacity: catIndex === 0 ? 0.2 : 1, background: 'none', border: 'none', color: ts.text, fontSize: '18px', padding: '4px' }}>▲</button>
                             <button disabled={catIndex === priceData.length - 1} onClick={(e) => moveCat(e, catIndex, 'down')} style={{ opacity: catIndex === priceData.length - 1 ? 0.2 : 1, background: 'none', border: 'none', color: ts.text, fontSize: '18px', padding: '4px' }}>▼</button>
-                            {!cat.isBase && <button onClick={(e) => removeCat(e, cat.id)} style={{ background: 'none', border: 'none', color: ts.danger, fontSize: '20px', padding: '4px', marginLeft: '4px' }}>🗑</button>}
+                            <button onClick={(e) => removeCat(e, cat.id)} style={{ background: 'none', border: 'none', color: ts.danger, fontSize: '20px', padding: '4px', marginLeft: '4px' }}>🗑</button>
                         </div>
                     </div>
                     {expandedCat === cat.id && (
@@ -425,7 +435,7 @@ const SettingsScreen = ({ t, ts, priceData, setPriceData, userId }) => {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                                         {itemIndex > 0 ? <button onClick={() => moveItem(cat.id, itemIndex, 'up')} style={{ background: ts.card, border: `1px solid ${ts.border}`, borderRadius: '6px', color: ts.text, fontSize: '10px', padding: '4px 6px' }}>▲</button> : <div style={{width:'22px'}}></div>}
                                         {itemIndex < cat.items.length - 1 ? <button onClick={() => moveItem(cat.id, itemIndex, 'down')} style={{ background: ts.card, border: `1px solid ${ts.border}`, borderRadius: '6px', color: ts.text, fontSize: '10px', padding: '4px 6px' }}>▼</button> : <div style={{width:'22px'}}></div>}
-                                        <button onClick={() => removeItem(cat.id, item.id)} style={{ background: 'none', border: 'none', color: ts.danger, fontSize: '20px', padding: '0 4px', marginLeft: '2px' }}>➖</button>
+                                        <button onClick={() => removeItem(cat.id, item.id)} style={{ background: 'none', border: 'none', color: ts.danger, fontSize: '20px', padding: '0 4px', marginLeft: '4px' }}>🗑</button>
                                     </div>
                                 </div>
                             ))}
