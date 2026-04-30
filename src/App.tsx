@@ -188,7 +188,6 @@ const SearchableSelect = ({ options, value, onChange, theme, placeholder, openUp
 const RoomCanvas = ({ room, updateRoom, options, theme }) => {
   const canvasRef = useRef(null);
   const [scale, setScale] = useState(30); 
-  // ⭐️ ИЗМЕНЕНИЕ ЗДЕСЬ: диагонали скрыты по умолчанию (false)
   const [showDiags, setShowDiags] = useState(false);
   const [viewMode, setViewMode] = useState('2d'); 
   const [mode, setMode] = useState('drag'); 
@@ -230,10 +229,14 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // ⭐️ СЕТКА 50 СМ (0.5м) ⭐️
     ctx.strokeStyle = t.border; ctx.lineWidth = 1;
-    const step = scale; const startX = offset.x % step; const startY = offset.y % step;
+    const step = scale / 2; // Шаг сетки теперь в 2 раза меньше масштаба!
+    const startX = offset.x % step; const startY = offset.y % step;
     for(let i = startX; i < canvas.width; i += step) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
     for(let i = startY; i < canvas.height; i += step) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+    
     ctx.beginPath(); ctx.moveTo(screenPts[0].x, screenPts[0].y);
     for(let i = 1; i < screenPts.length; i++) ctx.lineTo(screenPts[i].x, screenPts[i].y);
     ctx.closePath();
@@ -318,6 +321,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     const factCanvas = document.getElementById(`canvas-factory-${room.id}`);
     if (factCanvas) {
         const fCtx = factCanvas.getContext('2d'); fCtx.fillStyle = '#ffffff'; fCtx.fillRect(0, 0, factCanvas.width, factCanvas.height); fCtx.strokeStyle = '#e5e5ea'; fCtx.lineWidth = 1;
+        // Заводской холст тоже с сеткой 50 см
         for(let i = startX; i < factCanvas.width; i += step) { fCtx.beginPath(); fCtx.moveTo(i, 0); fCtx.lineTo(i, factCanvas.height); fCtx.stroke(); }
         for(let i = startY; i < factCanvas.height; i += step) { fCtx.beginPath(); fCtx.moveTo(0, i); fCtx.lineTo(factCanvas.width, i); fCtx.stroke(); }
         fCtx.beginPath(); fCtx.moveTo(screenPts[0].x, screenPts[0].y); for(let i = 1; i < screenPts.length; i++) fCtx.lineTo(screenPts[i].x, screenPts[i].y); fCtx.closePath();
@@ -425,20 +429,10 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
 
   const handleModeSwitch = (newMode) => { triggerHaptic('light'); setMode(mode === newMode ? 'drag' : newMode); setSelectedDiagPt(null); setActiveTrackPts([]); setDraggingElement(null); };
 
-  const getHelperText = () => {
-      if (viewMode === '3d') return '👀 3D Режим. Стены: 2.7м. Можно крутить пальцем.';
-      if (mode === 'add') return '👆 Кликните на линию стены для создания угла'; if (mode === 'remove') return '👆 Кликните на объект (угол, точку, трек), чтобы удалить';
-      if (mode === 'add_diag') return selectedDiagPt === null ? '👆 Выберите первый угол для диагонали' : '👆 Кликните на противоположный угол';
-      if (mode === 'spot') return '👆 Кликайте по чертежу, чтобы расставить Точечные'; if (mode === 'chand') return '👆 Кликните, чтобы повесить Люстру';
-      if (mode === 'pipe') return '👆 Кликните у стены, чтобы отметить Обход трубы'; if (mode === 'track') return activeTrackPts.length === 0 ? '👆 Кликните на чертеж, чтобы начать рисовать трек' : '👆 Кликайте дальше. Чтобы завершить, нажмите ✅';
-      return '👆 Выберите инструмент';
-  };
-
   return (
     <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
-      <div style={{ height: '24px', marginBottom: '4px', fontWeight: '800', fontSize: '13px', color: viewMode === '3d' ? t.danger : (['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? t.success : (mode === 'remove' ? t.danger : t.subText)) }}>{getHelperText()}</div>
       
-      {/* ⭐️ НОВАЯ ЭРГОНОМИЧНАЯ ПАНЕЛЬ ИНСТРУМЕНТОВ (СВЕРХУ) ⭐️ */}
+      {/* ⭐️ ЭРГОНОМИЧНАЯ ПАНЕЛЬ ИНСТРУМЕНТОВ (СВЕРХУ) ⭐️ */}
       {viewMode === '2d' && (
           <div style={{ background: t.card, borderRadius: '16px', padding: '12px', marginBottom: '12px', border: `1px solid ${t.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
