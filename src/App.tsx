@@ -4,26 +4,23 @@ import { OrbitControls, Environment, Grid } from '@react-three/drei'
 import * as THREE from 'three'
 import './App.css'
 
-// ⭐️ ОБНОВЛЕННЫЙ СЛОВАРЬ (ДОБАВЛЕНЫ ПЕРЕВОДЫ ДЛЯ НАСТРОЕК) ⭐️
 const T = {
-  ru: { calc: "Умный Расчет", dash: "Главная", archive: "Архив", settings: "Настройки", addRoom: "Добавить комнату", toBot: "Оформить смету 🚀", area: "Площадь", perim: "Периметр", corners: "Углы", geom: "📏 Геометрия и замеры", materials: "🎨 Выбор материалов", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", pre: "ИТОГО ПРЕДВАРИТЕЛЬНО:", contacts: "👤 Данные клиента", clientName: "Имя", clientPhone: "Телефон", clientAddress: "Адрес объекта", savePrice: "💾 Сохранить прайс", priceSaved: "✅ Прайс сохранен!", priceCanvases: "Полотна (за м²)", priceProfiles: "Профили (за м.п.)", priceCornices: "Карнизы (за м.п.)", priceDops: "Монтаж и Допы" },
-  uk: { calc: "Розумний Розрахунок", dash: "Головна", archive: "Архів", settings: "Налаштування", addRoom: "Додати кімнату", toBot: "Оформити кошторис 🚀", area: "Площа", perim: "Периметр", corners: "Кути", geom: "📏 Геометрія та заміри", materials: "🎨 Вибір матеріалів", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", pre: "РАЗОМ ПОПЕРЕДНЬО:", contacts: "👤 Дані клієнта", clientName: "Ім'я", clientPhone: "Телефон", clientAddress: "Адреса об'єкта", savePrice: "💾 Зберегти прайс", priceSaved: "✅ Прайс збережено!", priceCanvases: "Полотна (за м²)", priceProfiles: "Профілі (за м.п.)", priceCornices: "Карнизи (за м.п.)", priceDops: "Монтаж та Дод. роботи" },
-  en: { calc: "Smart Calc", dash: "Home", archive: "Archive", settings: "Settings", addRoom: "Add Room", toBot: "Send to Bot 🚀", area: "Area", perim: "Perimeter", corners: "Corners", geom: "📏 Geometry", materials: "🎨 Materials", lighting: "💡 Lighting", corniceSec: "🏁 Cornices", dops: "🔧 Extras", pre: "ESTIMATED TOTAL:", contacts: "👤 Client Data", clientName: "Name", clientPhone: "Phone", clientAddress: "Address", savePrice: "💾 Save Pricing", priceSaved: "✅ Saved!", priceCanvases: "Canvases (per m²)", priceProfiles: "Profiles (per m)", priceCornices: "Cornices (per m)", priceDops: "Installation & Extras" },
-  es: { calc: "Cálculo Inteligente", dash: "Inicio", archive: "Archivo", settings: "Ajustes", addRoom: "Añadir sala", toBot: "Enviar al Bot 🚀", area: "Área", perim: "Perímetro", corners: "Esquinas", geom: "📏 Geometría", materials: "🎨 Materiales", lighting: "💡 Iluminación", corniceSec: "🏁 Cornisas", dops: "🔧 Extras", pre: "TOTAL ESTIMADO:", contacts: "👤 Datos del cliente", clientName: "Nombre", clientPhone: "Teléfono", clientAddress: "Dirección", savePrice: "💾 Guardar Precios", priceSaved: "✅ ¡Guardado!", priceCanvases: "Lonas (por m²)", priceProfiles: "Perfiles (por m)", priceCornices: "Cornisas (por m)", priceDops: "Instalación y Extras" },
-  pl: { calc: "Inteligentny Kalkulator", dash: "Główna", archive: "Archiwum", settings: "Ustawienia", addRoom: "Dodaj pokój", toBot: "Wyślij do Bota 🚀", area: "Powierzchnia", perim: "Obwód", corners: "Kąty", geom: "📏 Geometria", materials: "🎨 Materiały", lighting: "💡 Oświetlenie", corniceSec: "🏁 Karnisze", dops: "🔧 Dodatki", pre: "WSTĘPNA SUMA:", contacts: "👤 Dane klienta", clientName: "Imię", clientPhone: "Telefon", clientAddress: "Adres", savePrice: "💾 Zapisz Cennik", priceSaved: "✅ Zapisano!", priceCanvases: "Płótna (za m²)", priceProfiles: "Profile (za mb)", priceCornices: "Karnisze (za mb)", priceDops: "Instalacja i Dodatki" },
-  kk: { calc: "Ақылды есептеу", dash: "Басты", archive: "Мұрағат", settings: "Параметрлер", addRoom: "Бөлме қосу", toBot: "Ботқа жіберу 🚀", area: "Аудан", perim: "Периметр", corners: "Бұрыштар", geom: "📏 Геометрия", materials: "🎨 Материалдар", lighting: "💡 Жарықтандыру", corniceSec: "🏁 Карниздер", dops: "🔧 Қосымша жұмыстар", pre: "АЛДЫН АЛА БАҒАСЫ:", contacts: "👤 Клиент деректері", clientName: "Аты", clientPhone: "Телефон", clientAddress: "Мекенжайы", savePrice: "💾 Бағаны сақтау", priceSaved: "✅ Сақталды!", priceCanvases: "Кенептер (м² үшін)", priceProfiles: "Профильдер (м үшін)", priceCornices: "Карниздер (м үшін)", priceDops: "Монтаж және қосымша" }
+  ru: { calc: "Умный Расчет", dash: "Главная", archive: "Архив", settings: "Настройки", addRoom: "Добавить комнату", toBot: "Оформить смету 🚀", area: "Площадь", perim: "Периметр", corners: "Углы", geom: "📏 Геометрия и замеры", materials: "🎨 Выбор материалов", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", pre: "ИТОГО ПРЕДВАРИТЕЛЬНО:", contacts: "👤 Данные клиента", clientName: "Имя", clientPhone: "Телефон", clientAddress: "Адрес объекта", savePrice: "💾 Сохранить прайс", priceSaved: "✅ Прайс сохранен!", addPosition: "➕ Добавить позицию", addCategory: "➕ Добавить категорию", deleteConfirm: "Удалить эту категорию полностью?", newCategory: "Новая категория", newItem: "Новая позиция" },
+  uk: { calc: "Розумний Розрахунок", dash: "Головна", archive: "Архів", settings: "Налаштування", addRoom: "Додати кімнату", toBot: "Оформити кошторис 🚀", area: "Площа", perim: "Периметр", corners: "Кути", geom: "📏 Геометрія та заміри", materials: "🎨 Вибір матеріалів", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", pre: "РАЗОМ ПОПЕРЕДНЬО:", contacts: "👤 Дані клієнта", clientName: "Ім'я", clientPhone: "Телефон", clientAddress: "Адреса об'єкта", savePrice: "💾 Зберегти прайс", priceSaved: "✅ Прайс збережено!", addPosition: "➕ Додати позицію", addCategory: "➕ Додати категорію", deleteConfirm: "Видалити цю категорію повністю?", newCategory: "Нова категорія", newItem: "Нова позиція" },
+  en: { calc: "Smart Calc", dash: "Home", archive: "Archive", settings: "Settings", addRoom: "Add Room", toBot: "Send to Bot 🚀", area: "Area", perim: "Perimeter", corners: "Corners", geom: "📏 Geometry", materials: "🎨 Materials", lighting: "💡 Lighting", corniceSec: "🏁 Cornices", dops: "🔧 Extras", pre: "ESTIMATED TOTAL:", contacts: "👤 Client Data", clientName: "Name", clientPhone: "Phone", clientAddress: "Address", savePrice: "💾 Save Pricing", priceSaved: "✅ Saved!", addPosition: "➕ Add item", addCategory: "➕ Add category", deleteConfirm: "Delete this category entirely?", newCategory: "New category", newItem: "New item" },
+  es: { calc: "Cálculo Inteligente", dash: "Inicio", archive: "Archivo", settings: "Ajustes", addRoom: "Añadir sala", toBot: "Enviar al Bot 🚀", area: "Área", perim: "Perímetro", corners: "Esquinas", geom: "📏 Geometría", materials: "🎨 Materiales", lighting: "💡 Iluminación", corniceSec: "🏁 Cornisas", dops: "🔧 Extras", pre: "TOTAL ESTIMADO:", contacts: "👤 Datos del cliente", clientName: "Nombre", clientPhone: "Teléfono", clientAddress: "Dirección", savePrice: "💾 Guardar Precios", priceSaved: "✅ ¡Guardado!", addPosition: "➕ Añadir elemento", addCategory: "➕ Añadir categoría", deleteConfirm: "¿Eliminar esta categoría por completo?", newCategory: "Nueva categoría", newItem: "Nuevo elemento" },
+  pl: { calc: "Inteligentny Kalkulator", dash: "Główna", archive: "Archiwum", settings: "Ustawienia", addRoom: "Dodaj pokój", toBot: "Wyślij do Bota 🚀", area: "Powierzchnia", perim: "Obwód", corners: "Kąty", geom: "📏 Geometria", materials: "🎨 Materiały", lighting: "💡 Oświetlenie", corniceSec: "🏁 Karnisze", dops: "🔧 Dodatki", pre: "WSTĘPNA SUMA:", contacts: "👤 Dane klienta", clientName: "Imię", clientPhone: "Telefon", clientAddress: "Adres", savePrice: "💾 Zapisz Cennik", priceSaved: "✅ Zapisano!", addPosition: "➕ Dodaj pozycję", addCategory: "➕ Dodaj kategorię", deleteConfirm: "Usunąć tę kategorię całkowicie?", newCategory: "Nowa kategoria", newItem: "Nowa pozycja" },
+  kk: { calc: "Ақылды есептеу", dash: "Басты", archive: "Мұрағат", settings: "Параметрлер", addRoom: "Бөлме қосу", toBot: "Ботқа жіберу 🚀", area: "Аудан", perim: "Периметр", corners: "Бұрыштар", geom: "📏 Геометрия", materials: "🎨 Материалдар", lighting: "💡 Жарықтандыру", corniceSec: "🏁 Карниздер", dops: "🔧 Қосымша жұмыстар", pre: "АЛДЫН АЛА БАҒАСЫ:", contacts: "👤 Клиент деректері", clientName: "Аты", clientPhone: "Телефон", clientAddress: "Мекенжайы", savePrice: "💾 Бағаны сақтау", priceSaved: "✅ Сақталды!", addPosition: "➕ Позиция қосу", addCategory: "➕ Санат қосу", deleteConfirm: "Бұл санатты толығымен жою керек пе?", newCategory: "Жаңа санат", newItem: "Жаңа позиция" }
 };
 
-// --- Геометрическое ядро ---
+// --- Геометрия ---
 const getDist = (p1, p2) => Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
 const getDistToSegment = (p, p1, p2) => {
     let A = p.x - p1.x, B = p.y - p1.y, C = p2.x - p1.x, D = p2.y - p1.y;
     let dot = A * C + B * D, lenSq = C * C + D * D;
     let param = lenSq !== 0 ? dot / lenSq : -1;
     let xx, yy;
-    if (param < 0) { xx = p1.x; yy = p1.y; }
-    else if (param > 1) { xx = p2.x; yy = p2.y; }
-    else { xx = p1.x + param * C; yy = p1.y + param * D; }
+    if (param < 0) { xx = p1.x; yy = p1.y; } else if (param > 1) { xx = p2.x; yy = p2.y; } else { xx = p1.x + param * C; yy = p1.y + param * D; }
     return Math.sqrt((p.x - xx)**2 + (p.y - yy)**2);
 };
 const centerShape = (pts) => {
@@ -31,96 +28,33 @@ const centerShape = (pts) => {
     let minY = Math.min(...pts.map(p => p.y)), maxY = Math.max(...pts.map(p => p.y));
     return pts.map(p => ({ x: p.x - (minX + maxX)/2, y: p.y - (minY + maxY)/2 }));
 };
-const getDefaultDiags = (count) => {
-    if (count < 4) return [];
-    if (count === 4) return ['AC', 'BD'];
-    let diags = [];
-    for (let i = 2; i < count - 1; i++) diags.push('A' + String.fromCharCode(65 + i));
-    return diags;
-};
-const getAllPossibleDiags = (count) => {
-    let diags = [];
-    for (let i = 0; i < count; i++) {
-        for (let j = i + 2; j < count; j++) {
-            if (i === 0 && j === count - 1) continue; 
-            diags.push(String.fromCharCode(65 + i) + String.fromCharCode(65 + j));
-        }
-    }
-    return diags;
-};
+const getDefaultDiags = (count) => { if (count < 4) return []; if (count === 4) return ['AC', 'BD']; let diags = []; for (let i = 2; i < count - 1; i++) diags.push('A' + String.fromCharCode(65 + i)); return diags; };
+const getAllPossibleDiags = (count) => { let diags = []; for (let i = 0; i < count; i++) { for (let j = i + 2; j < count; j++) { if (i === 0 && j === count - 1) continue; diags.push(String.fromCharCode(65 + i) + String.fromCharCode(65 + j)); } } return diags; };
 const solveGeometry = (pts, manualData, activeDiags) => {
-  let newPts = pts.map(p => ({...p}));
-  let springs = [];
-  for(let i = 0; i < pts.length; i++) {
-      let j = (i + 1) % pts.length;
-      let name = String.fromCharCode(65 + i) + String.fromCharCode(65 + j);
-      let isManual = manualData[name] !== undefined && manualData[name] !== '';
-      let target = isManual ? parseFloat(manualData[name]) : getDist(pts[i], pts[j]);
-      let weight = isManual ? 0.9 : 0.6; 
-      if (!isNaN(target) && target > 0) springs.push({i, j, target, weight});
-  }
-  for(let diag of activeDiags) {
-      let i = diag.charCodeAt(0) - 65; let j = diag.charCodeAt(1) - 65;
-      if (i >= pts.length || j >= pts.length || i < 0 || j < 0) continue; 
-      let isManual = manualData[diag] !== undefined && manualData[diag] !== '';
-      let target = isManual ? parseFloat(manualData[diag]) : getDist(pts[i], pts[j]);
-      let weight = isManual ? 0.9 : 0.02; 
-      if (!isNaN(target) && target > 0) springs.push({i, j, target, weight});
-  }
-  for(let iter = 0; iter < 1000; iter++) { 
-      for(let s of springs) {
-          let p1 = newPts[s.i], p2 = newPts[s.j];
-          let dx = p2.x - p1.x, dy = p2.y - p1.y;
-          let d = Math.sqrt(dx*dx + dy*dy);
-          if (d < 0.001) continue;
-          let diff = (d - s.target) / d * s.weight; 
-          p1.x += dx * diff; p1.y += dy * diff;
-          p2.x -= dx * diff; p2.y -= dy * diff;
-      }
-  }
-  let angle = Math.atan2(newPts[1].y - newPts[0].y, newPts[1].x - newPts[0].x);
-  let alignedPts = [];
-  let cx = newPts[0].x, cy = newPts[0].y;
-  for(let p of newPts) {
-      let nx = p.x - cx, ny = p.y - cy;
-      alignedPts.push({ x: nx * Math.cos(-angle) - ny * Math.sin(-angle), y: nx * Math.sin(-angle) + ny * Math.cos(-angle) });
-  }
+  let newPts = pts.map(p => ({...p})); let springs = [];
+  for(let i = 0; i < pts.length; i++) { let j = (i + 1) % pts.length; let name = String.fromCharCode(65 + i) + String.fromCharCode(65 + j); let isManual = manualData[name] !== undefined && manualData[name] !== ''; let target = isManual ? parseFloat(manualData[name]) : getDist(pts[i], pts[j]); let weight = isManual ? 0.9 : 0.6; if (!isNaN(target) && target > 0) springs.push({i, j, target, weight}); }
+  for(let diag of activeDiags) { let i = diag.charCodeAt(0) - 65; let j = diag.charCodeAt(1) - 65; if (i >= pts.length || j >= pts.length || i < 0 || j < 0) continue; let isManual = manualData[diag] !== undefined && manualData[diag] !== ''; let target = isManual ? parseFloat(manualData[diag]) : getDist(pts[i], pts[j]); let weight = isManual ? 0.9 : 0.02; if (!isNaN(target) && target > 0) springs.push({i, j, target, weight}); }
+  for(let iter = 0; iter < 1000; iter++) { for(let s of springs) { let p1 = newPts[s.i], p2 = newPts[s.j]; let dx = p2.x - p1.x, dy = p2.y - p1.y; let d = Math.sqrt(dx*dx + dy*dy); if (d < 0.001) continue; let diff = (d - s.target) / d * s.weight; p1.x += dx * diff; p1.y += dy * diff; p2.x -= dx * diff; p2.y -= dy * diff; } }
+  let angle = Math.atan2(newPts[1].y - newPts[0].y, newPts[1].x - newPts[0].x); let alignedPts = []; let cx = newPts[0].x, cy = newPts[0].y;
+  for(let p of newPts) { let nx = p.x - cx, ny = p.y - cy; alignedPts.push({ x: nx * Math.cos(-angle) - ny * Math.sin(-angle), y: nx * Math.sin(-angle) + ny * Math.cos(-angle) }); }
   return centerShape(alignedPts);
 };
 
-// --- 🧊 3D Preview ---
-const createThreeShape = (pts) => {
-    const shape = new THREE.Shape();
-    if (!pts || pts.length < 3) return shape;
-    shape.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) shape.lineTo(pts[i].x, pts[i].y);
-    shape.closePath();
-    return shape;
-};
+// --- 3D Preview ---
+const createThreeShape = (pts) => { const shape = new THREE.Shape(); if (!pts || pts.length < 3) return shape; shape.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) shape.lineTo(pts[i].x, pts[i].y); shape.closePath(); return shape; };
 const CeilingGeometry3D = ({ roomPts, elements }) => {
-  const wallExtrudeSettings = useMemo(() => ({ depth: 2.7, bevelEnabled: false }), []);
-  const shape = useMemo(() => createThreeShape(roomPts), [roomPts]);
+  const wallExtrudeSettings = useMemo(() => ({ depth: 2.7, bevelEnabled: false }), []); const shape = useMemo(() => createThreeShape(roomPts), [roomPts]);
   return (
     <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 2.7, 0]}> 
-      <mesh receiveShadow>
-        <shapeGeometry args={[shape]} />
-        <meshPhysicalMaterial color="#ffffff" metalness={0.1} roughness={0.3} clearcoat={0.5} emissive="#ffffff" emissiveIntensity={0.05} />
-      </mesh>
-      <mesh position={[0, 0, -2.7]} castShadow>
-        <extrudeGeometry args={[shape, wallExtrudeSettings]} />
-        <meshStandardMaterial color="#f0f0f0" side={THREE.BackSide} roughness={1} />
-      </mesh>
-      <mesh rotation={[0, 0, 0]} position={[0,0,-2.69]}>
-          <shapeGeometry args={[shape]} />
-          <meshBasicMaterial color="#1c1c1e" side={THREE.DoubleSide} />
-      </mesh>
+      <mesh receiveShadow><shapeGeometry args={[shape]} /><meshPhysicalMaterial color="#ffffff" metalness={0.1} roughness={0.3} clearcoat={0.5} emissive="#ffffff" emissiveIntensity={0.05} /></mesh>
+      <mesh position={[0, 0, -2.7]} castShadow><extrudeGeometry args={[shape, wallExtrudeSettings]} /><meshStandardMaterial color="#f0f0f0" side={THREE.BackSide} roughness={1} /></mesh>
+      <mesh rotation={[0, 0, 0]} position={[0,0,-2.69]}><shapeGeometry args={[shape]} /><meshBasicMaterial color="#1c1c1e" side={THREE.DoubleSide} /></mesh>
       {elements?.map((el, idx) => {
           if (el.type === 'spot') return ( <mesh key={el.id} position={[el.x, el.y, -0.05]}> <cylinderGeometry args={[0.06, 0.06, 0.02, 16]} rotation={[Math.PI/2, 0, 0]} /><meshBasicMaterial color="#ffffff" /><pointLight distance={3} intensity={0.6} color="#fff8e7" /></mesh> );
           if (el.type === 'chand') return ( <mesh key={el.id} position={[el.x, el.y, -0.2]}> <sphereGeometry args={[0.15, 16, 16]} /><meshBasicMaterial color="#ffcc00" /><pointLight distance={5} intensity={1} color="#ffffff" /></mesh> );
           if (el.type === 'track') {
               return el.points.map((pt, i) => {
-                  if (i === 0) return null;
-                  let prev = el.points[i-1]; let len = Math.sqrt((pt.x - prev.x)**2 + (pt.y - prev.y)**2); let angle = Math.atan2(pt.y - prev.y, pt.x - prev.x); let mx = (prev.x + pt.x)/2; let my = (prev.y + pt.y)/2;
+                  if (i === 0) return null; let prev = el.points[i-1]; let len = Math.sqrt((pt.x - prev.x)**2 + (pt.y - prev.y)**2); let angle = Math.atan2(pt.y - prev.y, pt.x - prev.x); let mx = (prev.x + pt.x)/2; let my = (prev.y + pt.y)/2;
                   return ( <group key={`${el.id}-${i}`} position={[mx, my, -0.02]} rotation={[0, 0, angle]}><mesh><boxGeometry args={[len + 0.035, 0.035, 0.02]} /><meshBasicMaterial color="#1c1c1e" /></mesh><mesh position={[0, 0, -0.015]}><boxGeometry args={[len, 0.02, 0.01]} /><meshBasicMaterial color="#ffffff" /><pointLight distance={1.5} intensity={0.2} color="#ffffff" /></mesh></group> )
               });
           }
@@ -129,55 +63,25 @@ const CeilingGeometry3D = ({ roomPts, elements }) => {
     </group>
   );
 };
-const ThreeDPreview = ({ roomPts, elements }) => {
-  return (
+const ThreeDPreview = ({ roomPts, elements }) => (
     <div style={{ width: '100%', height: '320px', borderRadius: '16px', overflow: 'hidden', background: '#000', position: 'relative' }}>
-      <Canvas shadows camera={{ position: [0, 1.5, 5], fov: 60 }}>
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[5, 10, 5]} intensity={1} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
-        <CeilingGeometry3D roomPts={roomPts} elements={elements} />
-        <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} minDistance={1} maxDistance={10} target={[0, 1.35, 0]} />
-        <Environment preset="city" blur={0.5} />
-        <Grid position={[0, 0.01, 0]} args={[10, 10]} cellColor="#38383A" sectionColor="#8E8E93" fadeDistance={20} />
-      </Canvas>
+      <Canvas shadows camera={{ position: [0, 1.5, 5], fov: 60 }}><ambientLight intensity={0.4} /><directionalLight position={[5, 10, 5]} intensity={1} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} /><CeilingGeometry3D roomPts={roomPts} elements={elements} /><OrbitControls enablePan={true} enableZoom={true} enableRotate={true} minDistance={1} maxDistance={10} target={[0, 1.35, 0]} /><Environment preset="city" blur={0.5} /><Grid position={[0, 0.01, 0]} args={[10, 10]} cellColor="#38383A" sectionColor="#8E8E93" fadeDistance={20} /></Canvas>
     </div>
-  );
-};
+);
 
-// --- 🖌 Стилизация темы ---
+// --- Темы и UI ---
 const getTheme = (mode) => ({
-    isDark: mode === 'dark',
-    bg: mode === 'dark' ? '#000000' : '#F5F5F7',
-    card: mode === 'dark' ? '#1C1C1E' : '#FFFFFF',
-    text: mode === 'dark' ? '#FFFFFF' : '#1C1C1E',
-    subText: '#8E8E93',
-    accent: '#0A84FF',
-    danger: '#FF453A',
-    warning: '#FF9F0A',
-    success: '#32D74B',
-    glass: mode === 'dark' ? 'rgba(28, 28, 30, 0.85)' : 'rgba(255, 255, 255, 0.85)',
-    border: mode === 'dark' ? '#38383A' : '#E5E5EA',
-    inputBg: mode === 'dark' ? '#2C2C2E' : '#F9F9FB',
+    isDark: mode === 'dark', bg: mode === 'dark' ? '#000000' : '#F5F5F7', card: mode === 'dark' ? '#1C1C1E' : '#FFFFFF', text: mode === 'dark' ? '#FFFFFF' : '#1C1C1E', subText: '#8E8E93', accent: '#0A84FF', danger: '#FF453A', warning: '#FF9F0A', success: '#32D74B', glass: mode === 'dark' ? 'rgba(28, 28, 30, 0.85)' : 'rgba(255, 255, 255, 0.85)', border: mode === 'dark' ? '#38383A' : '#E5E5EA', inputBg: mode === 'dark' ? '#2C2C2E' : '#F9F9FB',
 });
+const triggerHaptic = (type = 'light') => { try { if (type === 'selection') window.Telegram?.WebApp?.HapticFeedback?.selectionChanged(); else window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type); } catch(e){} };
 
-const triggerHaptic = (type = 'light') => {
-    try { if (type === 'selection') window.Telegram?.WebApp?.HapticFeedback?.selectionChanged(); else window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type); } catch(e){}
-};
-
-// --- 📱 Дизайнерский SearchableSelect ---
 const SearchableSelect = ({ options, value, onChange, theme, placeholder, openUp = false }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const t = getTheme(theme);
-  const selected = options.find(o => o.id === value);
-  const filtered = options.filter(o => o.name.toLowerCase().includes(search.toLowerCase()));
-
+  const [isOpen, setIsOpen] = useState(false); const [search, setSearch] = useState(""); const t = getTheme(theme);
+  const selected = options.find(o => o.id === value); const filtered = options.filter(o => o.name.toLowerCase().includes(search.toLowerCase()));
   return (
     <div style={{ position: 'relative', width: '100%', marginBottom: '8px' }}>
       <div onClick={() => { triggerHaptic('selection'); setIsOpen(!isOpen); setSearch(""); }} style={{ background: t.inputBg, border: `1px solid ${t.border}`, padding: '14px 16px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-        {isOpen ? ( <input autoFocus type="text" value={search} onChange={e => setSearch(e.target.value)} onBlur={() => setTimeout(() => setIsOpen(false), 200)} style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '16px', color: t.text }} placeholder="Поиск..." /> ) : (
-            <span translate="no" className="notranslate" style={{ color: selected ? t.text : t.subText, fontSize: '16px', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selected ? selected.name : placeholder}</span>
-        )}
+        {isOpen ? ( <input autoFocus type="text" value={search} onChange={e => setSearch(e.target.value)} onBlur={() => setTimeout(() => setIsOpen(false), 200)} style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '16px', color: t.text }} placeholder="Поиск..." /> ) : ( <span translate="no" className="notranslate" style={{ color: selected ? t.text : t.subText, fontSize: '16px', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selected ? selected.name : placeholder}</span> )}
         <span style={{ color: t.subText, fontSize: '12px' }}>{isOpen ? (openUp ? '▼' : '▲') : (openUp ? '▲' : '▼')}</span>
       </div>
       {isOpen && (
@@ -189,127 +93,62 @@ const SearchableSelect = ({ options, value, onChange, theme, placeholder, openUp
   );
 };
 
-// --- 🎨 Дизайнерский Холст ---
+// --- Холст ---
 const RoomCanvas = ({ room, updateRoom, options, theme }) => {
-  const canvasRef = useRef(null);
-  const [scale, setScale] = useState(30); 
-  const [showDiags, setShowDiags] = useState(false);
-  const [viewMode, setViewMode] = useState('2d'); 
-  const [mode, setMode] = useState('drag'); 
-  const [selectedDiagPt, setSelectedDiagPt] = useState(null); 
-  const [activeTrackPts, setActiveTrackPts] = useState([]);
-  const [els, setEls] = useState(room.elements || []);
-  const [draggingElement, setDraggingElement] = useState(null);
-  const t = getTheme(theme);
-  const CANVAS_WIDTH = 340, CANVAS_HEIGHT = 320;
-  const offset = { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 }; 
-  const [pts, setPts] = useState(room.logicalPts || centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]));
-  const [draggingIdx, setDraggingIdx] = useState(null);
+  const canvasRef = useRef(null); const [scale, setScale] = useState(30); const [showDiags, setShowDiags] = useState(false); const [viewMode, setViewMode] = useState('2d'); const [mode, setMode] = useState('drag'); const [selectedDiagPt, setSelectedDiagPt] = useState(null); const [activeTrackPts, setActiveTrackPts] = useState([]); const [els, setEls] = useState(room.elements || []); const [draggingElement, setDraggingElement] = useState(null);
+  const t = getTheme(theme); const CANVAS_WIDTH = 340, CANVAS_HEIGHT = 320; const offset = { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 }; 
+  const [pts, setPts] = useState(room.logicalPts || centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }])); const [draggingIdx, setDraggingIdx] = useState(null);
+  const toScreen = (p) => ({ x: p.x * scale + offset.x, y: p.y * scale + offset.y }); const toLogical = (p) => ({ x: (p.x - offset.x) / scale, y: (p.y - offset.y) / scale }); const allPossibleDiags = getAllPossibleDiags(pts.length);
 
-  const toScreen = (p) => ({ x: p.x * scale + offset.x, y: p.y * scale + offset.y });
-  const toLogical = (p) => ({ x: (p.x - offset.x) / scale, y: (p.y - offset.y) / scale });
-  const allPossibleDiags = getAllPossibleDiags(pts.length);
-
-  useEffect(() => { if (room.logicalPts) setPts(room.logicalPts); }, [room.logicalPts]);
-  useEffect(() => { setEls(room.elements || []) }, [room.elements]); 
+  useEffect(() => { if (room.logicalPts) setPts(room.logicalPts); }, [room.logicalPts]); useEffect(() => { setEls(room.elements || []) }, [room.elements]); 
 
   const syncElementsToInputs = (newEls) => {
       setEls(newEls); updateRoom(room.id, 'elements', newEls);
-      const spots = newEls.filter(e => e.type === 'spot').length;
-      const chands = newEls.filter(e => e.type === 'chand').length;
-      const pipes = newEls.filter(e => e.type === 'pipe').length;
-      let trackLen = 0;
+      const spots = newEls.filter(e => e.type === 'spot').length; const chands = newEls.filter(e => e.type === 'chand').length; const pipes = newEls.filter(e => e.type === 'pipe').length; let trackLen = 0;
       newEls.filter(e => e.type === 'track').forEach(tr => { for(let i=1; i<tr.points.length; i++) { trackLen += Math.sqrt((tr.points[i].x - tr.points[i-1].x)**2 + (tr.points[i].y - tr.points[i-1].y)**2); } });
-      updateRoom(room.id, 'spots', spots > 0 ? spots.toString() : '');
-      updateRoom(room.id, 'chands', chands > 0 ? chands.toString() : '');
-      updateRoom(room.id, 'pipe', pipes > 0 ? pipes.toString() : '');
-      updateRoom(room.id, 'track', trackLen > 0 ? trackLen.toFixed(1) : '');
+      updateRoom(room.id, 'spots', spots > 0 ? spots.toString() : ''); updateRoom(room.id, 'chands', chands > 0 ? chands.toString() : ''); updateRoom(room.id, 'pipe', pipes > 0 ? pipes.toString() : ''); updateRoom(room.id, 'track', trackLen > 0 ? trackLen.toFixed(1) : '');
   };
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    const canvasName = options.canvases.find(c => c.id === room.canvas)?.name || 'Полотно';
-    const screenPts = pts.map(toScreen);
-    const manual = room.manualWalls || {}; 
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const canvasName = options.canvases.find(c => c.id === room.canvas)?.name || 'Полотно'; const screenPts = pts.map(toScreen); const manual = room.manualWalls || {}; const canvas = canvasRef.current; const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Сетка 50 см
-    ctx.strokeStyle = t.border; ctx.lineWidth = 1;
-    const step = scale / 2; 
-    const startX = offset.x % step; const startY = offset.y % step;
+    ctx.strokeStyle = t.border; ctx.lineWidth = 1; const step = scale / 2; const startX = offset.x % step; const startY = offset.y % step;
     for(let i = startX; i < canvas.width; i += step) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
     for(let i = startY; i < canvas.height; i += step) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
-    
-    ctx.beginPath(); ctx.moveTo(screenPts[0].x, screenPts[0].y);
-    for(let i = 1; i < screenPts.length; i++) ctx.lineTo(screenPts[i].x, screenPts[i].y);
-    ctx.closePath();
+    ctx.beginPath(); ctx.moveTo(screenPts[0].x, screenPts[0].y); for(let i = 1; i < screenPts.length; i++) ctx.lineTo(screenPts[i].x, screenPts[i].y); ctx.closePath();
     ctx.fillStyle = mode === 'add' ? (t.isDark ? 'rgba(50, 215, 75, 0.15)' : 'rgba(50, 215, 75, 0.1)') : (mode === 'remove' ? (t.isDark ? 'rgba(255, 69, 58, 0.15)' : 'rgba(255, 69, 58, 0.05)') : (t.isDark ? 'rgba(10, 132, 255, 0.15)' : 'rgba(10, 132, 255, 0.08)')); 
     ctx.fill(); ctx.strokeStyle = mode === 'add' ? t.success : t.accent; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.stroke();
 
     if (showDiags && room.activeDiags) {
         ctx.setLineDash([5, 5]); ctx.strokeStyle = t.isDark ? 'rgba(255, 159, 10, 0.6)' : 'rgba(255, 149, 0, 0.6)'; ctx.lineWidth = 1.5; ctx.textAlign = 'center';
         room.activeDiags.forEach((diag) => {
-            let i = diag.charCodeAt(0) - 65; let j = diag.charCodeAt(1) - 65;
-            if (i >= pts.length || j >= pts.length || i < 0 || j < 0) return;
-            let sp1 = screenPts[i], sp2 = screenPts[j];
-            ctx.beginPath(); ctx.moveTo(sp1.x, sp1.y); ctx.lineTo(sp2.x, sp2.y); ctx.stroke();
-            let dist = Math.sqrt((pts[j].x - pts[i].x)**2 + (pts[j].y - pts[i].y)**2);
-            let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
-            let displayDist = manual[diag] !== undefined && manual[diag] !== '' ? manual[diag] : dist.toFixed(2);
-            ctx.fillStyle = t.isDark ? '#2C2C2E' : 'rgba(255, 255, 255, 0.9)'; ctx.fillRect(mx - 28, my - 10, 56, 18);
-            ctx.fillStyle = t.warning; ctx.font = 'bold 11px system-ui'; ctx.fillText(`${diag}: ${displayDist}м`, mx, my + 3);
-        });
-        ctx.setLineDash([]); 
+            let i = diag.charCodeAt(0) - 65; let j = diag.charCodeAt(1) - 65; if (i >= pts.length || j >= pts.length || i < 0 || j < 0) return; let sp1 = screenPts[i], sp2 = screenPts[j]; ctx.beginPath(); ctx.moveTo(sp1.x, sp1.y); ctx.lineTo(sp2.x, sp2.y); ctx.stroke();
+            let dist = Math.sqrt((pts[j].x - pts[i].x)**2 + (pts[j].y - pts[i].y)**2); let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2; let displayDist = manual[diag] !== undefined && manual[diag] !== '' ? manual[diag] : dist.toFixed(2);
+            ctx.fillStyle = t.isDark ? '#2C2C2E' : 'rgba(255, 255, 255, 0.9)'; ctx.fillRect(mx - 28, my - 10, 56, 18); ctx.fillStyle = t.warning; ctx.font = 'bold 11px system-ui'; ctx.fillText(`${diag}: ${displayDist}м`, mx, my + 3);
+        }); ctx.setLineDash([]); 
     }
 
     ctx.font = 'bold 12px system-ui'; ctx.textAlign = 'center';
     for(let i = 0; i < pts.length; i++) {
-       let p1 = pts[i], p2 = pts[(i+1) % pts.length];
-       let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
-       let sp1 = screenPts[i], sp2 = screenPts[(i+1) % screenPts.length];
-       let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
-       let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length); 
-       let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2);
-       ctx.fillStyle = t.isDark ? '#2C2C2E' : 'rgba(255,255,255,0.85)'; ctx.fillRect(mx - 32, my - 12, 64, 18); 
-       ctx.fillStyle = t.accent; ctx.fillText(`${name}: ${displayDist}м`, mx, my + 2);
+       let p1 = pts[i], p2 = pts[(i+1) % pts.length]; let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2); let sp1 = screenPts[i], sp2 = screenPts[(i+1) % screenPts.length]; let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2; let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length); let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2);
+       ctx.fillStyle = t.isDark ? '#2C2C2E' : 'rgba(255,255,255,0.85)'; ctx.fillRect(mx - 32, my - 12, 64, 18); ctx.fillStyle = t.accent; ctx.fillText(`${name}: ${displayDist}м`, mx, my + 2);
     }
 
     els.forEach(el => {
         if (el.type === 'track') {
-            ctx.beginPath(); ctx.moveTo(toScreen(el.points[0]).x, toScreen(el.points[0]).y);
-            for(let i=1; i<el.points.length; i++) ctx.lineTo(toScreen(el.points[i]).x, toScreen(el.points[i]).y);
-            ctx.strokeStyle = t.text; ctx.lineWidth = 4; ctx.stroke();
-            for(let i=1; i<el.points.length; i++) {
-                let dist = Math.sqrt((el.points[i].x - el.points[i-1].x)**2 + (el.points[i].y - el.points[i-1].y)**2).toFixed(2);
-                let sp1 = toScreen(el.points[i-1]); let sp2 = toScreen(el.points[i]); let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
-                ctx.fillStyle = t.isDark ? '#2C2C2E' : 'rgba(255,255,255,0.9)'; ctx.fillRect(mx - 15, my - 8, 30, 16);
-                ctx.fillStyle = t.text; ctx.font = 'bold 10px system-ui'; ctx.fillText(`${dist}м`, mx, my + 3);
-            }
-            el.points.forEach((p, idx) => {
-                let sp = toScreen(p); ctx.beginPath(); ctx.arc(sp.x, sp.y, 4, 0, 2*Math.PI); 
-                ctx.fillStyle = (draggingElement && draggingElement.elId === el.id && draggingElement.ptIdx === idx) ? t.danger : t.card; 
-                ctx.fill(); ctx.strokeStyle = t.text; ctx.lineWidth = 2; ctx.stroke();
-            });
+            ctx.beginPath(); ctx.moveTo(toScreen(el.points[0]).x, toScreen(el.points[0]).y); for(let i=1; i<el.points.length; i++) ctx.lineTo(toScreen(el.points[i]).x, toScreen(el.points[i]).y); ctx.strokeStyle = t.text; ctx.lineWidth = 4; ctx.stroke();
+            for(let i=1; i<el.points.length; i++) { let dist = Math.sqrt((el.points[i].x - el.points[i-1].x)**2 + (el.points[i].y - el.points[i-1].y)**2).toFixed(2); let sp1 = toScreen(el.points[i-1]); let sp2 = toScreen(el.points[i]); let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2; ctx.fillStyle = t.isDark ? '#2C2C2E' : 'rgba(255,255,255,0.9)'; ctx.fillRect(mx - 15, my - 8, 30, 16); ctx.fillStyle = t.text; ctx.font = 'bold 10px system-ui'; ctx.fillText(`${dist}м`, mx, my + 3); }
+            el.points.forEach((p, idx) => { let sp = toScreen(p); ctx.beginPath(); ctx.arc(sp.x, sp.y, 4, 0, 2*Math.PI); ctx.fillStyle = (draggingElement && draggingElement.elId === el.id && draggingElement.ptIdx === idx) ? t.danger : t.card; ctx.fill(); ctx.strokeStyle = t.text; ctx.lineWidth = 2; ctx.stroke(); });
         } else {
-            let sp = toScreen({x: el.x, y: el.y}); ctx.beginPath(); ctx.arc(sp.x, sp.y, el.type === 'chand' ? 8 : 5, 0, 2*Math.PI);
-            ctx.fillStyle = (draggingElement && draggingElement.elId === el.id) ? t.danger : (el.type === 'spot' ? '#FFD60A' : (el.type === 'chand' ? t.warning : t.subText));
-            ctx.fill(); ctx.strokeStyle = t.card; ctx.lineWidth = 2; ctx.stroke();
+            let sp = toScreen({x: el.x, y: el.y}); ctx.beginPath(); ctx.arc(sp.x, sp.y, el.type === 'chand' ? 8 : 5, 0, 2*Math.PI); ctx.fillStyle = (draggingElement && draggingElement.elId === el.id) ? t.danger : (el.type === 'spot' ? '#FFD60A' : (el.type === 'chand' ? t.warning : t.subText)); ctx.fill(); ctx.strokeStyle = t.card; ctx.lineWidth = 2; ctx.stroke();
             if (el.type === 'pipe') { ctx.fillStyle=t.card; ctx.font='bold 8px system-ui'; ctx.fillText('T', sp.x, sp.y+3); }
         }
     });
 
     if (mode === 'track' && activeTrackPts.length > 0) {
-        ctx.beginPath(); ctx.moveTo(toScreen(activeTrackPts[0]).x, toScreen(activeTrackPts[0]).y);
-        for(let i=1; i<activeTrackPts.length; i++) ctx.lineTo(toScreen(activeTrackPts[i]).x, toScreen(activeTrackPts[i]).y);
-        ctx.strokeStyle = t.warning; ctx.lineWidth = 4; ctx.stroke();
-        for(let i=1; i<activeTrackPts.length; i++) {
-            let dist = Math.sqrt((activeTrackPts[i].x - activeTrackPts[i-1].x)**2 + (activeTrackPts[i].y - activeTrackPts[i-1].y)**2).toFixed(2);
-            let sp1 = toScreen(activeTrackPts[i-1]); let sp2 = toScreen(activeTrackPts[i]); let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
-            ctx.fillStyle = t.isDark ? '#2C2C2E' : 'rgba(255,255,255,0.9)'; ctx.fillRect(mx - 15, my - 8, 30, 16);
-            ctx.fillStyle = t.warning; ctx.font = 'bold 10px system-ui'; ctx.fillText(`${dist}м`, mx, my + 3);
-        }
+        ctx.beginPath(); ctx.moveTo(toScreen(activeTrackPts[0]).x, toScreen(activeTrackPts[0]).y); for(let i=1; i<activeTrackPts.length; i++) ctx.lineTo(toScreen(activeTrackPts[i]).x, toScreen(activeTrackPts[i]).y); ctx.strokeStyle = t.warning; ctx.lineWidth = 4; ctx.stroke();
+        for(let i=1; i<activeTrackPts.length; i++) { let dist = Math.sqrt((activeTrackPts[i].x - activeTrackPts[i-1].x)**2 + (activeTrackPts[i].y - activeTrackPts[i-1].y)**2).toFixed(2); let sp1 = toScreen(activeTrackPts[i-1]); let sp2 = toScreen(activeTrackPts[i]); let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2; ctx.fillStyle = t.isDark ? '#2C2C2E' : 'rgba(255,255,255,0.9)'; ctx.fillRect(mx - 15, my - 8, 30, 16); ctx.fillStyle = t.warning; ctx.font = 'bold 10px system-ui'; ctx.fillText(`${dist}м`, mx, my + 3); }
         activeTrackPts.forEach(p => { let sp = toScreen(p); ctx.beginPath(); ctx.arc(sp.x, sp.y, 5, 0, 2*Math.PI); ctx.fillStyle = t.warning; ctx.fill(); });
     }
 
@@ -320,8 +159,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
        const label = String.fromCharCode(65 + i); ctx.fillStyle = t.text; ctx.font = '900 16px system-ui'; ctx.fillText(label, sp.x + 18, sp.y - 12);
     }
 
-    ctx.fillStyle = t.text; ctx.font = '900 16px system-ui'; ctx.textAlign = 'left'; ctx.fillText(`Монтаж: ${room.name}`, 10, 24);
-    ctx.fillStyle = t.accent; ctx.font = 'bold 12px system-ui'; ctx.fillText(canvasName, 10, 42);
+    ctx.fillStyle = t.text; ctx.font = '900 16px system-ui'; ctx.textAlign = 'left'; ctx.fillText(`Монтаж: ${room.name}`, 10, 24); ctx.fillStyle = t.accent; ctx.font = 'bold 12px system-ui'; ctx.fillText(canvasName, 10, 42);
 
     const factCanvas = document.getElementById(`canvas-factory-${room.id}`);
     if (factCanvas) {
@@ -332,23 +170,11 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
         fCtx.fillStyle = 'rgba(0, 122, 255, 0.08)'; fCtx.fill(); fCtx.strokeStyle = '#007aff'; fCtx.lineWidth = 3; fCtx.lineJoin = 'round'; fCtx.stroke();
         if (showDiags && room.activeDiags) {
             fCtx.setLineDash([5, 5]); fCtx.strokeStyle = 'rgba(255, 149, 0, 0.6)'; fCtx.lineWidth = 1.5; fCtx.textAlign = 'center';
-            room.activeDiags.forEach((diag) => {
-                let i = diag.charCodeAt(0) - 65; let j = diag.charCodeAt(1) - 65;
-                if (i >= pts.length || j >= pts.length || i < 0 || j < 0) return;
-                let sp1 = screenPts[i], sp2 = screenPts[j]; fCtx.beginPath(); fCtx.moveTo(sp1.x, sp1.y); fCtx.lineTo(sp2.x, sp2.y); fCtx.stroke();
-                let dist = Math.sqrt((pts[j].x - pts[i].x)**2 + (pts[j].y - pts[i].y)**2); let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2; let displayDist = manual[diag] !== undefined && manual[diag] !== '' ? manual[diag] : dist.toFixed(2);
-                fCtx.fillStyle = 'rgba(255, 255, 255, 0.9)'; fCtx.fillRect(mx - 28, my - 10, 56, 18); fCtx.fillStyle = '#ff9500'; fCtx.font = 'bold 11px system-ui'; fCtx.fillText(`${diag}: ${displayDist}м`, mx, my + 3);
-            });
-            fCtx.setLineDash([]); 
+            room.activeDiags.forEach((diag) => { let i = diag.charCodeAt(0) - 65; let j = diag.charCodeAt(1) - 65; if (i >= pts.length || j >= pts.length || i < 0 || j < 0) return; let sp1 = screenPts[i], sp2 = screenPts[j]; fCtx.beginPath(); fCtx.moveTo(sp1.x, sp1.y); fCtx.lineTo(sp2.x, sp2.y); fCtx.stroke(); let dist = Math.sqrt((pts[j].x - pts[i].x)**2 + (pts[j].y - pts[i].y)**2); let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2; let displayDist = manual[diag] !== undefined && manual[diag] !== '' ? manual[diag] : dist.toFixed(2); fCtx.fillStyle = 'rgba(255, 255, 255, 0.9)'; fCtx.fillRect(mx - 28, my - 10, 56, 18); fCtx.fillStyle = '#ff9500'; fCtx.font = 'bold 11px system-ui'; fCtx.fillText(`${diag}: ${displayDist}м`, mx, my + 3); }); fCtx.setLineDash([]); 
         }
         fCtx.fillStyle = '#1c1c1e'; fCtx.font = 'bold 12px system-ui'; fCtx.textAlign = 'center';
-        for(let i = 0; i < pts.length; i++) {
-           let p1 = pts[i], p2 = pts[(i+1) % pts.length]; let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2); let sp1 = screenPts[i], sp2 = screenPts[(i+1) % screenPts.length]; let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2; let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length); let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2);
-           fCtx.fillStyle = 'rgba(255,255,255,0.85)'; fCtx.fillRect(mx - 32, my - 12, 64, 18); fCtx.fillStyle = '#007aff'; fCtx.fillText(`${name}: ${displayDist}м`, mx, my + 2);
-        }
-        for(let i = 0; i < screenPts.length; i++) {
-           let sp = screenPts[i]; fCtx.beginPath(); fCtx.arc(sp.x, sp.y, 10, 0, 2 * Math.PI); fCtx.fillStyle = '#ffffff'; fCtx.fill(); fCtx.lineWidth = 3; fCtx.strokeStyle = '#007aff'; fCtx.stroke(); const label = String.fromCharCode(65 + i); fCtx.fillStyle = '#1c1c1e'; fCtx.font = '900 16px system-ui'; fCtx.fillText(label, sp.x + 18, sp.y - 12);
-        }
+        for(let i = 0; i < pts.length; i++) { let p1 = pts[i], p2 = pts[(i+1) % pts.length]; let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2); let sp1 = screenPts[i], sp2 = screenPts[(i+1) % screenPts.length]; let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2; let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length); let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2); fCtx.fillStyle = 'rgba(255,255,255,0.85)'; fCtx.fillRect(mx - 32, my - 12, 64, 18); fCtx.fillStyle = '#007aff'; fCtx.fillText(`${name}: ${displayDist}м`, mx, my + 2); }
+        for(let i = 0; i < screenPts.length; i++) { let sp = screenPts[i]; fCtx.beginPath(); fCtx.arc(sp.x, sp.y, 10, 0, 2 * Math.PI); fCtx.fillStyle = '#ffffff'; fCtx.fill(); fCtx.lineWidth = 3; fCtx.strokeStyle = '#007aff'; fCtx.stroke(); const label = String.fromCharCode(65 + i); fCtx.fillStyle = '#1c1c1e'; fCtx.font = '900 16px system-ui'; fCtx.fillText(label, sp.x + 18, sp.y - 12); }
         fCtx.fillStyle = '#1c1c1e'; fCtx.font = '900 16px system-ui'; fCtx.textAlign = 'left'; fCtx.fillText(`Производство: ${room.name}`, 10, 24); fCtx.fillStyle = '#ff9500'; fCtx.font = 'bold 12px system-ui'; fCtx.fillText(canvasName, 10, 42);
     }
   }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode, room.activeDiags, selectedDiagPt, viewMode, els, activeTrackPts, draggingElement, room.canvas, room.name, options, theme]);
@@ -360,14 +186,11 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     if (newDiags) updateRoom(room.id, 'activeDiags', newDiags);
   };
 
-  const getMousePos = (e) => {
-    const canvas = canvasRef.current; if(!canvas) return {x:0,y:0}; const rect = canvas.getBoundingClientRect(); const clientX = e.clientX || (e.touches && e.touches[0].clientX); const clientY = e.clientY || (e.touches && e.touches[0].clientY); const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height; return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
-  };
+  const getMousePos = (e) => { const canvas = canvasRef.current; if(!canvas) return {x:0,y:0}; const rect = canvas.getBoundingClientRect(); const clientX = e.clientX || (e.touches && e.touches[0].clientX); const clientY = e.clientY || (e.touches && e.touches[0].clientY); const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height; return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY }; };
 
   const handlePointerDown = (e) => {
     if (viewMode !== '2d') return; 
     const pos = getMousePos(e); const screenPts = pts.map(toScreen); const logicalPos = toLogical(pos);
-
     if (mode === 'remove') {
         let hitFound = false; let newEls = [];
         for (let el of els) {
@@ -382,7 +205,6 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
         if (hitIndex !== -1) { if (pts.length <= 3) return alert("Минимум 3 угла!"); triggerHaptic('heavy'); const newPts = pts.filter((_, idx) => idx !== hitIndex); updateAreaPerimAndSave(centerShape(newPts), getDefaultDiags(newPts.length)); setMode('drag'); }
         return;
     }
-
     if (['spot', 'chand', 'pipe'].includes(mode)) { triggerHaptic('light'); syncElementsToInputs([...els, { id: Date.now(), type: mode, x: logicalPos.x, y: logicalPos.y }]); return; }
     if (mode === 'track') { triggerHaptic('light'); setActiveTrackPts([...activeTrackPts, logicalPos]); return; }
     if (mode === 'add_diag') {
@@ -433,18 +255,8 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
 
   const handleModeSwitch = (newMode) => { triggerHaptic('light'); setMode(mode === newMode ? 'drag' : newMode); setSelectedDiagPt(null); setActiveTrackPts([]); setDraggingElement(null); };
 
-  const getHelperText = () => {
-      if (viewMode === '3d') return '👀 3D Режим. Стены: 2.7м. Можно крутить пальцем.';
-      if (mode === 'add') return '👆 Кликните на линию стены для создания угла'; if (mode === 'remove') return '👆 Кликните на объект (угол, точку, трек), чтобы удалить';
-      if (mode === 'add_diag') return selectedDiagPt === null ? '👆 Выберите первый угол для диагонали' : '👆 Кликните на противоположный угол';
-      if (mode === 'spot') return '👆 Кликайте по чертежу, чтобы расставить Точечные'; if (mode === 'chand') return '👆 Кликните, чтобы повесить Люстру';
-      if (mode === 'pipe') return '👆 Кликните у стены, чтобы отметить Обход трубы'; if (mode === 'track') return activeTrackPts.length === 0 ? '👆 Кликните на чертеж, чтобы начать рисовать трек' : '👆 Кликайте дальше. Чтобы завершить, нажмите ✅';
-      return '👆 Выберите инструмент';
-  };
-
   return (
     <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
-      <div style={{ height: '24px', marginBottom: '4px', fontWeight: '800', fontSize: '13px', color: viewMode === '3d' ? t.danger : (['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? t.success : (mode === 'remove' ? t.danger : t.subText)) }}>{getHelperText()}</div>
       
       {viewMode === '2d' && (
           <div style={{ background: t.card, borderRadius: '16px', padding: '12px', marginBottom: '12px', border: `1px solid ${t.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
@@ -515,7 +327,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
   );
 };
 
-// --- ЗАГЛУШКИ ДЛЯ НОВЫХ ЭКРАНОВ ---
+// --- ЗАГЛУШКИ ДЛЯ ЭКРАНОВ ---
 const DashboardScreen = ({ t, ts }) => (
     <div style={{ padding: '20px', textAlign: 'center', color: ts.text }}>
         <h2 style={{ fontSize: '28px', fontWeight: '900', marginBottom: '20px' }}>{t('dash')}</h2>
@@ -530,67 +342,50 @@ const ArchiveScreen = ({ t, ts }) => (
 );
 
 // ⭐️ НОВЫЙ ЭКРАН НАСТРОЕК (ПРАЙС-ЛИСТ) ⭐️
-const SettingsScreen = ({ t, ts, options, prices, setPrices }) => {
+const SettingsScreen = ({ t, ts, priceData, setPriceData }) => {
+    const [expandedCat, setExpandedCat] = useState(null);
     const [isSaved, setIsSaved] = useState(false);
 
-    const handlePriceChange = (category, id, value) => {
-        const numVal = parseFloat(value) || 0;
-        if (category === 'flat') {
-            setPrices(prev => ({ ...prev, [id]: numVal }));
-        } else {
-            setPrices(prev => ({ ...prev, [category]: { ...prev[category], [id]: numVal } }));
-        }
-    };
-
-    const handleSave = () => {
-        triggerHaptic('heavy');
-        setIsSaved(true);
-        // В будущем тут будет fetch для сохранения в базу Питона
-        setTimeout(() => setIsSaved(false), 2000);
-    };
-
-    const InputRow = ({ label, val, onChange }) => (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: `1px solid ${ts.border}` }}>
-            <span style={{ color: ts.text, fontSize: '15px', fontWeight: '600' }}>{label}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input type="number" value={val} onChange={(e) => { triggerHaptic('selection'); onChange(e.target.value); }} style={{ width: '70px', padding: '8px', borderRadius: '10px', border: `1px solid ${ts.border}`, background: ts.inputBg, color: ts.text, textAlign: 'center', fontSize: '15px', fontWeight: 'bold', outline: 'none' }} />
-                <span style={{ color: ts.subText, fontSize: '14px', fontWeight: '600' }}>₴</span>
-            </div>
-        </div>
-    );
+    const toggleCat = (id) => { triggerHaptic('light'); setExpandedCat(expandedCat === id ? null : id); };
+    const updateCatName = (id, newName) => { setPriceData(priceData.map(c => c.id === id ? { ...c, name: newName } : c)); };
+    const removeCat = (e, id) => { e.stopPropagation(); triggerHaptic('heavy'); if(window.confirm(t('deleteConfirm'))) setPriceData(priceData.filter(c => c.id !== id)); };
+    const addCat = () => { triggerHaptic('medium'); const newCat = { id: 'cat_' + Date.now(), name: t('newCategory'), isBase: false, items: [] }; setPriceData([...priceData, newCat]); setExpandedCat(newCat.id); };
+    const updateItem = (catId, itemId, field, value) => { setPriceData(priceData.map(c => c.id === catId ? { ...c, items: c.items.map(i => i.id === itemId ? { ...i, [field]: value } : i) } : c)); };
+    const removeItem = (catId, itemId) => { triggerHaptic('medium'); setPriceData(priceData.map(c => c.id === catId ? { ...c, items: c.items.filter(i => i.id !== itemId) } : c)); };
+    const addItem = (catId) => { triggerHaptic('light'); setPriceData(priceData.map(c => c.id === catId ? { ...c, items: [...c.items, { id: 'item_' + Date.now(), name: t('newItem'), price: 0 }] } : c)); };
+    
+    const handleSave = () => { triggerHaptic('heavy'); setIsSaved(true); setTimeout(() => setIsSaved(false), 2000); };
 
     return (
         <div style={{ animation: 'fadeIn 0.3s ease-in', paddingBottom: '30px' }}>
             <h2 style={{ fontSize: '28px', margin: '0 8px 20px', fontWeight: '900', color: ts.text }}>{t('settings')}</h2>
-            
-            {/* ПОЛОТНА */}
-            <div style={{ background: ts.card, borderRadius: '20px', padding: '16px 20px', marginBottom: '16px', border: `1px solid ${ts.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
-                <h3 style={{ fontSize: '13px', fontWeight: '800', color: ts.accent, textTransform: 'uppercase', marginBottom: '8px' }}>{t('priceCanvases')}</h3>
-                {options.canvases.map(o => <InputRow key={o.id} label={o.name} val={prices.canvas[o.id]} onChange={(v) => handlePriceChange('canvas', o.id, v)} />)}
-            </div>
-
-            {/* ПРОФИЛИ */}
-            <div style={{ background: ts.card, borderRadius: '20px', padding: '16px 20px', marginBottom: '16px', border: `1px solid ${ts.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
-                <h3 style={{ fontSize: '13px', fontWeight: '800', color: ts.accent, textTransform: 'uppercase', marginBottom: '8px' }}>{t('priceProfiles')}</h3>
-                {options.profiles.map(o => <InputRow key={o.id} label={o.name} val={prices.profile[o.id]} onChange={(v) => handlePriceChange('profile', o.id, v)} />)}
-            </div>
-
-            {/* КАРНИЗЫ */}
-            <div style={{ background: ts.card, borderRadius: '20px', padding: '16px 20px', marginBottom: '16px', border: `1px solid ${ts.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
-                <h3 style={{ fontSize: '13px', fontWeight: '800', color: ts.accent, textTransform: 'uppercase', marginBottom: '8px' }}>{t('priceCornices')}</h3>
-                {options.cornices.filter(c => c.id !== 'none').map(o => <InputRow key={o.id} label={o.name} val={prices.cornices[o.id]} onChange={(v) => handlePriceChange('cornices', o.id, v)} />)}
-            </div>
-
-            {/* ДОПЫ */}
-            <div style={{ background: ts.card, borderRadius: '20px', padding: '16px 20px', marginBottom: '16px', border: `1px solid ${ts.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
-                <h3 style={{ fontSize: '13px', fontWeight: '800', color: ts.accent, textTransform: 'uppercase', marginBottom: '8px' }}>{t('priceDops')}</h3>
-                <InputRow label="Точечные светильники (шт)" val={prices.light} onChange={(v) => handlePriceChange('flat', 'light', v)} />
-                <InputRow label="Люстры (шт)" val={prices.chand} onChange={(v) => handlePriceChange('flat', 'chand', v)} />
-                <InputRow label="Доп. углы (шт)" val={prices.corner} onChange={(v) => handlePriceChange('flat', 'corner', v)} />
-                <InputRow label="Обход труб (шт)" val={prices.pipe} onChange={(v) => handlePriceChange('flat', 'pipe', v)} />
-                <InputRow label="Треки / Свет. линии (м.п.)" val={prices.track} onChange={(v) => handlePriceChange('flat', 'track', v)} />
-            </div>
-
+            {priceData.map(cat => (
+                <div key={cat.id} style={{ background: ts.card, borderRadius: '20px', marginBottom: '16px', border: `1px solid ${ts.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                    <div onClick={() => toggleCat(cat.id)} style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', background: expandedCat === cat.id ? ts.inputBg : ts.card }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                            <span style={{ color: ts.accent, fontSize: '18px' }}>{expandedCat === cat.id ? '▼' : '▶'}</span>
+                            <input type="text" value={cat.name} onChange={e => updateCatName(cat.id, e.target.value)} onClick={e => e.stopPropagation()} style={{ fontWeight: '800', border: 'none', outline: 'none', fontSize: '16px', width: '100%', background: 'transparent', color: ts.text }} />
+                        </div>
+                        {!cat.isBase && <button onClick={(e) => removeCat(e, cat.id)} style={{ background: 'none', border: 'none', color: ts.danger, fontSize: '20px', padding: '4px' }}>🗑</button>}
+                    </div>
+                    {expandedCat === cat.id && (
+                        <div style={{ padding: '16px 20px 24px', borderTop: `1px solid ${ts.border}` }}>
+                            {cat.items.map(item => (
+                                <div key={item.id} style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '12px' }}>
+                                    <input type="text" value={item.name} onChange={e => updateItem(cat.id, item.id, 'name', e.target.value)} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: `1px solid ${ts.border}`, background: ts.inputBg, color: ts.text, fontSize: '14px', outline: 'none' }} placeholder={t('clientName')} />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <input type="number" value={item.price} onChange={e => updateItem(cat.id, item.id, 'price', parseFloat(e.target.value) || 0)} style={{ width: '60px', padding: '10px', borderRadius: '10px', border: `1px solid ${ts.border}`, background: ts.inputBg, color: ts.text, fontSize: '14px', textAlign: 'center', outline: 'none', fontWeight: 'bold' }} />
+                                      <span style={{ color: ts.subText, fontSize: '14px', fontWeight: '600' }}>₴</span>
+                                    </div>
+                                    <button onClick={() => removeItem(cat.id, item.id)} style={{ background: 'none', border: 'none', color: ts.danger, fontSize: '22px', padding: '0 4px' }}>➖</button>
+                                </div>
+                            ))}
+                            <button onClick={() => addItem(cat.id)} style={{ width: '100%', padding: '12px', background: 'transparent', color: ts.accent, border: `2px dashed ${ts.accent}80`, borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', marginTop: '4px' }}>{t('addPosition')}</button>
+                        </div>
+                    )}
+                </div>
+            ))}
+            <button onClick={addCat} style={{ width: '100%', padding: '16px', background: 'transparent', color: ts.text, border: `2px dashed ${ts.border}`, borderRadius: '16px', fontSize: '15px', fontWeight: '800', marginBottom: '20px' }}>{t('addCategory')}</button>
             <button onClick={handleSave} style={{ width: '100%', padding: '18px', background: isSaved ? ts.success : ts.accent, color: '#fff', border: 'none', borderRadius: '16px', fontSize: '17px', fontWeight: '800', transition: '0.3s', boxShadow: `0 8px 20px ${isSaved ? 'rgba(50,215,75,0.3)' : 'rgba(10,132,255,0.3)'}` }}>
                 {isSaved ? t('priceSaved') : t('savePrice')}
             </button>
@@ -607,8 +402,15 @@ function App() {
   const [userId, setUserId] = useState(null);
   const [isTelegram, setIsTelegram] = useState(true);
   const [theme, setTheme] = useState('light');
-  
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  // ⭐️ ДИНАМИЧЕСКИЙ ПРАЙС-ЛИСТ (ИСТОЧНИК ПРАВДЫ ДЛЯ ВСЕГО ПРИЛОЖЕНИЯ) ⭐️
+  const [priceData, setPriceData] = useState([
+      { id: 'canvas', name: 'Полотна (за м²)', isBase: true, items: [ {id: 'полотно_м2', name: 'Белый Матовый (MSD)', price: 330}, {id: 'msd_premium_320_м2', name: 'MSD Premium (Глянец)', price: 350}, {id: 'черный_матовый_м2', name: 'Черный Матовый', price: 400} ] },
+      { id: 'profile', name: 'Профили (за м.п.)', isBase: true, items: [ {id: 'профиль_м', name: 'Стандартный (ПВХ)', price: 60}, {id: 'профиль_теневой_6мм_мп', name: 'Теневой (6 мм)', price: 350}, {id: 'профиль_парящий_мп', name: 'Парящий', price: 500} ] },
+      { id: 'cornices', name: 'Карнизы (за м.п.)', isBase: true, items: [ {id: 'none', name: 'Нет', price: 0}, {id: 'карниз_м', name: 'Стандартный скрытый', price: 1200}, {id: 'карниз_q5_мп', name: 'Карниз Q5', price: 1500}, {id: 'карниз_q10_мп', name: 'Карниз Q10', price: 2200} ] },
+      { id: 'dops', name: 'Монтаж и Допы', isBase: true, items: [ {id: 'light', name: 'Точечные светильники (шт)', price: 250}, {id: 'chand', name: 'Люстры (шт)', price: 300}, {id: 'corner', name: 'Доп. углы (шт)', price: 50}, {id: 'pipe', name: 'Обход труб (шт)', price: 200}, {id: 'track', name: 'Треки / Свет. линии (м.п.)', price: 2000} ] }
+  ]);
 
   const [customer, setCustomer] = useState({ name: '', phone: '', address: '' });
   const [isContactExpanded, setIsContactExpanded] = useState(true);
@@ -624,7 +426,7 @@ function App() {
     if (tg && tg.initData) {
       tg.ready(); tg.expand();
       const user = tg.initDataUnsafe?.user;
-      if (user) { setUserId(user.id); setLang(user.language_code === 'uk' ? 'uk' : 'ru'); }
+      if (user) { setUserId(user.id); setLang(T[user.language_code] ? user.language_code : 'ru'); }
       setTheme(tg.colorScheme === 'dark' ? 'dark' : 'light');
       tg.onEvent('themeChanged', () => setTheme(tg.colorScheme));
     } else { setIsTelegram(false); }
@@ -650,21 +452,27 @@ function App() {
   const ts = getTheme(theme);
   const t = (key) => T[lang]?.[key] || T['ru'][key];
 
+  // ⭐️ ГЕНЕРАЦИЯ OPTIONS И PRICES ИЗ PRICEDATA ⭐️
   const options = {
-    canvases: [ { id: 'полотно_м2', name: 'Белый Матовый (MSD)' }, { id: 'msd_premium_320_м2', name: 'MSD Premium (Глянец)' }, { id: 'черный_матовый_м2', name: 'Черный Матовый' } ],
-    profiles: [ { id: 'профиль_м', name: 'Стандартный (ПВХ)' }, { id: 'профиль_теневой_6мм_мп', name: 'Теневой (6 мм)' }, { id: 'профиль_парящий_мп', name: 'Парящий' } ],
-    cornices: [ { id: 'none', name: 'Нет' }, { id: 'карниз_м', name: 'Стандартный скрытый' }, { id: 'карниз_q5_мп', name: 'Карниз Q5' }, { id: 'карниз_q10_мп', name: 'Карниз Q10' } ]
+    canvases: priceData.find(c => c.id === 'canvas')?.items || [],
+    profiles: priceData.find(c => c.id === 'profile')?.items || [],
+    cornices: priceData.find(c => c.id === 'cornices')?.items || []
   };
 
-  // ⭐️ СТЕЙТ ЦЕН ПЕРЕШЕЛ ПОД УПРАВЛЕНИЕ РЕАКТА ⭐️
-  const [prices, setPrices] = useState({ 
-      canvas: { 'полотно_м2': 330, 'msd_premium_320_м2': 350, 'черный_матовый_м2': 400 }, 
-      profile: { 'профиль_м': 60, 'профиль_теневой_6мм_мп': 350, 'профиль_парящий_мп': 500 }, 
-      cornices: { 'none': 0, 'карниз_м': 1200, 'карниз_q5_мп': 1500, 'карниз_q10_мп': 2200 }, 
-      light: 250, chand: 300, corner: 50, pipe: 200, track: 2000 
-  });
+  const getDopPrice = (id) => priceData.find(c => c.id === 'dops')?.items.find(i => i.id === id)?.price || 0;
 
-  const addRoom = () => { triggerHaptic(); const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }; setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom'); setIsContactExpanded(false); };
+  const prices = {
+    canvas: Object.fromEntries((options.canvases).map(i => [i.id, i.price])),
+    profile: Object.fromEntries((options.profiles).map(i => [i.id, i.price])),
+    cornices: Object.fromEntries((options.cornices).map(i => [i.id, i.price])),
+    light: getDopPrice('light'),
+    chand: getDopPrice('chand'),
+    corner: getDopPrice('corner'),
+    pipe: getDopPrice('pipe'),
+    track: getDopPrice('track'),
+  };
+
+  const addRoom = () => { triggerHaptic(); const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', canvas: options.canvases[0]?.id || '', profile: options.profiles[0]?.id || '', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }; setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom'); setIsContactExpanded(false); };
   const removeRoom = (id, e) => { e.stopPropagation(); triggerHaptic('heavy'); if (rooms.length > 1) setRooms(rooms.filter(room => room.id !== id)); else alert("Должно остаться хотя бы одно помещение!"); };
   
   const sendToBot = async () => {
@@ -679,7 +487,7 @@ function App() {
       window.Telegram?.WebApp?.close();
   };
 
-  const localTotalSum = rooms.reduce((total, r) => total + ((Number(r.area) || 0) * (prices.canvas[r.canvas] || 330)) + ((Number(r.perim) || 0) * (prices.profile[r.profile] || 60)) + ((Number(r.spots) || 0) * prices.light) + ((Number(r.chands) || 0) * prices.chand) + ((Number(r.track) || 0) * prices.track) + ((Number(r.corners) || 0) * prices.corner) + ((Number(r.cornice) || 0) * (prices.cornices[r.corniceType] || 0)) + ((Number(r.pipe) || 0) * prices.pipe), 0);
+  const localTotalSum = rooms.reduce((total, r) => total + ((Number(r.area) || 0) * (prices.canvas[r.canvas] || 0)) + ((Number(r.perim) || 0) * (prices.profile[r.profile] || 0)) + ((Number(r.spots) || 0) * prices.light) + ((Number(r.chands) || 0) * prices.chand) + ((Number(r.track) || 0) * prices.track) + ((Number(r.corners) || 0) * prices.corner) + ((Number(r.cornice) || 0) * (prices.cornices[r.corniceType] || 0)) + ((Number(r.pipe) || 0) * prices.pipe), 0);
 
   const styles = {
     appContainer: { width: '100%', maxWidth: '100%', margin: '0 auto', height: '100vh', backgroundColor: ts.bg, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', fontFamily: 'system-ui, -apple-system, sans-serif' },
@@ -818,7 +626,7 @@ function App() {
               
               {/* === ЭКРАН 4: НАСТРОЙКИ (ПРАЙС) === */}
               <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}>
-                  <SettingsScreen t={t} ts={ts} options={options} prices={prices} setPrices={setPrices} />
+                  <SettingsScreen t={t} ts={ts} priceData={priceData} setPriceData={setPriceData} />
               </div>
           </div>
           
