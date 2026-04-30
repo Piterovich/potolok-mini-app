@@ -1,56 +1,30 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Environment, Grid, Html } from '@react-three/drei'
+import { OrbitControls, Environment, Grid } from '@react-three/drei'
 import * as THREE from 'three'
 import './App.css'
 
 const T = {
-  ru: { calc: "Расчет", addRoom: "Добавить помещение", toBot: "В бот 🚀", area: "Площадь (м²)", perim: "Периметр (м)", corners: "Углы (шт)", geom: "📏 Геометрия", materials: "🎨 Полотно и Профиль", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", spots: "Точечные (шт)", chands: "Люстры (шт)", track: "Свет. линия/Трек (м)", corniceType: "Вид карниза", corniceLen: "Метраж (м)", pipe: "Обход труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФИЛЬ", pre: "ПРЕДВАРИТЕЛЬНО:" },
-  uk: { calc: "Розрахунок", addRoom: "Додати приміщення", toBot: "В бот 🚀", area: "Площа (м²)", perim: "Периметр (м)", corners: "Кути (шт)", geom: "📏 Геометрія", materials: "🎨 Полотно та Профіль", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", spots: "Точкові (шт)", chands: "Люстри (шт)", track: "Світл. лінія/Трек (м)", corniceType: "Вид карнизу", corniceLen: "Метраж (м)", pipe: "Обхід труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФІЛЬ", pre: "ПОПЕРЕДНЬО:" }
+  ru: { calc: "Умный Расчет", dash: "Главная", archive: "Архив", settings: "Настройки", addRoom: "Добавить комнату", toBot: "Оформить смету 🚀", area: "Площадь", perim: "Периметр", corners: "Углы", geom: "📏 Геометрия и замеры", materials: "🎨 Выбор материалов", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", pre: "ИТОГО ПРЕДВАРИТЕЛЬНО:" },
+  uk: { calc: "Розумний Розрахунок", dash: "Головна", archive: "Архів", settings: "Налаштування", addRoom: "Додати кімнату", toBot: "Оформити кошторис 🚀", area: "Площа", perim: "Периметр", corners: "Кути", geom: "📏 Геометрія та заміри", materials: "🎨 Вибір матеріалів", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", pre: "РАЗОМ ПОПЕРЕДНЬО:" }
 };
 
-// ==========================================
-// 🎨 ЦВЕТОВЫЕ ТЕМЫ (UI/UX)
-// ==========================================
-const getTheme = (mode) => ({
-    isDark: mode === 'dark',
-    bg: mode === 'dark' ? '#000000' : '#F5F5F7',
-    card: mode === 'dark' ? '#1C1C1E' : '#FFFFFF',
-    text: mode === 'dark' ? '#FFFFFF' : '#1C1C1E',
-    subText: '#8E8E93',
-    accent: '#0A84FF', // Ярко-синий Apple
-    danger: '#FF453A',
-    warning: '#FF9F0A',
-    success: '#32D74B',
-    glass: mode === 'dark' ? 'rgba(28, 28, 30, 0.85)' : 'rgba(255, 255, 255, 0.85)',
-    border: mode === 'dark' ? '#38383A' : '#E5E5EA',
-    inputBg: mode === 'dark' ? '#2C2C2E' : '#F9F9FB',
-});
-
-// ==========================================
-// 🧠 МАТЕМАТИКА И ГЕОМЕТРИЯ
-// ==========================================
+// --- Геометрическое ядро (без изменений) ---
 const getDist = (p1, p2) => Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
-
 const getDistToSegment = (p, p1, p2) => {
-    let A = p.x - p1.x, B = p.y - p1.y;
-    let C = p2.x - p1.x, D = p2.y - p1.y;
-    let dot = A * C + B * D;
-    let lenSq = C * C + D * D;
+    let A = p.x - p1.x, B = p.y - p1.y, C = p2.x - p1.x, D = p2.y - p1.y;
+    let dot = A * C + B * D, lenSq = C * C + D * D;
     let param = lenSq !== 0 ? dot / lenSq : -1;
     let xx, yy;
     if (param < 0) { xx = p1.x; yy = p1.y; }
     else if (param > 1) { xx = p2.x; yy = p2.y; }
     else { xx = p1.x + param * C; yy = p1.y + param * D; }
-    let dx = p.x - xx, dy = p.y - yy;
-    return Math.sqrt(dx * dx + dy * dy);
+    return Math.sqrt((p.x - xx)**2 + (p.y - yy)**2);
 };
-
 const centerShape = (pts) => {
-    let minX = Math.min(...pts.map(p => p.x)); let maxX = Math.max(...pts.map(p => p.x));
-    let minY = Math.min(...pts.map(p => p.y)); let maxY = Math.max(...pts.map(p => p.y));
-    let cx = (minX + maxX) / 2; let cy = (minY + maxY) / 2;
-    return pts.map(p => ({ x: p.x - cx, y: p.y - cy }));
+    let minX = Math.min(...pts.map(p => p.x)), maxX = Math.max(...pts.map(p => p.x));
+    let minY = Math.min(...pts.map(p => p.y)), maxY = Math.max(...pts.map(p => p.y));
+    return pts.map(p => ({ x: p.x - (minX + maxX)/2, y: p.y - (minY + maxY)/2 }));
 };
 
 const getDefaultDiags = (count) => {
@@ -112,16 +86,14 @@ const solveGeometry = (pts, manualData, activeDiags) => {
   return centerShape(alignedPts);
 };
 
-// ==========================================
-// 🧊 3D ДВИЖОК
-// ==========================================
+// --- 🧊 3D Preview (без изменений) ---
 const createThreeShape = (pts) => {
-  const shape = new THREE.Shape();
-  if (!pts || pts.length < 3) return shape;
-  shape.moveTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < pts.length; i++) shape.lineTo(pts[i].x, pts[i].y);
-  shape.closePath();
-  return shape;
+    const shape = new THREE.Shape();
+    if (!pts || pts.length < 3) return shape;
+    shape.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) shape.lineTo(pts[i].x, pts[i].y);
+    shape.closePath();
+    return shape;
 };
 
 const CeilingGeometry3D = ({ roomPts, elements }) => {
@@ -202,9 +174,69 @@ const ThreeDPreview = ({ roomPts, elements }) => {
   );
 };
 
-// ==========================================
-// 🎨 2D ХОЛСТ С ОБОРУДОВАНИЕМ
-// ==========================================
+// --- 🖌 Стилизация темы ---
+const getTheme = (mode) => ({
+    isDark: mode === 'dark',
+    bg: mode === 'dark' ? '#000000' : '#F5F5F7',
+    card: mode === 'dark' ? '#1C1C1E' : '#FFFFFF',
+    text: mode === 'dark' ? '#FFFFFF' : '#1C1C1E',
+    subText: '#8E8E93',
+    accent: '#0A84FF',
+    danger: '#FF453A',
+    warning: '#FF9F0A',
+    success: '#32D74B',
+    glass: mode === 'dark' ? 'rgba(28, 28, 30, 0.85)' : 'rgba(255, 255, 255, 0.85)',
+    border: mode === 'dark' ? '#38383A' : '#E5E5EA',
+    inputBg: mode === 'dark' ? '#2C2C2E' : '#F9F9FB',
+});
+
+const triggerHaptic = (type = 'light') => window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type);
+const triggerHapticSelection = () => window.Telegram?.WebApp?.HapticFeedback?.selectionChanged();
+
+// --- 📱 Дизайнерский SearchableSelect ---
+const SearchableSelect = ({ options, value, onChange, theme, placeholder }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const t = getTheme(theme);
+  const selected = options.find(o => o.id === value);
+  const filtered = options.filter(o => o.name.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div style={{ position: 'relative', width: '100%', marginBottom: '8px' }}>
+      <div 
+        onClick={() => { triggerHapticSelection(); setIsOpen(!isOpen); setSearch(""); }}
+        style={{ background: t.inputBg, border: `1px solid ${t.border}`, padding: '14px 16px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+      >
+        {isOpen ? (
+            <input 
+              autoFocus type="text" value={search} onChange={e => setSearch(e.target.value)} onBlur={() => setTimeout(() => setIsOpen(false), 200)} 
+              style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '16px', color: t.text }} placeholder="Поиск..."
+            />
+        ) : (
+            <span translate="no" className="notranslate" style={{ color: selected ? t.text : t.subText, fontSize: '16px', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {selected ? selected.name : placeholder}
+            </span>
+        )}
+        <span style={{ color: t.subText, fontSize: '12px' }}>{isOpen ? '▲' : '▼'}</span>
+      </div>
+      {isOpen && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: t.card, borderRadius: '14px', marginTop: '8px', border: `1px solid ${t.border}`, boxShadow: '0 12px 24px rgba(0,0,0,0.2)', maxHeight: '250px', overflowY: 'auto' }}>
+          {filtered.length > 0 ? filtered.map(o => (
+            <div 
+              key={o.id} 
+              onMouseDown={(e) => { e.preventDefault(); triggerHapticSelection(); onChange(o.id); setIsOpen(false); }}
+              style={{ padding: '14px 16px', borderBottom: `1px solid ${t.border}`, color: value === o.id ? t.accent : t.text, fontWeight: value === o.id ? 'bold' : '500', cursor: 'pointer', background: value === o.id ? (t.isDark ? '#2C2C2E' : '#F0F8FF') : 'transparent' }}
+            >
+              <span translate="no" className="notranslate">{o.name}</span>
+            </div>
+          )) : <div style={{ padding: '15px', color: t.subText, textAlign: 'center', fontSize: '14px' }}>Ничего не найдено</div>}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- 🎨 Дизайнерский Холст ---
 const RoomCanvas = ({ room, updateRoom, options, theme }) => {
   const canvasRef = useRef(null);
   const [scale, setScale] = useState(30); 
@@ -230,8 +262,6 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
   useEffect(() => { if (room.logicalPts) setPts(room.logicalPts); }, [room.logicalPts]);
   useEffect(() => { setEls(room.elements || []) }, [room.elements]); 
 
-  const triggerHaptic = () => window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
-
   const syncElementsToInputs = (newEls) => {
       setEls(newEls);
       updateRoom(room.id, 'elements', newEls);
@@ -252,12 +282,10 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    
     const canvasName = options.canvases.find(c => c.id === room.canvas)?.name || 'Полотно';
     const screenPts = pts.map(toScreen);
     const manual = room.manualWalls || {}; 
 
-    // === 1. ГЛАВНЫЙ ХОЛСТ ===
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -273,7 +301,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     ctx.fillStyle = mode === 'add' ? (t.isDark ? 'rgba(50, 215, 75, 0.15)' : 'rgba(50, 215, 75, 0.1)') : (mode === 'remove' ? (t.isDark ? 'rgba(255, 69, 58, 0.15)' : 'rgba(255, 69, 58, 0.05)') : (t.isDark ? 'rgba(10, 132, 255, 0.15)' : 'rgba(10, 132, 255, 0.08)')); 
     ctx.fill();
     ctx.strokeStyle = mode === 'add' ? t.success : t.accent;
-    ctx.lineWidth = 3; ctx.stroke();
+    ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.stroke();
 
     if (showDiags && room.activeDiags) {
         ctx.setLineDash([5, 5]); ctx.strokeStyle = t.isDark ? 'rgba(255, 159, 10, 0.6)' : 'rgba(255, 149, 0, 0.6)'; ctx.lineWidth = 1.5; ctx.textAlign = 'center';
@@ -370,23 +398,19 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     ctx.fillStyle = t.accent; ctx.font = 'bold 12px system-ui'; ctx.fillText(canvasName, 10, 42);
 
 
-    // === 2. СКРЫТЫЙ ХОЛСТ ДЛЯ ЗАВОДА ===
     const factCanvas = document.getElementById(`canvas-factory-${room.id}`);
     if (factCanvas) {
         const fCtx = factCanvas.getContext('2d');
         fCtx.fillStyle = '#ffffff'; 
         fCtx.fillRect(0, 0, factCanvas.width, factCanvas.height);
-
         fCtx.strokeStyle = '#e5e5ea'; fCtx.lineWidth = 1;
         for(let i = startX; i < factCanvas.width; i += step) { fCtx.beginPath(); fCtx.moveTo(i, 0); fCtx.lineTo(i, factCanvas.height); fCtx.stroke(); }
         for(let i = startY; i < factCanvas.height; i += step) { fCtx.beginPath(); fCtx.moveTo(0, i); fCtx.lineTo(factCanvas.width, i); fCtx.stroke(); }
-
         fCtx.beginPath(); fCtx.moveTo(screenPts[0].x, screenPts[0].y);
         for(let i = 1; i < screenPts.length; i++) fCtx.lineTo(screenPts[i].x, screenPts[i].y);
         fCtx.closePath();
         fCtx.fillStyle = 'rgba(0, 122, 255, 0.08)'; fCtx.fill();
-        fCtx.strokeStyle = '#007aff'; fCtx.lineWidth = 3; fCtx.stroke();
-
+        fCtx.strokeStyle = '#007aff'; fCtx.lineWidth = 3; fCtx.lineJoin = 'round'; fCtx.stroke();
         if (showDiags && room.activeDiags) {
             fCtx.setLineDash([5, 5]); fCtx.strokeStyle = 'rgba(255, 149, 0, 0.6)'; fCtx.lineWidth = 1.5; fCtx.textAlign = 'center';
             room.activeDiags.forEach((diag) => {
@@ -402,7 +426,6 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
             });
             fCtx.setLineDash([]); 
         }
-
         fCtx.fillStyle = '#1c1c1e'; fCtx.font = 'bold 12px system-ui'; fCtx.textAlign = 'center';
         for(let i = 0; i < pts.length; i++) {
            let p1 = pts[i], p2 = pts[(i+1) % pts.length];
@@ -414,7 +437,6 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
            fCtx.fillStyle = 'rgba(255,255,255,0.85)'; fCtx.fillRect(mx - 32, my - 12, 64, 18); 
            fCtx.fillStyle = '#007aff'; fCtx.fillText(`${name}: ${displayDist}м`, mx, my + 2);
         }
-
         for(let i = 0; i < screenPts.length; i++) {
            let sp = screenPts[i];
            fCtx.beginPath(); fCtx.arc(sp.x, sp.y, 10, 0, 2 * Math.PI);
@@ -423,12 +445,10 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
            const label = String.fromCharCode(65 + i); 
            fCtx.fillStyle = '#1c1c1e'; fCtx.font = '900 16px system-ui'; fCtx.fillText(label, sp.x + 18, sp.y - 12);
         }
-
         fCtx.fillStyle = '#1c1c1e'; fCtx.font = '900 16px system-ui'; fCtx.textAlign = 'left';
         fCtx.fillText(`Производство: ${room.name}`, 10, 24);
         fCtx.fillStyle = '#ff9500'; fCtx.font = 'bold 12px system-ui'; fCtx.fillText(canvasName, 10, 42);
     }
-
   }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode, room.activeDiags, selectedDiagPt, viewMode, els, activeTrackPts, draggingElement, room.canvas, room.name, options, theme]);
 
   const updateAreaPerimAndSave = (newPts, newDiags = null) => {
@@ -470,9 +490,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
             if (el.type === 'track') {
                 let segmentHitIdx = -1;
                 for(let i=1; i<el.points.length; i++) {
-                    if(getDistToSegment(pos, toScreen(el.points[i-1]), toScreen(el.points[i])) < 15) {
-                        segmentHitIdx = i; break;
-                    }
+                    if(getDistToSegment(pos, toScreen(el.points[i-1]), toScreen(el.points[i])) < 15) { segmentHitIdx = i; break; }
                 }
                 if (segmentHitIdx !== -1) {
                     hitFound = true;
@@ -480,19 +498,14 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
                     let part2 = el.points.slice(segmentHitIdx);
                     if (part1.length >= 2) newEls.push({ id: Date.now() + Math.random(), type: 'track', points: part1 });
                     if (part2.length >= 2) newEls.push({ id: Date.now() + Math.random(), type: 'track', points: part2 });
-                } else {
-                    newEls.push(el);
-                }
+                } else { newEls.push(el); }
             } else {
-                if (Math.sqrt((toScreen(el).x - pos.x)**2 + (toScreen(el).y - pos.y)**2) < 15) {
-                    hitFound = true; 
-                } else {
-                    newEls.push(el);
-                }
+                if (Math.sqrt((toScreen(el).x - pos.x)**2 + (toScreen(el).y - pos.y)**2) < 15) { hitFound = true; } 
+                else { newEls.push(el); }
             }
         }
         if (hitFound) {
-            triggerHaptic();
+            triggerHaptic('medium');
             syncElementsToInputs(newEls);
             return;
         }
@@ -500,7 +513,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
         const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 30);
         if (hitIndex !== -1) {
             if (pts.length <= 3) return alert("Минимум 3 угла!");
-            triggerHaptic();
+            triggerHaptic('heavy');
             const newPts = pts.filter((_, idx) => idx !== hitIndex);
             updateAreaPerimAndSave(centerShape(newPts), getDefaultDiags(newPts.length));
             setMode('drag'); 
@@ -509,14 +522,14 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     }
 
     if (['spot', 'chand', 'pipe'].includes(mode)) {
-        triggerHaptic();
+        triggerHaptic('light');
         const newEls = [...els, { id: Date.now(), type: mode, x: logicalPos.x, y: logicalPos.y }];
         syncElementsToInputs(newEls);
         return; 
     }
 
     if (mode === 'track') {
-        triggerHaptic();
+        triggerHaptic('light');
         setActiveTrackPts([...activeTrackPts, logicalPos]);
         return;
     }
@@ -524,7 +537,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     if (mode === 'add_diag') {
         const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 30);
         if (hitIndex !== -1) {
-            triggerHaptic();
+            triggerHaptic('medium');
             if (selectedDiagPt === null) setSelectedDiagPt(hitIndex);
             else {
                 if (hitIndex === selectedDiagPt) { setSelectedDiagPt(null); return; }
@@ -547,7 +560,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
             let dist = getDistToSegment(logicalPos, pts[i], pts[(i+1)%pts.length]);
             if (dist < minDist) { minDist = dist; insertIdx = i; }
         }
-        triggerHaptic();
+        triggerHaptic('medium');
         const newPts = [...pts];
         newPts.splice(insertIdx + 1, 0, logicalPos);
         updateAreaPerimAndSave(centerShape(newPts), getDefaultDiags(newPts.length));
@@ -557,23 +570,22 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     if (mode === 'drag') {
         const hitCornerIdx = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 25); 
         if (hitCornerIdx !== -1) { 
-            triggerHaptic();
+            triggerHaptic('selection');
             setDraggingIdx(hitCornerIdx); e.target.setPointerCapture(e.pointerId); return; 
         }
-        
         for (let el of els) {
             if (el.type === 'track') {
                 for(let i=0; i<el.points.length; i++) {
                     let sp = toScreen(el.points[i]);
                     if (Math.sqrt((sp.x - pos.x)**2 + (sp.y - pos.y)**2) < 25) {
-                        triggerHaptic();
+                        triggerHaptic('selection');
                         setDraggingElement({ elId: el.id, ptIdx: i }); e.target.setPointerCapture(e.pointerId); return;
                     }
                 }
             } else {
                 let sp = toScreen(el);
                 if (Math.sqrt((sp.x - pos.x)**2 + (sp.y - pos.y)**2) < 25) {
-                    triggerHaptic();
+                    triggerHaptic('selection');
                     setDraggingElement({ elId: el.id, ptIdx: null }); e.target.setPointerCapture(e.pointerId); return;
                 }
             }
@@ -585,50 +597,34 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     if (mode !== 'drag') return;
     const pos = getMousePos(e);
     const logicalPos = toLogical(pos);
-
     if (draggingElement) {
         const newEls = els.map(el => {
             if (el.id === draggingElement.elId) {
                 if (el.type === 'track') {
-                    let newPts = [...el.points];
-                    newPts[draggingElement.ptIdx] = logicalPos;
+                    let newPts = [...el.points]; newPts[draggingElement.ptIdx] = logicalPos;
                     return { ...el, points: newPts };
-                } else {
-                    return { ...el, x: logicalPos.x, y: logicalPos.y };
-                }
+                } else { return { ...el, x: logicalPos.x, y: logicalPos.y }; }
             }
             return el;
         });
-        setEls(newEls); 
-        return;
+        setEls(newEls); return;
     }
-
     if (draggingIdx !== null) {
-        const newPts = [...pts];
-        newPts[draggingIdx] = logicalPos;
+        const newPts = [...pts]; newPts[draggingIdx] = logicalPos;
         setPts(newPts);
     }
   };
 
   const handlePointerUp = (e) => {
     e.target.releasePointerCapture(e.pointerId);
-    if (draggingElement) {
-        setDraggingElement(null);
-        syncElementsToInputs(els); 
-        return;
-    }
-    if (draggingIdx !== null) {
-        setDraggingIdx(null);
-        updateAreaPerimAndSave(centerShape(pts));
-    }
+    if (draggingElement) { setDraggingElement(null); syncElementsToInputs(els); return; }
+    if (draggingIdx !== null) { setDraggingIdx(null); updateAreaPerimAndSave(centerShape(pts)); }
   };
 
   const handleModeSwitch = (newMode) => {
-      triggerHaptic();
+      triggerHaptic('light');
       setMode(mode === newMode ? 'drag' : newMode);
-      setSelectedDiagPt(null);
-      setActiveTrackPts([]);
-      setDraggingElement(null);
+      setSelectedDiagPt(null); setActiveTrackPts([]); setDraggingElement(null);
   };
 
   const getHelperText = () => {
@@ -652,36 +648,27 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
       </div>
 
       <div style={{position: 'relative'}}>
-        
         <canvas id={`canvas-${room.id}`} ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} 
             style={{ 
-                display: viewMode === '2d' ? 'block' : 'none',
-                width: '100%', maxWidth: '400px', height: 'auto', background: t.isDark ? '#1C1C1E' : '#FAFAFA', borderRadius: '16px', 
+                display: viewMode === '2d' ? 'block' : 'none', width: '100%', maxWidth: '400px', height: 'auto', background: t.isDark ? '#1C1C1E' : '#FAFAFA', borderRadius: '16px', 
                 border: ['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? `2px solid ${t.success}` : (mode === 'remove' ? `2px solid ${t.danger}` : `1px solid ${t.border}`), 
                 touchAction: 'none', cursor: 'default'
             }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}
         />
-
         <canvas id={`canvas-factory-${room.id}`} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} style={{ display: 'none' }} />
-        
-        {viewMode === '3d' && (
-            <ThreeDPreview roomPts={pts} elements={room.elements} />
-        )}
+        {viewMode === '3d' && <ThreeDPreview roomPts={pts} elements={room.elements} />}
         
         {mode === 'track' && activeTrackPts.length > 0 && viewMode === '2d' && (
             <button onClick={() => {
-                if(activeTrackPts.length > 1) {
-                    const newEls = [...els, { id: Date.now(), type: 'track', points: activeTrackPts }];
-                    syncElementsToInputs(newEls);
-                }
-                setActiveTrackPts([]);
-                setMode('drag');
+                triggerHaptic('heavy');
+                if(activeTrackPts.length > 1) { const newEls = [...els, { id: Date.now(), type: 'track', points: activeTrackPts }]; syncElementsToInputs(newEls); }
+                setActiveTrackPts([]); setMode('drag');
             }} style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', padding: '12px 20px', background: t.success, color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '15px', boxShadow: `0 4px 12px ${t.isDark ? 'rgba(50,215,75,0.2)' : 'rgba(52, 199, 89, 0.4)'}`, zIndex: 10 }}>
                 ✅ Завершить фигуру
             </button>
         )}
 
-        <button onClick={() => { triggerHaptic(); setViewMode(viewMode === '2d' ? '3d' : '2d') }} style={{ position: 'absolute', bottom: '10px', right: '10px', padding: '8px 12px', borderRadius: '20px', background: viewMode === '2d' ? t.danger : t.subText, color: 'white', border: 'none', fontWeight: '900', fontSize: '13px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)', zIndex: 10, transition: '0.3s' }}>
+        <button onClick={() => { triggerHaptic('light'); setViewMode(viewMode === '2d' ? '3d' : '2d') }} style={{ position: 'absolute', bottom: '10px', right: '10px', padding: '8px 12px', borderRadius: '20px', background: viewMode === '2d' ? t.danger : t.subText, color: 'white', border: 'none', fontWeight: '900', fontSize: '13px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)', zIndex: 10, transition: '0.3s' }}>
             {viewMode === '2d' ? '👀 3D' : '🔙 2D Чертеж'}
         </button>
       </div>
@@ -689,14 +676,12 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
       {viewMode === '2d' && (
           <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', padding: '0 4px' }}>
-                  <button onClick={() => { triggerHaptic(); setShowDiags(!showDiags) }} style={{ padding: '8px 12px', borderRadius: '12px', border: `1px solid ${t.border}`, background: t.card, fontSize: '13px', color: t.text, fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 6px rgba(0,0,0,0.05)', cursor: 'pointer' }}>
-                      <span style={{ fontSize: '16px' }}>{showDiags ? '👁' : '👓'}</span>
-                      {showDiags ? 'Скрыть диагонали' : 'Показать диагонали'}
+                  <button onClick={() => { triggerHaptic('light'); setShowDiags(!showDiags) }} style={{ padding: '8px 12px', borderRadius: '12px', border: `1px solid ${t.border}`, background: t.card, fontSize: '13px', color: t.text, fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 6px rgba(0,0,0,0.05)', cursor: 'pointer' }}>
+                      <span style={{ fontSize: '16px' }}>{showDiags ? '👁' : '👓'}</span>{showDiags ? 'Скрыть диагонали' : 'Показать диагонали'}
                   </button>
-                  
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <button onClick={() => { triggerHaptic(); setScale(s => Math.max(s - 5, 5)) }} style={{ width: '38px', height: '38px', borderRadius: '12px', border: `1px solid ${t.border}`, background: t.card, fontSize: '20px', color: t.accent, fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.05)', cursor: 'pointer' }}>-</button>
-                      <button onClick={() => { triggerHaptic(); setScale(s => Math.min(s + 5, 80)) }} style={{ width: '38px', height: '38px', borderRadius: '12px', border: `1px solid ${t.border}`, background: t.card, fontSize: '20px', color: t.accent, fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.05)', cursor: 'pointer' }}>+</button>
+                      <button onClick={() => { triggerHaptic('light'); setScale(s => Math.max(s - 5, 5)) }} style={{ width: '38px', height: '38px', borderRadius: '12px', border: `1px solid ${t.border}`, background: t.card, fontSize: '20px', color: t.accent, fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.05)', cursor: 'pointer' }}>-</button>
+                      <button onClick={() => { triggerHaptic('light'); setScale(s => Math.min(s + 5, 80)) }} style={{ width: '38px', height: '38px', borderRadius: '12px', border: `1px solid ${t.border}`, background: t.card, fontSize: '20px', color: t.accent, fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.05)', cursor: 'pointer' }}>+</button>
                   </div>
               </div>
 
@@ -748,7 +733,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
                     </select>
                     <span style={{fontWeight: '800', color: t.warning, marginRight: '4px'}}>:</span>
                     <input type="number" value={displayVal} onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [diagName]: e.target.value})} style={{ width: '50px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '15px', color: t.text }}/>
-                    <button onClick={() => { triggerHaptic(); const newD = room.activeDiags.filter((_, i) => i !== index); updateRoom(room.id, 'activeDiags', newD); }} style={{ background: 'none', border: 'none', color: t.danger, marginLeft: '5px', fontSize: '16px', fontWeight: 'bold' }}>✕</button>
+                    <button onClick={() => { triggerHaptic('heavy'); const newD = room.activeDiags.filter((_, i) => i !== index); updateRoom(room.id, 'activeDiags', newD); }} style={{ background: 'none', border: 'none', color: t.danger, marginLeft: '5px', fontSize: '16px', fontWeight: 'bold' }}>✕</button>
                 </div>
                 )
             })}
@@ -757,72 +742,16 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     </div>
   );
 };
-// ----------------------------------------
 
-// ⭐️ НОВЫЙ КОМПОНЕНТ: ПОИСКОВЫЙ ВЫПАДАЮЩИЙ СПИСОК (С ТЕМАМИ) ⭐️
-const SearchableSelect = ({ options, value, onChange, placeholder = "Выберите...", theme }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const t = getTheme(theme);
-  
-  const selectedOption = options.find(o => o.id === value);
-  const filteredOptions = options.filter(o => 
-    o.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  return (
-    <div style={{ position: 'relative', width: '100%' }}>
-      <div 
-         style={{ width: '100%', padding: '14px 16px', borderRadius: '12px', border: `1px solid ${t.border}`, fontSize: '16px', background: t.inputBg, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
-         onClick={() => { setIsOpen(true); setSearchTerm(""); }}
-      >
-        {isOpen ? (
-            <input 
-              autoFocus
-              type="text" 
-              value={searchTerm} 
-              onChange={e => setSearchTerm(e.target.value)} 
-              onBlur={() => setTimeout(() => setIsOpen(false), 200)} 
-              style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '16px', color: t.text }}
-              placeholder="Поиск..."
-            />
-        ) : (
-            <span translate="no" className="notranslate" style={{ fontSize: '16px', color: selectedOption ? t.text : t.subText, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: '500' }}>
-                {selectedOption ? selectedOption.name : placeholder}
-            </span>
-        )}
-        <span style={{ color: t.subText, fontSize: '12px', marginLeft: '8px' }}>{isOpen ? '▲' : '▼'}</span>
-      </div>
-      
-      {isOpen && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: t.card, border: `1px solid ${t.border}`, borderRadius: '12px', marginTop: '6px', maxHeight: '220px', overflowY: 'auto', zIndex: 1000, boxShadow: '0 12px 24px rgba(0,0,0,0.15)' }}>
-          {filteredOptions.length > 0 ? filteredOptions.map(o => (
-            <div 
-              key={o.id} 
-              onMouseDown={(e) => { 
-                  e.preventDefault(); 
-                  window.Telegram?.WebApp?.HapticFeedback?.selectionChanged();
-                  onChange(o.id); 
-                  setIsOpen(false); 
-              }}
-              style={{ padding: '14px 16px', borderBottom: `1px solid ${t.border}`, fontSize: '15px', color: value === o.id ? t.accent : t.text, fontWeight: value === o.id ? 'bold' : '500', cursor: 'pointer', background: value === o.id ? (t.isDark ? '#2C2C2E' : '#F0F8FF') : 'transparent' }}
-            >
-              <span translate="no" className="notranslate">{o.name}</span>
-            </div>
-          )) : (
-            <div style={{ padding: '15px', color: t.subText, textAlign: 'center', fontSize: '14px' }}>Ничего не найдено</div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
+// ==========================================
+// 🚀 ГЛАВНОЕ ПРИЛОЖЕНИЕ СО ВКЛАДКАМИ (ROUTING)
+// ==========================================
 function App() {
+  const [activeTab, setActiveTab] = useState('calc'); // ⭐️ Роутинг: dash, calc, archive, settings
   const [lang, setLang] = useState('ru');
   const [userId, setUserId] = useState(null);
   const [isTelegram, setIsTelegram] = useState(true);
-  const [theme, setTheme] = useState('light'); // ☀️ 'light' / 🌙 'dark'
+  const [theme, setTheme] = useState('light');
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -830,7 +759,6 @@ function App() {
       tg.ready(); tg.expand();
       const user = tg.initDataUnsafe?.user;
       if (user) { setUserId(user.id); setLang(user.language_code === 'uk' ? 'uk' : 'ru'); }
-      // Авто-определение темы Telegram
       setTheme(tg.colorScheme === 'dark' ? 'dark' : 'light');
       tg.onEvent('themeChanged', () => setTheme(tg.colorScheme));
     } else {
@@ -838,8 +766,7 @@ function App() {
     }
   }, []);
 
-  const triggerHaptic = () => window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
-
+  const triggerHaptic = (type = 'light') => window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type);
   const ts = getTheme(theme);
   const t = (key) => T[lang]?.[key] || T['ru'][key];
 
@@ -858,7 +785,7 @@ function App() {
 
   const styles = {
     appContainer: { width: '100%', maxWidth: '100%', margin: '0 auto', height: '100vh', backgroundColor: ts.bg, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', fontFamily: 'system-ui, -apple-system, sans-serif' },
-    contentArea: { flex: 1, padding: '16px 12px', overflowY: 'auto', paddingBottom: '140px', boxSizing: 'border-box' },
+    contentArea: { flex: 1, padding: '16px 12px', overflowY: 'auto', paddingBottom: '200px', boxSizing: 'border-box' }, // ⭐️ Увеличили нижний отступ для меню
     card: { background: ts.card, borderRadius: '20px', marginBottom: '16px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', width: '100%', position: 'relative', border: `1px solid ${ts.border}` },
     header: { padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' },
     subHeader: { padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderTop: `1px solid ${ts.border}` },
@@ -870,12 +797,7 @@ function App() {
 
   const CalculatorScreen = () => {
     const [rooms, setRooms] = useState([
-      { 
-        id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', 
-        canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '',
-        logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]),
-        activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] 
-      }
+      { id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }
     ]);
     const [expandedRoomId, setExpandedRoomId] = useState(rooms[0].id);
     const [expandedSubSec, setExpandedSubSec] = useState('geom'); 
@@ -888,65 +810,40 @@ function App() {
             let p_sum = 0, area = 0;
             for(let k=0; k<newPts.length; k++) {
                 let p1 = newPts[k], p2 = newPts[(k+1)%newPts.length];
-                p_sum += Math.sqrt((p2.x-p1.x)**2 + (p2.y-p1.y)**2);
-                area += (p1.x*p2.y - p2.x*p1.y);
+                p_sum += Math.sqrt((p2.x-p1.x)**2 + (p2.y-p1.y)**2); area += (p1.x*p2.y - p2.x*p1.y);
             }
             if (Math.abs(p_sum - parseFloat(room.perim)) > 0.05) {
-                updateRoom(room.id, 'logicalPts', newPts);
-                updateRoom(room.id, 'perim', p_sum.toFixed(2));
-                updateRoom(room.id, 'area', Math.abs(area/2).toFixed(2));
+                updateRoom(room.id, 'logicalPts', newPts); updateRoom(room.id, 'perim', p_sum.toFixed(2)); updateRoom(room.id, 'area', Math.abs(area/2).toFixed(2));
             }
         });
     }, [rooms.map(r => JSON.stringify(r.manualWalls)).join(','), rooms.map(r => JSON.stringify(r.activeDiags)).join(',')]);
 
     const addRoom = () => {
       triggerHaptic();
-      const nr = { 
-        id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', 
-        canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '',
-        logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]),
-        activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] 
-      };
+      const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] };
       setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom');
     };
 
     const removeRoom = (id, e) => {
-      e.stopPropagation();
-      triggerHaptic();
-      if (rooms.length > 1) setRooms(rooms.filter(room => room.id !== id));
-      else alert("Должно остаться хотя бы одно помещение!");
+      e.stopPropagation(); triggerHaptic('heavy');
+      if (rooms.length > 1) setRooms(rooms.filter(room => room.id !== id)); else alert("Должно остаться хотя бы одно помещение!");
     };
 
     const sendToBot = async () => {
-      triggerHaptic();
+      triggerHaptic('heavy');
       const roomsWithImages = rooms.map(room => {
         const instCanvas = document.getElementById(`canvas-${room.id}`);
         const factCanvas = document.getElementById(`canvas-factory-${room.id}`);
-        
-        let installerBase64 = '';
-        let factoryBase64 = '';
-        
+        let installerBase64 = '', factoryBase64 = '';
         if (instCanvas) {
-            const tmp1 = document.createElement('canvas');
-            tmp1.width = instCanvas.width; tmp1.height = instCanvas.height;
-            const c1 = tmp1.getContext('2d');
-            c1.fillStyle = '#ffffff'; c1.fillRect(0, 0, tmp1.width, tmp1.height);
-            c1.drawImage(instCanvas, 0, 0);
+            const tmp1 = document.createElement('canvas'); tmp1.width = instCanvas.width; tmp1.height = instCanvas.height;
+            const c1 = tmp1.getContext('2d'); c1.fillStyle = '#ffffff'; c1.fillRect(0, 0, tmp1.width, tmp1.height); c1.drawImage(instCanvas, 0, 0);
             installerBase64 = tmp1.toDataURL('image/png');
         }
-        
-        if (factCanvas) {
-            factoryBase64 = factCanvas.toDataURL('image/png');
-        }
-        
+        if (factCanvas) factoryBase64 = factCanvas.toDataURL('image/png');
         return { ...room, image_installer: installerBase64, image_factory: factoryBase64 }; 
       });
-
-      await fetch('https://potolokpro777bot.website/api/calculate', { 
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify({ userId, rooms: roomsWithImages }) 
-      });
+      await fetch('https://potolokpro777bot.website/api/calculate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, rooms: roomsWithImages }) });
       window.Telegram?.WebApp?.close();
     };
 
@@ -980,9 +877,7 @@ function App() {
                     <span style={{ color: ts.subText, fontSize: '14px' }}>{expandedSubSec === 'geom' ? '▲' : '▼'}</span>
                   </div>
                   <div style={{ display: expandedSubSec === 'geom' ? 'block' : 'none', ...styles.subContent }}>
-                      
                       <RoomCanvas room={room} updateRoom={updateRoom} options={options} theme={theme} />
-                      
                       <div style={{...styles.inputRow, marginTop: '24px'}}><span>{t('area')}</span><input type="number" value={room.area} onChange={e => updateRoom(room.id, 'area', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('perim')}</span><input type="number" value={room.perim} onChange={e => updateRoom(room.id, 'perim', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('corners')}</span><input type="number" value={room.corners} readOnly style={{...styles.numInput, background: ts.border, color: ts.subText, border: 'none'}} placeholder="4" /></div>
@@ -994,23 +889,11 @@ function App() {
                     <span style={{ color: ts.subText, fontSize: '14px' }}>{expandedSubSec === 'mat' ? '▲' : '▼'}</span>
                   </div>
                   <div style={{ display: expandedSubSec === 'mat' ? 'block' : 'none', ...styles.subContent }}>
-                      
                       <span style={styles.label}>{t('canvas')}</span>
-                      <SearchableSelect 
-                          options={options.canvases} 
-                          value={room.canvas} 
-                          onChange={(val) => updateRoom(room.id, 'canvas', val)} 
-                          theme={theme}
-                      />
-
+                      <SearchableSelect options={options.canvases} value={room.canvas} onChange={(val) => updateRoom(room.id, 'canvas', val)} theme={theme} />
                       <div style={{ marginTop: '20px' }}>
                         <span style={styles.label}>{t('profile')}</span>
-                        <SearchableSelect 
-                            options={options.profiles} 
-                            value={room.profile} 
-                            onChange={(val) => updateRoom(room.id, 'profile', val)} 
-                            theme={theme}
-                        />
+                        <SearchableSelect options={options.profiles} value={room.profile} onChange={(val) => updateRoom(room.id, 'profile', val)} theme={theme} />
                       </div>
                   </div>
                 </div>
@@ -1031,15 +914,8 @@ function App() {
                     <span style={{ color: ts.subText, fontSize: '14px' }}>{expandedSubSec === 'corniceSec' ? '▲' : '▼'}</span>
                   </div>
                   <div style={{ display: expandedSubSec === 'corniceSec' ? 'block' : 'none', ...styles.subContent }}>
-                      
                       <span style={styles.label}>{t('corniceType')}</span>
-                      <SearchableSelect 
-                          options={options.cornices} 
-                          value={room.corniceType} 
-                          onChange={(val) => updateRoom(room.id, 'corniceType', val)} 
-                          theme={theme}
-                      />
-
+                      <SearchableSelect options={options.cornices} value={room.corniceType} onChange={(val) => updateRoom(room.id, 'corniceType', val)} theme={theme} />
                       {room.corniceType !== 'none' && (
                         <div style={{...styles.inputRow, marginTop: '20px'}}>
                           <span>{t('corniceLen')}</span>
@@ -1063,8 +939,8 @@ function App() {
         
         <button onClick={addRoom} style={{ width: '100%', padding: '18px', background: 'transparent', color: ts.accent, border: `2px dashed ${ts.accent}`, borderRadius: '16px', fontSize: '16px', fontWeight: '800', marginBottom: '20px' }}>➕ {t('addRoom')}</button>
         
-        {/* ⭐️ КРАСИВАЯ GLASSMORPHISM ПАНЕЛЬ ⭐️ */}
-        <div style={{ position: 'fixed', bottom: '24px', left: '12px', right: '12px', background: ts.glass, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', padding: '16px 20px', borderRadius: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 12px 40px rgba(0,0,0,0.15)', border: `1px solid ${theme === 'dark' ? '#48484A' : '#FFFFFF'}`, zIndex: 100 }}>
+        {/* ⭐️ КРАСИВАЯ GLASSMORPHISM ПАНЕЛЬ (ПОДНЯТА ВЫШЕ ТАБ-БАРА) ⭐️ */}
+        <div style={{ position: 'fixed', bottom: '100px', left: '12px', right: '12px', background: ts.glass, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', padding: '16px 20px', borderRadius: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 12px 40px rgba(0,0,0,0.15)', border: `1px solid ${theme === 'dark' ? '#48484A' : '#FFFFFF'}`, zIndex: 100 }}>
            <div>
              <span style={{ color: ts.subText, fontSize: '12px', fontWeight: '800', display: 'block', textTransform: 'uppercase', marginBottom: '2px' }}>{t('pre')}</span>
              <span style={{ color: ts.text, fontSize: '24px', fontWeight: '900', letterSpacing: '-0.5px' }}>{localTotalSum.toLocaleString()} ₴</span>
@@ -1073,6 +949,65 @@ function App() {
         </div>
       </div>
     );
+  };
+
+  // --- ЗАГЛУШКИ ДЛЯ НОВЫХ ЭКРАНОВ ---
+  const DashboardScreen = () => (
+      <div style={{ padding: '20px', textAlign: 'center', color: ts.text }}>
+          <h2 style={{ fontSize: '28px', fontWeight: '900', marginBottom: '20px' }}>{t('dash')}</h2>
+          <div style={{ background: ts.card, border: `1px solid ${ts.border}`, padding: '40px 20px', borderRadius: '20px' }}>
+              <span style={{ fontSize: '50px' }}>💸</span>
+              <h3 style={{ marginTop: '16px' }}>Здесь будет баланс и горящие клиенты</h3>
+              <p style={{ color: ts.subText, marginTop: '8px' }}>Экран в разработке...</p>
+          </div>
+      </div>
+  );
+
+  const ArchiveScreen = () => (
+      <div style={{ padding: '20px', textAlign: 'center', color: ts.text }}>
+          <h2 style={{ fontSize: '28px', fontWeight: '900', marginBottom: '20px' }}>{t('archive')}</h2>
+          <div style={{ background: ts.card, border: `1px solid ${ts.border}`, padding: '40px 20px', borderRadius: '20px' }}>
+              <span style={{ fontSize: '50px' }}>🗂</span>
+              <h3 style={{ marginTop: '16px' }}>Здесь будет история замеров</h3>
+              <p style={{ color: ts.subText, marginTop: '8px' }}>Экран в разработке...</p>
+          </div>
+      </div>
+  );
+
+  const SettingsScreen = () => (
+      <div style={{ padding: '20px', textAlign: 'center', color: ts.text }}>
+          <h2 style={{ fontSize: '28px', fontWeight: '900', marginBottom: '20px' }}>{t('settings')}</h2>
+          <div style={{ background: ts.card, border: `1px solid ${ts.border}`, padding: '40px 20px', borderRadius: '20px' }}>
+              <span style={{ fontSize: '50px' }}>⚙️</span>
+              <h3 style={{ marginTop: '16px' }}>Здесь будет настройка Прайса и PDF</h3>
+              <p style={{ color: ts.subText, marginTop: '8px' }}>Экран в разработке...</p>
+          </div>
+      </div>
+  );
+
+  // --- КОМПОНЕНТ TAB BAR ---
+  const TabBar = () => {
+      const tabs = [
+          { id: 'dash', icon: '🏠', label: t('dash') },
+          { id: 'calc', icon: '📐', label: t('calc') },
+          { id: 'archive', icon: '🗂', label: t('archive') },
+          { id: 'settings', icon: '⚙️', label: t('settings') }
+      ];
+
+      return (
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: '85px', background: ts.glass, backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)', borderTop: `1px solid ${ts.border}`, display: 'flex', justifyContent: 'space-around', alignItems: 'center', paddingBottom: '15px', zIndex: 1000 }}>
+              {tabs.map(tab => (
+                  <div 
+                      key={tab.id} 
+                      onClick={() => { triggerHaptic('medium'); setActiveTab(tab.id); }}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', width: '60px', opacity: activeTab === tab.id ? 1 : 0.5, transform: activeTab === tab.id ? 'scale(1.05)' : 'scale(1)', transition: '0.2s ease' }}
+                  >
+                      <span style={{ fontSize: '24px', marginBottom: '4px' }}>{tab.icon}</span>
+                      <span style={{ fontSize: '10px', fontWeight: '700', color: ts.text }}>{tab.label}</span>
+                  </div>
+              ))}
+          </div>
+      );
   };
 
   if (!isTelegram) {
@@ -1085,6 +1020,19 @@ function App() {
     );
   }
 
-  return <div style={styles.appContainer}><div style={styles.contentArea}><CalculatorScreen /></div></div>;
+  return (
+      <div style={styles.appContainer}>
+          <div style={styles.contentArea}>
+              {/* РОУТИНГ ЭКРАНОВ */}
+              {activeTab === 'dash' && <DashboardScreen />}
+              {activeTab === 'calc' && <CalculatorScreen />}
+              {activeTab === 'archive' && <ArchiveScreen />}
+              {activeTab === 'settings' && <SettingsScreen />}
+          </div>
+          
+          {/* НИЖНЕЕ НАВИГАЦИОННОЕ МЕНЮ */}
+          <TabBar />
+      </div>
+  );
 }
 export default App;
