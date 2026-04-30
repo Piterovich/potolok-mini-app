@@ -4,18 +4,14 @@ import { OrbitControls, Environment, Grid } from '@react-three/drei'
 import * as THREE from 'three'
 import './App.css'
 
+// ⭐️ ОБНОВЛЕННЫЙ СЛОВАРЬ (ДОБАВЛЕНЫ ПЕРЕВОДЫ ДЛЯ НАСТРОЕК) ⭐️
 const T = {
-  ru: { calc: "Умный Расчет", dash: "Главная", archive: "Архив", settings: "Настройки", addRoom: "Добавить комнату", toBot: "Оформить смету 🚀", area: "Площадь", perim: "Периметр", corners: "Углы", geom: "📏 Геометрия и замеры", materials: "🎨 Выбор материалов", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", pre: "ИТОГО ПРЕДВАРИТЕЛЬНО:", contacts: "👤 Данные клиента", clientName: "Имя", clientPhone: "Телефон", clientAddress: "Адрес объекта" },
-  
-  uk: { calc: "Розумний Розрахунок", dash: "Головна", archive: "Архів", settings: "Налаштування", addRoom: "Додати кімнату", toBot: "Оформити кошторис 🚀", area: "Площа", perim: "Периметр", corners: "Кути", geom: "📏 Геометрія та заміри", materials: "🎨 Вибір матеріалів", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", pre: "РАЗОМ ПОПЕРЕДНЬО:", contacts: "👤 Дані клієнта", clientName: "Ім'я", clientPhone: "Телефон", clientAddress: "Адреса об'єкта" },
-  
-  en: { calc: "Smart Calc", dash: "Home", archive: "Archive", settings: "Settings", addRoom: "Add Room", toBot: "Send to Bot 🚀", area: "Area", perim: "Perimeter", corners: "Corners", geom: "📏 Geometry", materials: "🎨 Materials", lighting: "💡 Lighting", corniceSec: "🏁 Cornices", dops: "🔧 Extras", pre: "ESTIMATED TOTAL:", contacts: "👤 Client Data", clientName: "Name", clientPhone: "Phone", clientAddress: "Address" },
-  
-  es: { calc: "Cálculo Inteligente", dash: "Inicio", archive: "Archivo", settings: "Ajustes", addRoom: "Añadir sala", toBot: "Enviar al Bot 🚀", area: "Área", perim: "Perímetro", corners: "Esquinas", geom: "📏 Geometría", materials: "🎨 Materiales", lighting: "💡 Iluminación", corniceSec: "🏁 Cornisas", dops: "🔧 Extras", pre: "TOTAL ESTIMADO:", contacts: "👤 Datos del cliente", clientName: "Nombre", clientPhone: "Teléfono", clientAddress: "Dirección" },
-  
-  pl: { calc: "Inteligentny Kalkulator", dash: "Główna", archive: "Archiwum", settings: "Ustawienia", addRoom: "Dodaj pokój", toBot: "Wyślij do Bota 🚀", area: "Powierzchnia", perim: "Obwód", corners: "Kąty", geom: "📏 Geometria", materials: "🎨 Materiały", lighting: "💡 Oświetlenie", corniceSec: "🏁 Karnisze", dops: "🔧 Dodatki", pre: "WSTĘPNA SUMA:", contacts: "👤 Dane klienta", clientName: "Imię", clientPhone: "Telefon", clientAddress: "Adres" },
-  
-  kk: { calc: "Ақылды есептеу", dash: "Басты", archive: "Мұрағат", settings: "Параметрлер", addRoom: "Бөлме қосу", toBot: "Ботқа жіберу 🚀", area: "Аудан", perim: "Периметр", corners: "Бұрыштар", geom: "📏 Геометрия", materials: "🎨 Материалдар", lighting: "💡 Жарықтандыру", corniceSec: "🏁 Карниздер", dops: "🔧 Қосымша жұмыстар", pre: "АЛДЫН АЛА БАҒАСЫ:", contacts: "👤 Клиент деректері", clientName: "Аты", clientPhone: "Телефон", clientAddress: "Мекенжайы" }
+  ru: { calc: "Умный Расчет", dash: "Главная", archive: "Архив", settings: "Настройки", addRoom: "Добавить комнату", toBot: "Оформить смету 🚀", area: "Площадь", perim: "Периметр", corners: "Углы", geom: "📏 Геометрия и замеры", materials: "🎨 Выбор материалов", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", pre: "ИТОГО ПРЕДВАРИТЕЛЬНО:", contacts: "👤 Данные клиента", clientName: "Имя", clientPhone: "Телефон", clientAddress: "Адрес объекта", savePrice: "💾 Сохранить прайс", priceSaved: "✅ Прайс сохранен!", priceCanvases: "Полотна (за м²)", priceProfiles: "Профили (за м.п.)", priceCornices: "Карнизы (за м.п.)", priceDops: "Монтаж и Допы" },
+  uk: { calc: "Розумний Розрахунок", dash: "Головна", archive: "Архів", settings: "Налаштування", addRoom: "Додати кімнату", toBot: "Оформити кошторис 🚀", area: "Площа", perim: "Периметр", corners: "Кути", geom: "📏 Геометрія та заміри", materials: "🎨 Вибір матеріалів", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", pre: "РАЗОМ ПОПЕРЕДНЬО:", contacts: "👤 Дані клієнта", clientName: "Ім'я", clientPhone: "Телефон", clientAddress: "Адреса об'єкта", savePrice: "💾 Зберегти прайс", priceSaved: "✅ Прайс збережено!", priceCanvases: "Полотна (за м²)", priceProfiles: "Профілі (за м.п.)", priceCornices: "Карнизи (за м.п.)", priceDops: "Монтаж та Дод. роботи" },
+  en: { calc: "Smart Calc", dash: "Home", archive: "Archive", settings: "Settings", addRoom: "Add Room", toBot: "Send to Bot 🚀", area: "Area", perim: "Perimeter", corners: "Corners", geom: "📏 Geometry", materials: "🎨 Materials", lighting: "💡 Lighting", corniceSec: "🏁 Cornices", dops: "🔧 Extras", pre: "ESTIMATED TOTAL:", contacts: "👤 Client Data", clientName: "Name", clientPhone: "Phone", clientAddress: "Address", savePrice: "💾 Save Pricing", priceSaved: "✅ Saved!", priceCanvases: "Canvases (per m²)", priceProfiles: "Profiles (per m)", priceCornices: "Cornices (per m)", priceDops: "Installation & Extras" },
+  es: { calc: "Cálculo Inteligente", dash: "Inicio", archive: "Archivo", settings: "Ajustes", addRoom: "Añadir sala", toBot: "Enviar al Bot 🚀", area: "Área", perim: "Perímetro", corners: "Esquinas", geom: "📏 Geometría", materials: "🎨 Materiales", lighting: "💡 Iluminación", corniceSec: "🏁 Cornisas", dops: "🔧 Extras", pre: "TOTAL ESTIMADO:", contacts: "👤 Datos del cliente", clientName: "Nombre", clientPhone: "Teléfono", clientAddress: "Dirección", savePrice: "💾 Guardar Precios", priceSaved: "✅ ¡Guardado!", priceCanvases: "Lonas (por m²)", priceProfiles: "Perfiles (por m)", priceCornices: "Cornisas (por m)", priceDops: "Instalación y Extras" },
+  pl: { calc: "Inteligentny Kalkulator", dash: "Główna", archive: "Archiwum", settings: "Ustawienia", addRoom: "Dodaj pokój", toBot: "Wyślij do Bota 🚀", area: "Powierzchnia", perim: "Obwód", corners: "Kąty", geom: "📏 Geometria", materials: "🎨 Materiały", lighting: "💡 Oświetlenie", corniceSec: "🏁 Karnisze", dops: "🔧 Dodatki", pre: "WSTĘPNA SUMA:", contacts: "👤 Dane klienta", clientName: "Imię", clientPhone: "Telefon", clientAddress: "Adres", savePrice: "💾 Zapisz Cennik", priceSaved: "✅ Zapisano!", priceCanvases: "Płótna (za m²)", priceProfiles: "Profile (za mb)", priceCornices: "Karnisze (za mb)", priceDops: "Instalacja i Dodatki" },
+  kk: { calc: "Ақылды есептеу", dash: "Басты", archive: "Мұрағат", settings: "Параметрлер", addRoom: "Бөлме қосу", toBot: "Ботқа жіберу 🚀", area: "Аудан", perim: "Периметр", corners: "Бұрыштар", geom: "📏 Геометрия", materials: "🎨 Материалдар", lighting: "💡 Жарықтандыру", corniceSec: "🏁 Карниздер", dops: "🔧 Қосымша жұмыстар", pre: "АЛДЫН АЛА БАҒАСЫ:", contacts: "👤 Клиент деректері", clientName: "Аты", clientPhone: "Телефон", clientAddress: "Мекенжайы", savePrice: "💾 Бағаны сақтау", priceSaved: "✅ Сақталды!", priceCanvases: "Кенептер (м² үшін)", priceProfiles: "Профильдер (м үшін)", priceCornices: "Карниздер (м үшін)", priceDops: "Монтаж және қосымша" }
 };
 
 // --- Геометрическое ядро ---
@@ -437,10 +433,19 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
 
   const handleModeSwitch = (newMode) => { triggerHaptic('light'); setMode(mode === newMode ? 'drag' : newMode); setSelectedDiagPt(null); setActiveTrackPts([]); setDraggingElement(null); };
 
+  const getHelperText = () => {
+      if (viewMode === '3d') return '👀 3D Режим. Стены: 2.7м. Можно крутить пальцем.';
+      if (mode === 'add') return '👆 Кликните на линию стены для создания угла'; if (mode === 'remove') return '👆 Кликните на объект (угол, точку, трек), чтобы удалить';
+      if (mode === 'add_diag') return selectedDiagPt === null ? '👆 Выберите первый угол для диагонали' : '👆 Кликните на противоположный угол';
+      if (mode === 'spot') return '👆 Кликайте по чертежу, чтобы расставить Точечные'; if (mode === 'chand') return '👆 Кликните, чтобы повесить Люстру';
+      if (mode === 'pipe') return '👆 Кликните у стены, чтобы отметить Обход трубы'; if (mode === 'track') return activeTrackPts.length === 0 ? '👆 Кликните на чертеж, чтобы начать рисовать трек' : '👆 Кликайте дальше. Чтобы завершить, нажмите ✅';
+      return '👆 Выберите инструмент';
+  };
+
   return (
     <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
+      <div style={{ height: '24px', marginBottom: '4px', fontWeight: '800', fontSize: '13px', color: viewMode === '3d' ? t.danger : (['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? t.success : (mode === 'remove' ? t.danger : t.subText)) }}>{getHelperText()}</div>
       
-      {/* ⭐️ ЭРГОНОМИЧНАЯ ПАНЕЛЬ ИНСТРУМЕНТОВ (СВЕРХУ) ⭐️ */}
       {viewMode === '2d' && (
           <div style={{ background: t.card, borderRadius: '16px', padding: '12px', marginBottom: '12px', border: `1px solid ${t.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -468,7 +473,6 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
           </div>
       )}
 
-      {/* ⭐️ ХОЛСТ ⭐️ */}
       <div style={{position: 'relative'}}>
         <canvas id={`canvas-${room.id}`} ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} style={{ display: viewMode === '2d' ? 'block' : 'none', width: '100%', maxWidth: '400px', height: 'auto', background: t.isDark ? '#1C1C1E' : '#FAFAFA', borderRadius: '16px', border: ['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? `2px solid ${t.success}` : (mode === 'remove' ? `2px solid ${t.danger}` : `1px solid ${t.border}`), touchAction: 'none', cursor: 'default' }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} />
         <canvas id={`canvas-factory-${room.id}`} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} style={{ display: 'none' }} />
@@ -524,12 +528,75 @@ const ArchiveScreen = ({ t, ts }) => (
         <div style={{ background: ts.card, border: `1px solid ${ts.border}`, padding: '40px 20px', borderRadius: '20px' }}><span style={{ fontSize: '50px' }}>🗂</span><h3 style={{ marginTop: '16px' }}>Здесь будет история замеров</h3><p style={{ color: ts.subText, marginTop: '8px' }}>Экран в разработке...</p></div>
     </div>
 );
-const SettingsScreen = ({ t, ts }) => (
-    <div style={{ padding: '20px', textAlign: 'center', color: ts.text }}>
-        <h2 style={{ fontSize: '28px', fontWeight: '900', marginBottom: '20px' }}>{t('settings')}</h2>
-        <div style={{ background: ts.card, border: `1px solid ${ts.border}`, padding: '40px 20px', borderRadius: '20px' }}><span style={{ fontSize: '50px' }}>⚙️</span><h3 style={{ marginTop: '16px' }}>Здесь будет настройка Прайса и PDF</h3><p style={{ color: ts.subText, marginTop: '8px' }}>Экран в разработке...</p></div>
-    </div>
-);
+
+// ⭐️ НОВЫЙ ЭКРАН НАСТРОЕК (ПРАЙС-ЛИСТ) ⭐️
+const SettingsScreen = ({ t, ts, options, prices, setPrices }) => {
+    const [isSaved, setIsSaved] = useState(false);
+
+    const handlePriceChange = (category, id, value) => {
+        const numVal = parseFloat(value) || 0;
+        if (category === 'flat') {
+            setPrices(prev => ({ ...prev, [id]: numVal }));
+        } else {
+            setPrices(prev => ({ ...prev, [category]: { ...prev[category], [id]: numVal } }));
+        }
+    };
+
+    const handleSave = () => {
+        triggerHaptic('heavy');
+        setIsSaved(true);
+        // В будущем тут будет fetch для сохранения в базу Питона
+        setTimeout(() => setIsSaved(false), 2000);
+    };
+
+    const InputRow = ({ label, val, onChange }) => (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: `1px solid ${ts.border}` }}>
+            <span style={{ color: ts.text, fontSize: '15px', fontWeight: '600' }}>{label}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input type="number" value={val} onChange={(e) => { triggerHaptic('selection'); onChange(e.target.value); }} style={{ width: '70px', padding: '8px', borderRadius: '10px', border: `1px solid ${ts.border}`, background: ts.inputBg, color: ts.text, textAlign: 'center', fontSize: '15px', fontWeight: 'bold', outline: 'none' }} />
+                <span style={{ color: ts.subText, fontSize: '14px', fontWeight: '600' }}>₴</span>
+            </div>
+        </div>
+    );
+
+    return (
+        <div style={{ animation: 'fadeIn 0.3s ease-in', paddingBottom: '30px' }}>
+            <h2 style={{ fontSize: '28px', margin: '0 8px 20px', fontWeight: '900', color: ts.text }}>{t('settings')}</h2>
+            
+            {/* ПОЛОТНА */}
+            <div style={{ background: ts.card, borderRadius: '20px', padding: '16px 20px', marginBottom: '16px', border: `1px solid ${ts.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+                <h3 style={{ fontSize: '13px', fontWeight: '800', color: ts.accent, textTransform: 'uppercase', marginBottom: '8px' }}>{t('priceCanvases')}</h3>
+                {options.canvases.map(o => <InputRow key={o.id} label={o.name} val={prices.canvas[o.id]} onChange={(v) => handlePriceChange('canvas', o.id, v)} />)}
+            </div>
+
+            {/* ПРОФИЛИ */}
+            <div style={{ background: ts.card, borderRadius: '20px', padding: '16px 20px', marginBottom: '16px', border: `1px solid ${ts.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+                <h3 style={{ fontSize: '13px', fontWeight: '800', color: ts.accent, textTransform: 'uppercase', marginBottom: '8px' }}>{t('priceProfiles')}</h3>
+                {options.profiles.map(o => <InputRow key={o.id} label={o.name} val={prices.profile[o.id]} onChange={(v) => handlePriceChange('profile', o.id, v)} />)}
+            </div>
+
+            {/* КАРНИЗЫ */}
+            <div style={{ background: ts.card, borderRadius: '20px', padding: '16px 20px', marginBottom: '16px', border: `1px solid ${ts.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+                <h3 style={{ fontSize: '13px', fontWeight: '800', color: ts.accent, textTransform: 'uppercase', marginBottom: '8px' }}>{t('priceCornices')}</h3>
+                {options.cornices.filter(c => c.id !== 'none').map(o => <InputRow key={o.id} label={o.name} val={prices.cornices[o.id]} onChange={(v) => handlePriceChange('cornices', o.id, v)} />)}
+            </div>
+
+            {/* ДОПЫ */}
+            <div style={{ background: ts.card, borderRadius: '20px', padding: '16px 20px', marginBottom: '16px', border: `1px solid ${ts.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+                <h3 style={{ fontSize: '13px', fontWeight: '800', color: ts.accent, textTransform: 'uppercase', marginBottom: '8px' }}>{t('priceDops')}</h3>
+                <InputRow label="Точечные светильники (шт)" val={prices.light} onChange={(v) => handlePriceChange('flat', 'light', v)} />
+                <InputRow label="Люстры (шт)" val={prices.chand} onChange={(v) => handlePriceChange('flat', 'chand', v)} />
+                <InputRow label="Доп. углы (шт)" val={prices.corner} onChange={(v) => handlePriceChange('flat', 'corner', v)} />
+                <InputRow label="Обход труб (шт)" val={prices.pipe} onChange={(v) => handlePriceChange('flat', 'pipe', v)} />
+                <InputRow label="Треки / Свет. линии (м.п.)" val={prices.track} onChange={(v) => handlePriceChange('flat', 'track', v)} />
+            </div>
+
+            <button onClick={handleSave} style={{ width: '100%', padding: '18px', background: isSaved ? ts.success : ts.accent, color: '#fff', border: 'none', borderRadius: '16px', fontSize: '17px', fontWeight: '800', transition: '0.3s', boxShadow: `0 8px 20px ${isSaved ? 'rgba(50,215,75,0.3)' : 'rgba(10,132,255,0.3)'}` }}>
+                {isSaved ? t('priceSaved') : t('savePrice')}
+            </button>
+        </div>
+    );
+};
 
 // ==========================================
 // 🚀 ГЛАВНОЕ ПРИЛОЖЕНИЕ СО ВКЛАДКАМИ
@@ -543,7 +610,6 @@ function App() {
   
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
-  // ⭐️ НОВЫЙ СТЕЙТ ДЛЯ ДАННЫХ КЛИЕНТА ⭐️
   const [customer, setCustomer] = useState({ name: '', phone: '', address: '' });
   const [isContactExpanded, setIsContactExpanded] = useState(true);
 
@@ -558,12 +624,7 @@ function App() {
     if (tg && tg.initData) {
       tg.ready(); tg.expand();
       const user = tg.initDataUnsafe?.user;
-      if (user) { 
-          setUserId(user.id); 
-          // ⭐️ УМНОЕ ОПРЕДЕЛЕНИЕ ЯЗЫКА: если язык есть в словаре T, ставим его. Иначе — русский.
-          const userLang = user.language_code;
-          setLang(T[userLang] ? userLang : 'ru'); 
-      }
+      if (user) { setUserId(user.id); setLang(user.language_code === 'uk' ? 'uk' : 'ru'); }
       setTheme(tg.colorScheme === 'dark' ? 'dark' : 'light');
       tg.onEvent('themeChanged', () => setTheme(tg.colorScheme));
     } else { setIsTelegram(false); }
@@ -594,7 +655,14 @@ function App() {
     profiles: [ { id: 'профиль_м', name: 'Стандартный (ПВХ)' }, { id: 'профиль_теневой_6мм_мп', name: 'Теневой (6 мм)' }, { id: 'профиль_парящий_мп', name: 'Парящий' } ],
     cornices: [ { id: 'none', name: 'Нет' }, { id: 'карниз_м', name: 'Стандартный скрытый' }, { id: 'карниз_q5_мп', name: 'Карниз Q5' }, { id: 'карниз_q10_мп', name: 'Карниз Q10' } ]
   };
-  const [prices] = useState({ canvas: { 'полотно_м2': 330, 'msd_premium_320_м2': 350, 'черный_матовый_м2': 400 }, profile: { 'профиль_м': 60, 'профиль_теневой_6мм_мп': 350, 'профиль_парящий_мп': 500 }, cornices: { 'none': 0, 'карниз_м': 1200, 'карниз_q5_мп': 1500, 'карниз_q10_мп': 2200 }, light: 250, chand: 300, corner: 50, pipe: 200, track: 2000 });
+
+  // ⭐️ СТЕЙТ ЦЕН ПЕРЕШЕЛ ПОД УПРАВЛЕНИЕ РЕАКТА ⭐️
+  const [prices, setPrices] = useState({ 
+      canvas: { 'полотно_м2': 330, 'msd_premium_320_м2': 350, 'черный_матовый_м2': 400 }, 
+      profile: { 'профиль_м': 60, 'профиль_теневой_6мм_мп': 350, 'профиль_парящий_мп': 500 }, 
+      cornices: { 'none': 0, 'карниз_м': 1200, 'карниз_q5_мп': 1500, 'карниз_q10_мп': 2200 }, 
+      light: 250, chand: 300, corner: 50, pipe: 200, track: 2000 
+  });
 
   const addRoom = () => { triggerHaptic(); const nr = { id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '', logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]), activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] }; setRooms([...rooms, nr]); setExpandedRoomId(nr.id); setExpandedSubSec('geom'); setIsContactExpanded(false); };
   const removeRoom = (id, e) => { e.stopPropagation(); triggerHaptic('heavy'); if (rooms.length > 1) setRooms(rooms.filter(room => room.id !== id)); else alert("Должно остаться хотя бы одно помещение!"); };
@@ -607,7 +675,6 @@ function App() {
         if (factCanvas) factoryBase64 = factCanvas.toDataURL('image/png');
         return { ...room, image_installer: installerBase64, image_factory: factoryBase64 }; 
       });
-      // ⭐️ ДОБАВЛЕНО ОТПРАВКУ ДАННЫХ КЛИЕНТА (customer) В БОТ ⭐️
       await fetch('https://potolokpro777bot.website/api/calculate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, customer, rooms: roomsWithImages }) });
       window.Telegram?.WebApp?.close();
   };
@@ -653,13 +720,13 @@ function App() {
           <div style={styles.contentArea}>
               <div style={{ display: activeTab === 'dash' ? 'block' : 'none' }}><DashboardScreen t={t} ts={ts} /></div>
 
+              {/* === ЭКРАН 2: КАЛЬКУЛЯТОР === */}
               <div style={{ display: activeTab === 'calc' ? 'block' : 'none', animation: 'fadeIn 0.3s ease-in', width: '100%' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '20px', padding: '0 8px', boxSizing: 'border-box' }}>
                       <h2 style={{ fontSize: '28px', margin: 0, fontWeight: '900', color: ts.text }}>{t('calc')}</h2>
                       <button onClick={() => { triggerHaptic(); setTheme(theme === 'light' ? 'dark' : 'light'); }} style={{ background: ts.card, border: `1px solid ${ts.border}`, width: '44px', height: '44px', borderRadius: '14px', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', cursor: 'pointer' }}>{theme === 'light' ? '🌙' : '☀️'}</button>
                   </div>
 
-                  {/* ⭐️ НОВЫЙ БЛОК: ДАННЫЕ КЛИЕНТА ⭐️ */}
                   <div style={{ ...styles.card, border: `2px solid ${ts.accent}40` }}>
                     <div style={styles.header} onClick={() => { triggerHaptic(); setIsContactExpanded(!isContactExpanded); setExpandedRoomId(null); }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -748,7 +815,11 @@ function App() {
               </div>
 
               <div style={{ display: activeTab === 'archive' ? 'block' : 'none' }}><ArchiveScreen t={t} ts={ts} /></div>
-              <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}><SettingsScreen t={t} ts={ts} /></div>
+              
+              {/* === ЭКРАН 4: НАСТРОЙКИ (ПРАЙС) === */}
+              <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}>
+                  <SettingsScreen t={t} ts={ts} options={options} prices={prices} setPrices={setPrices} />
+              </div>
           </div>
           
           {!isKeyboardOpen && activeTab === 'calc' && (
