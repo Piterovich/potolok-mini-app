@@ -5,8 +5,8 @@ import * as THREE from 'three'
 import './App.css'
 
 const T = {
-  ru: { calc: "Расчет", addRoom: "Добавить помещение", toBot: "В бот 🚀", area: "Площадь (м²)", perim: "Периметр (м)", corners: "Углы (шт)", geom: "📏 Геометрия", materials: "🎨 Полотно и Профиль", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", spots: "Точечные (шт)", chands: "Люстры (шт)", track: "Свет. линия/Трек (м)", corniceType: "Вид карниза", corniceLen: "Метраж (м)", pipe: "Обход труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФИЛЬ", pre: "ПРЕДВАРИТЕЛЬНО:" },
-  uk: { calc: "Розрахунок", addRoom: "Додати приміщення", toBot: "В бот 🚀", area: "Площа (м²)", perim: "Периметр (м)", corners: "Кути (шт)", geom: "📏 Геометрія", materials: "🎨 Полотно та Профіль", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", spots: "Точкові (шт)", chands: "Люстри (шт)", track: "Світл. лінія/Трек (м)", corniceType: "Вид карнизу", corniceLen: "Метраж (м)", pipe: "Обхід труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФІЛЬ", pre: "ПОПЕРЕДНЬО:" }
+  ru: { calc: "Расчет", addRoom: "Добавить помещение", toBot: "В бот 🚀", area: "Площадь (м²)", perim: "Периметр (м)", corners: "Углы (шт)", geom: "📏 Геометрия", materials: "🎨 Полотно и Профиль", lighting: "💡 Освещение", corniceSec: "🏁 Карнизы", dops: "🔧 Доп. работы", spots: "Точечные (шт)", chands: "Люстры (шт)", track: "Магнитный трек (м)", lightLine: "Световая линия (м)", corniceType: "Вид карниза", corniceLen: "Метраж (м)", pipe: "Обход труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФИЛЬ", pre: "ПРЕДВАРИТЕЛЬНО:" },
+  uk: { calc: "Розрахунок", addRoom: "Додати приміщення", toBot: "В бот 🚀", area: "Площа (м²)", perim: "Периметр (м)", corners: "Кути (шт)", geom: "📏 Геометрія", materials: "🎨 Полотно та Профіль", lighting: "💡 Освітлення", corniceSec: "🏁 Карнизи", dops: "🔧 Дод. роботи", spots: "Точкові (шт)", chands: "Люстри (шт)", track: "Магнітний трек (м)", lightLine: "Світлова лінія (м)", corniceType: "Вид карнизу", corniceLen: "Метраж (м)", pipe: "Обхід труб (шт)", canvas: "ПОЛОТНО", profile: "ПРОФІЛЬ", pre: "ПОПЕРЕДНЬО:" }
 };
 
 // ==========================================
@@ -855,7 +855,6 @@ function App() {
       { id: 'профиль_бесщелевой_мп',              name: 'Бесщелевой' },
       { id: 'профиль_парящий_мп',                 name: 'Парящий' },
       { id: 'профиль_контурный_мп',               name: 'Контурный' },
-      { id: 'профиль_световая_линия_30_50мм_мп',  name: 'Световая линия 30-50 мм' },
     ],
     cornices: [
       { id: 'none',                              name: 'Нет' },
@@ -886,7 +885,6 @@ function App() {
       'профиль_бесщелевой_мп':              400,
       'профиль_парящий_мп':                 500,
       'профиль_контурный_мп':               300,
-      'профиль_световая_линия_30_50мм_мп':  1500,
     },
     cornices: {
       'none':                              0,
@@ -901,7 +899,7 @@ function App() {
       'ниша_под_штору_с_заворотом_мп':     800,
       'ниша_под_штору_обрыв_мп':           600,
     },
-    light: 250, chand: 300, corner: 50, pipe: 200, track: 2000
+    light: 250, chand: 300, corner: 50, pipe: 200, track: 2000, lightLine: 1500
   });
 
   const styles = {
@@ -920,7 +918,7 @@ function App() {
     const [rooms, setRooms] = useState([
       { 
         id: Date.now(), name: 'Помещение 1', area: '16.00', perim: '16.00', corners: '4', 
-        canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '',
+        canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', lightLine: '', corniceType: 'none', cornice: '', pipe: '',
         logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]),
         activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] 
       }
@@ -951,7 +949,7 @@ function App() {
       triggerHaptic();
       const nr = { 
         id: Date.now(), name: `Помещение ${rooms.length+1}`, area: '16.00', perim: '16.00', corners: '4', 
-        canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', corniceType: 'none', cornice: '', pipe: '',
+        canvas: 'полотно_м2', profile: 'профиль_м', spots: '', chands: '', track: '', lightLine: '', corniceType: 'none', cornice: '', pipe: '',
         logicalPts: centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]),
         activeDiags: ['AC', 'BD'], manualWalls: {}, elements: [] 
       };
@@ -999,25 +997,27 @@ function App() {
     };
 
     const localTotalSum = rooms.reduce((total, r) => {
-      const area    = Number(r.area)    || 0;
-      const perim   = Number(r.perim)   || 0;
-      const corners = Number(r.corners) || 0;
-      const spots   = Number(r.spots)   || 0;
-      const chands  = Number(r.chands)  || 0;
-      const track   = Number(r.track)   || 0;
-      const cornice = Number(r.cornice) || 0;
-      const pipe    = Number(r.pipe)    || 0;
+      const area      = Number(r.area)      || 0;
+      const perim     = Number(r.perim)     || 0;
+      const corners   = Number(r.corners)   || 0;
+      const spots     = Number(r.spots)     || 0;
+      const chands    = Number(r.chands)    || 0;
+      const track     = Number(r.track)     || 0;
+      const lightLine = Number(r.lightLine) || 0;
+      const cornice   = Number(r.cornice)   || 0;
+      const pipe      = Number(r.pipe)      || 0;
 
       // Карниз — отдельная конструкция (короб в потолке), стеновой профиль идёт по всему периметру независимо
       return total
-        + area    * (prices.canvas[r.canvas]   || 330)
-        + perim   * (prices.profile[r.profile] || 80)
-        + spots   * prices.light
-        + chands  * prices.chand
-        + track   * prices.track
-        + corners * prices.corner
-        + cornice * (prices.cornices[r.corniceType] || 0)
-        + pipe    * prices.pipe;
+        + area      * (prices.canvas[r.canvas]   || 330)
+        + perim     * (prices.profile[r.profile] || 80)
+        + spots     * prices.light
+        + chands    * prices.chand
+        + track     * prices.track
+        + lightLine * prices.lightLine
+        + corners   * prices.corner
+        + cornice   * (prices.cornices[r.corniceType] || 0)
+        + pipe      * prices.pipe;
     }, 0);
 
     return (
@@ -1091,6 +1091,7 @@ function App() {
                       <div style={styles.inputRow}><span>{t('spots')}</span><input type="number" value={room.spots} onChange={e => updateRoom(room.id, 'spots', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('chands')}</span><input type="number" value={room.chands} onChange={e => updateRoom(room.id, 'chands', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                       <div style={styles.inputRow}><span>{t('track')}</span><input type="number" value={room.track} onChange={e => updateRoom(room.id, 'track', e.target.value)} style={styles.numInput} placeholder="0" /></div>
+                      <div style={styles.inputRow}><span>{t('lightLine')}</span><input type="number" value={room.lightLine} onChange={e => updateRoom(room.id, 'lightLine', e.target.value)} style={styles.numInput} placeholder="0" /></div>
                   </div>
                 </div>
                 <div>
