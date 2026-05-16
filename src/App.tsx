@@ -101,20 +101,19 @@ const SearchableSelect = ({ options, value, onChange, theme, placeholder, openUp
 
 // --- Холст ---
 // ════════════════════════════════════════════════════════════════════════
-// ЗАМЕНА КОМПОНЕНТА RoomCanvas В App.tsx
+// ЗАМЕНА КОМПОНЕНТА RoomCanvas В App.tsx (версия 2 — с HD canvas)
 // ────────────────────────────────────────────────────────────────────────
 // Поиск в App.tsx:   const RoomCanvas = ({ room, updateRoom, options, theme }) => {
 // Заменить функцию ЦЕЛИКОМ (от const RoomCanvas... до };) на этот код.
 //
-// ЧТО ИЗМЕНЕНО (только косметика, вся логика сохранена 1:1):
-//   • Тонкие линии вместо толстых (lineWidth 3 → 2)
-//   • Бледная сетка вместо заметной серой
-//   • Точки углов: визуально 6px вместо 10px (хитбокс 25px сохранён — палец попадает)
-//   • Точки: белый фон + тонкая синяя обводка (вместо толстой красной)
-//   • Полигон: убрана тяжёлая заливка, осталась почти прозрачная
-//   • Подписи стен: меньше плашка, аккуратнее шрифт
-//   • Factory canvas (производственный): почти как в боте — чистый белый,
-//     красные кружки в углах, тонкие тёмные линии, минимум визуального шума
+// ЧТО ИЗМЕНЕНО в этой версии:
+//   • HD-РЕНДЕРИНГ: canvas физически рендерится в ×3 разрешении (1020×960),
+//     визуально на экране — тот же 340×320. Картинка из toDataURL() теперь
+//     В 3 РАЗА ДЕТАЛЬНЕЕ → в PDF чертёж идёт чисто, без размытия и "тумана".
+//   • Factory canvas (то что в архив и в PDF) — ВСЕГДА DPR=3 независимо от устройства.
+//   • Installer canvas (на экране) — DPR подбирается под устройство (Retina = 2-3).
+//   • getMousePos переписан под HD: возвращает CSS-координаты, чтобы клики
+//     по точкам работали как раньше.
 // ════════════════════════════════════════════════════════════════════════
 
 const RoomCanvas = ({ room, updateRoom, options, theme }) => {
@@ -136,7 +135,18 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     if (!canvasRef.current) return;
     const canvasName = options.canvases.find(c => c.id === room.canvas)?.name || 'Полотно';
     const screenPts = pts.map(toScreen); const manual = room.manualWalls || {}; const canvas = canvasRef.current; const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // ─── HD-РЕНДЕРИНГ: физический canvas в ×DPR раз больше, CSS-размер прежний ───
+    const DPR_INSTALLER = Math.min(window.devicePixelRatio || 2, 3);
+    if (canvas.width !== CANVAS_WIDTH * DPR_INSTALLER) {
+        canvas.width = CANVAS_WIDTH * DPR_INSTALLER;
+        canvas.height = CANVAS_HEIGHT * DPR_INSTALLER;
+        canvas.style.width = `${CANVAS_WIDTH}px`;
+        canvas.style.height = `${CANVAS_HEIGHT}px`;
+    }
+    ctx.save();
+    ctx.scale(DPR_INSTALLER, DPR_INSTALLER);
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     // ─── Лёгкая сетка (едва заметная) ───
     ctx.strokeStyle = t.isDark ? '#1F1F22' : '#F2F2F5';
@@ -260,6 +270,8 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     ctx.fillStyle = t.accent; ctx.font = '600 11px system-ui';
     ctx.fillText(canvasName, 12, 38);
 
+    ctx.restore(); // ─── завершаем installer scope (закрываем ctx.scale)
+
     // ════════════════════════════════════════════════════════════════════
     // FACTORY CANVAS: производственный вариант, максимально чистый стиль
     // (близкий к тому, что отдаёт бот в архивный канал)
@@ -267,7 +279,17 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     const factCanvas = document.getElementById(`canvas-factory-${room.id}`);
     if (factCanvas) {
         const fCtx = factCanvas.getContext('2d');
-        fCtx.fillStyle = '#ffffff'; fCtx.fillRect(0, 0, factCanvas.width, factCanvas.height);
+
+        // ─── HD-РЕНДЕРИНГ FACTORY: всегда ×3 для чёткого PDF ───
+        const DPR_FACTORY = 3;
+        if (factCanvas.width !== CANVAS_WIDTH * DPR_FACTORY) {
+            factCanvas.width = CANVAS_WIDTH * DPR_FACTORY;
+            factCanvas.height = CANVAS_HEIGHT * DPR_FACTORY;
+        }
+        fCtx.save();
+        fCtx.scale(DPR_FACTORY, DPR_FACTORY);
+
+        fCtx.fillStyle = '#ffffff'; fCtx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
         // Очень бледная сетка
         fCtx.strokeStyle = '#F5F5F7'; fCtx.lineWidth = 0.5;
@@ -323,6 +345,8 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
         fCtx.fillText(`Производство: ${room.name}`, 12, 22);
         fCtx.fillStyle = '#ff9500'; fCtx.font = '600 11px system-ui';
         fCtx.fillText(canvasName, 12, 38);
+
+        fCtx.restore(); // ─── завершаем factory scope
     }
   }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode, room.activeDiags, selectedDiagPt, viewMode, els, activeTrackPts, draggingElement, room.canvas, room.name, options, theme]);
 
@@ -333,7 +357,16 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     if (newDiags) updateRoom(room.id, 'activeDiags', newDiags);
   };
 
-  const getMousePos = (e) => { const canvas = canvasRef.current; if(!canvas) return {x:0,y:0}; const rect = canvas.getBoundingClientRect(); const clientX = e.clientX || (e.touches && e.touches[0].clientX); const clientY = e.clientY || (e.touches && e.touches[0].clientY); const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height; return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY }; };
+  const getMousePos = (e) => {
+    const canvas = canvasRef.current;
+    if(!canvas) return {x:0,y:0};
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    // ВАЖНО: возвращаем CSS-пиксели (без умножения на DPR).
+    // Координатная система кода — 340×320 (CSS), HD-масштабирование делает ctx.scale внутри.
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  };
 
   const handlePointerDown = (e) => {
     if (viewMode !== '2d') return;
@@ -484,6 +517,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     </div>
   );
 };
+;
 
 
 // --- ЗАГЛУШКИ ДЛЯ ЭКРАНОВ ---
