@@ -350,12 +350,264 @@ const DashboardScreen = ({ t, ts }) => (
         <div style={{ background: ts.card, border: `1px solid ${ts.border}`, padding: '40px 20px', borderRadius: '20px' }}><span style={{ fontSize: '50px' }}>💸</span><h3 style={{ marginTop: '16px' }}>Здесь будет баланс и горящие клиенты</h3><p style={{ color: ts.subText, marginTop: '8px' }}>Экран в разработке...</p></div>
     </div>
 );
-const ArchiveScreen = ({ t, ts }) => (
-    <div style={{ padding: '20px', textAlign: 'center', color: ts.text }}>
-        <h2 style={{ fontSize: '28px', fontWeight: '900', marginBottom: '20px' }}>{t('archive')}</h2>
-        <div style={{ background: ts.card, border: `1px solid ${ts.border}`, padding: '40px 20px', borderRadius: '20px' }}><span style={{ fontSize: '50px' }}>🗂</span><h3 style={{ marginTop: '16px' }}>Здесь будет история замеров</h3><p style={{ color: ts.subText, marginTop: '8px' }}>Экран в разработке...</p></div>
-    </div>
-);
+// ════════════════════════════════════════════════════════════════════
+// ВСТАВЬ ЭТОТ КОМПОНЕНТ В App.tsx ВМЕСТО ТЕКУЩЕГО ArchiveScreen (заглушки)
+// Поиск:  const ArchiveScreen = ({ t, ts }) => (
+// Заменить целиком всю функцию-заглушку на этот код.
+// userId передаётся из App-компонента — App УЖЕ передаёт его в SettingsScreen,
+// так что в JSX-вызове просто добавь userId:
+//
+//   <ArchiveScreen t={t} ts={ts} userId={userId} />
+// ════════════════════════════════════════════════════════════════════
+
+const API_BASE = 'https://potolokpro777bot.website';
+
+const ArchiveScreen = ({ t, ts, userId }) => {
+    const [projects, setProjects] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [search, setSearch] = useState('');
+    const [openedId, setOpenedId] = useState(null);
+    const [openedDetail, setOpenedDetail] = useState(null);
+    const [limit, setLimit] = useState(10);
+
+    // Грузим список проектов при открытии вкладки
+    const loadProjects = async () => {
+        if (!userId) { setLoading(false); return; }
+        setLoading(true); setError(null);
+        try {
+            const res = await fetch(`${API_BASE}/api/projects?userId=${userId}`);
+            const data = await res.json();
+            if (data.projects) {
+                setProjects(data.projects);
+                if (data.limit) setLimit(data.limit);
+            } else {
+                setError(data.error || 'Не удалось загрузить архив');
+            }
+        } catch (e) {
+            setError('Ошибка сети. Проверь интернет.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { loadProjects(); }, [userId]);
+
+    // Фильтрация по поисковому запросу
+    const filtered = projects.filter(p => {
+        if (!search.trim()) return true;
+        const q = search.toLowerCase();
+        return (p.client_info || '').toLowerCase().includes(q)
+            || String(p.total || '').includes(q);
+    });
+
+    const formatDate = (ts) => {
+        if (!ts) return '—';
+        const d = new Date(ts * 1000);
+        return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })
+            + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const handleOpen = async (project) => {
+        triggerHaptic('selection');
+        setOpenedId(project.id);
+        setOpenedDetail(null);
+        try {
+            const res = await fetch(`${API_BASE}/api/project?userId=${userId}&projectId=${project.id}`);
+            const data = await res.json();
+            if (data && !data.error) setOpenedDetail(data);
+            else setOpenedDetail({ ...project, items: [] });
+        } catch {
+            setOpenedDetail({ ...project, items: [] });
+        }
+    };
+
+    const handleDelete = async (projectId, e) => {
+        e.stopPropagation();
+        triggerHaptic('heavy');
+        if (!window.confirm('Удалить этот проект из архива?')) return;
+        try {
+            await fetch(`${API_BASE}/api/project-delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, projectId })
+            });
+            setProjects(prev => prev.filter(p => p.id !== projectId));
+            if (openedId === projectId) { setOpenedId(null); setOpenedDetail(null); }
+        } catch (e) {
+            alert('Не удалось удалить');
+        }
+    };
+
+    // ─── Карточка проекта (открытая) ───
+    if (openedId && openedDetail) {
+        const p = openedDetail;
+        const items = p.items || [];
+        const canvasItems = items.filter(it => it.type === 'canvas');
+        const otherItems = items.filter(it => it.type !== 'canvas');
+        const drawings = p.drawings || [];
+
+        return (
+            <div style={{ animation: 'fadeIn 0.3s ease-in', paddingBottom: '30px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', padding: '0 8px' }}>
+                    <button onClick={() => { triggerHaptic('light'); setOpenedId(null); setOpenedDetail(null); }} style={{ background: ts.card, border: `1px solid ${ts.border}`, width: '44px', height: '44px', borderRadius: '14px', fontSize: '20px', marginRight: '12px', color: ts.text }}>‹</button>
+                    <h2 style={{ fontSize: '22px', margin: 0, fontWeight: '900', color: ts.text, flex: 1 }}>📁 Проект</h2>
+                    <button onClick={(e) => handleDelete(p.id, e)} style={{ background: 'none', border: 'none', color: ts.danger, fontSize: '24px', padding: '4px' }}>🗑</button>
+                </div>
+
+                {/* Чертежи */}
+                {drawings.length > 0 && (
+                    <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '20px', padding: '0 8px 4px' }}>
+                        {drawings.map((d, idx) => (
+                            d.installer_file_id ? (
+                                <img
+                                    key={idx}
+                                    src={`${API_BASE}/api/project-image?fileId=${d.installer_file_id}`}
+                                    alt={d.room_name}
+                                    style={{ width: '180px', height: '180px', objectFit: 'contain', borderRadius: '14px', border: `1px solid ${ts.border}`, background: '#fff', flexShrink: 0 }}
+                                />
+                            ) : null
+                        ))}
+                    </div>
+                )}
+
+                {/* Шапка */}
+                <div style={{ background: ts.card, borderRadius: '20px', padding: '20px', marginBottom: '16px', border: `1px solid ${ts.border}` }}>
+                    <div style={{ color: ts.subText, fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>{formatDate(p.created_at)}</div>
+                    <div style={{ fontSize: '15px', color: ts.text, fontWeight: '600', marginBottom: '8px' }}>👤 {p.client_info || 'Клиент не указан'}</div>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', fontSize: '13px', color: ts.subText }}>
+                        <span>🏠 {p.rooms_count || 0} комн.</span>
+                        <span>📐 {p.total_area || 0} м²</span>
+                        <span>📏 {p.total_perimeter || 0} м</span>
+                    </div>
+                    <div style={{ fontSize: '26px', fontWeight: '900', color: ts.accent, marginTop: '12px' }}>
+                        {Number(p.total || 0).toLocaleString()} {p.currency || ''}
+                    </div>
+                </div>
+
+                {/* Состав сметы */}
+                {canvasItems.length > 0 && (
+                    <div style={{ background: ts.card, borderRadius: '20px', padding: '20px', marginBottom: '16px', border: `1px solid ${ts.border}` }}>
+                        <div style={{ fontWeight: '800', fontSize: '15px', color: ts.text, marginBottom: '12px' }}>🧱 ПОЛОТНО</div>
+                        {canvasItems.map((it, i) => (
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < canvasItems.length - 1 ? `1px solid ${ts.border}` : 'none', fontSize: '13px' }}>
+                                <span style={{ color: ts.text, flex: 1, paddingRight: '8px' }}>{it.name}</span>
+                                <span style={{ color: ts.subText, marginRight: '12px' }}>{Number(it.qty).toFixed(2)} {it.unit}</span>
+                                <span style={{ color: ts.accent, fontWeight: '700' }}>{Number(it.cost).toLocaleString()}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {otherItems.length > 0 && (
+                    <div style={{ background: ts.card, borderRadius: '20px', padding: '20px', marginBottom: '16px', border: `1px solid ${ts.border}` }}>
+                        <div style={{ fontWeight: '800', fontSize: '15px', color: ts.text, marginBottom: '12px' }}>🔧 РАБОТЫ И МАТЕРИАЛЫ</div>
+                        {otherItems.map((it, i) => (
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < otherItems.length - 1 ? `1px solid ${ts.border}` : 'none', fontSize: '13px' }}>
+                                <span style={{ color: ts.text, flex: 1, paddingRight: '8px' }}>{it.name}</span>
+                                <span style={{ color: ts.subText, marginRight: '12px' }}>{Number(it.qty)} {it.unit}</span>
+                                <span style={{ color: ts.accent, fontWeight: '700' }}>{Number(it.cost).toLocaleString()}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // ─── Список проектов ───
+    return (
+        <div style={{ animation: 'fadeIn 0.3s ease-in', paddingBottom: '30px' }}>
+            <h2 style={{ fontSize: '28px', margin: '0 8px 16px', fontWeight: '900', color: ts.text }}>🗂 {t('archive')}</h2>
+
+            {/* Поиск */}
+            {projects.length > 0 && (
+                <div style={{ padding: '0 8px 16px' }}>
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="🔍 Поиск по клиенту или сумме..."
+                        style={{ width: '100%', padding: '14px 16px', borderRadius: '14px', border: `1px solid ${ts.border}`, background: ts.inputBg, color: ts.text, fontSize: '15px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                </div>
+            )}
+
+            {loading && (
+                <div style={{ textAlign: 'center', color: ts.subText, padding: '60px 20px', fontSize: '15px' }}>⏳ Загружаю архив...</div>
+            )}
+
+            {error && (
+                <div style={{ background: ts.card, border: `1px solid ${ts.danger}40`, padding: '20px', borderRadius: '16px', margin: '0 8px', color: ts.danger, textAlign: 'center' }}>
+                    {error}
+                    <button onClick={loadProjects} style={{ display: 'block', margin: '12px auto 0', padding: '10px 20px', background: ts.accent, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '700' }}>Повторить</button>
+                </div>
+            )}
+
+            {!loading && !error && projects.length === 0 && (
+                <div style={{ background: ts.card, border: `1px solid ${ts.border}`, padding: '40px 20px', borderRadius: '20px', margin: '0 8px', textAlign: 'center', color: ts.text }}>
+                    <div style={{ fontSize: '50px', marginBottom: '12px' }}>🗂</div>
+                    <h3 style={{ margin: '0 0 8px', fontSize: '17px' }}>Архив пуст</h3>
+                    <p style={{ color: ts.subText, margin: 0, fontSize: '14px' }}>Сделай первый расчёт — он сохранится сюда автоматически.</p>
+                </div>
+            )}
+
+            {!loading && !error && projects.length > 0 && filtered.length === 0 && (
+                <div style={{ textAlign: 'center', color: ts.subText, padding: '40px 20px' }}>
+                    По запросу «{search}» ничего не найдено
+                </div>
+            )}
+
+            {/* Список карточек */}
+            {filtered.map(p => (
+                <div
+                    key={p.id}
+                    onClick={() => handleOpen(p)}
+                    style={{ background: ts.card, borderRadius: '18px', padding: '14px', marginBottom: '12px', border: `1px solid ${ts.border}`, display: 'flex', gap: '14px', alignItems: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+                >
+                    {/* Превью чертежа */}
+                    {p.preview_file_id ? (
+                        <img
+                            src={`${API_BASE}/api/project-image?fileId=${p.preview_file_id}`}
+                            alt=""
+                            style={{ width: '70px', height: '70px', objectFit: 'contain', borderRadius: '12px', background: '#fff', border: `1px solid ${ts.border}`, flexShrink: 0 }}
+                        />
+                    ) : (
+                        <div style={{ width: '70px', height: '70px', borderRadius: '12px', background: ts.inputBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', flexShrink: 0 }}>📐</div>
+                    )}
+
+                    {/* Инфо */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ color: ts.subText, fontSize: '11px', fontWeight: '700', marginBottom: '2px' }}>{formatDate(p.created_at)}</div>
+                        <div style={{ color: ts.text, fontWeight: '700', fontSize: '14px', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            👤 {p.client_info || 'Клиент не указан'}
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: ts.subText }}>
+                            <span>🏠 {p.rooms_count || 0}</span>
+                            <span>📐 {p.total_area || 0} м²</span>
+                        </div>
+                        <div style={{ color: ts.accent, fontWeight: '900', fontSize: '17px', marginTop: '4px' }}>
+                            {Number(p.total || 0).toLocaleString()} {p.currency || ''}
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={(e) => handleDelete(p.id, e)}
+                        style={{ background: 'none', border: 'none', color: ts.danger, fontSize: '22px', padding: '8px', flexShrink: 0 }}
+                    >🗑</button>
+                </div>
+            ))}
+
+            {/* Счётчик лимита */}
+            {!loading && projects.length > 0 && (
+                <div style={{ textAlign: 'center', color: ts.subText, fontSize: '12px', padding: '16px 8px', fontWeight: '600' }}>
+                    {projects.length} из {limit} проектов
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 // ⭐️ ЭКРАН НАСТРОЕК (ПРАЙС-ЛИСТ) ⭐️
 const SettingsScreen = ({ t, ts, priceData, setPriceData, userId }) => {
@@ -791,7 +1043,7 @@ function App() {
                   <button onClick={addRoom} style={{ width: '100%', padding: '18px', background: 'transparent', color: ts.accent, border: `2px dashed ${ts.accent}`, borderRadius: '16px', fontSize: '16px', fontWeight: '800', marginBottom: '20px' }}>➕ {t('addRoom')}</button>
               </div>
 
-              <div style={{ display: activeTab === 'archive' ? 'block' : 'none' }}><ArchiveScreen t={t} ts={ts} /></div>
+              <div style={{ display: activeTab === 'archive' ? 'block' : 'none' }}><ArchiveScreen t={t} ts={ts} userId={userId} /></div>
               
               <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}>
                   <SettingsScreen t={t} ts={ts} priceData={priceData} setPriceData={setPriceData} userId={userId} />
