@@ -155,8 +155,8 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     ctx.scale(DPR_INSTALLER, DPR_INSTALLER);
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // ─── Лёгкая сетка (едва заметная) ───
-    ctx.strokeStyle = t.isDark ? '#1F1F22' : '#F2F2F5';
+    // ─── Сетка (заметная, чтобы видеть куда тянешь точку) ───
+    ctx.strokeStyle = t.isDark ? '#2C2C2E' : '#E5E5EA';
     ctx.lineWidth = 0.5;
     const step = scale; const startX = offset.x % step; const startY = offset.y % step;
     for(let i = startX; i < canvas.width; i += step) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
@@ -340,10 +340,10 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
         const diagsLines = wrapItems(diagsList);
 
         // ─── Высота шапки с замерами ───
-        const HEADER_BASE = 28; // заголовок "Замеры[N]:"
+        const TOP_PADDING = 10;
         const wallsBlockH = wallsLines.length * LINE_H + 4;
         const diagsBlockH = diagsLines.length > 0 ? (diagsLines.length * LINE_H + 14) : 0;
-        const HEADER_HEIGHT = HEADER_BASE + wallsBlockH + diagsBlockH + 16;
+        const HEADER_HEIGHT = TOP_PADDING + wallsBlockH + diagsBlockH + 30;
         const DRAW_HEIGHT = 320;
         const FACTORY_HEIGHT = HEADER_HEIGHT + DRAW_HEIGHT;
 
@@ -357,15 +357,10 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
         fCtx.scale(DPR_FACTORY, DPR_FACTORY);
         fCtx.fillStyle = '#ffffff'; fCtx.fillRect(0, 0, WIDTH, FACTORY_HEIGHT);
 
-        // ─── ШАПКА: замеры ───
+        // ─── ШАПКА: только замеры, без дублирующего заголовка ───
         fCtx.textAlign = 'left'; fCtx.textBaseline = 'top';
 
-        // Заголовок "Замеры[N][L]: Помещение N"
-        const totalMeasures = wallsList.length + diagsList.length;
-        fCtx.fillStyle = '#1c1c1e'; fCtx.font = '700 13px monospace';
-        fCtx.fillText(`Замеры[${totalMeasures}][L]: ${room.name}`, PADDING, 8);
-
-        let y = HEADER_BASE;
+        let y = 10;
         fCtx.font = MEASURE_FONT; fCtx.fillStyle = '#1c1c1e';
         for (const line of wallsLines) {
             fCtx.fillText(line, PADDING, y);
@@ -505,6 +500,46 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
 
   const handleModeSwitch = (newMode) => { triggerHaptic('light'); setMode(mode === newMode ? 'drag' : newMode); setSelectedDiagPt(null); setActiveTrackPts([]); setDraggingElement(null); };
 
+  // ─── ВЫРОВНЯТЬ УГЛЫ ПО 90° ───
+  // Идея: находим близкие точки по X и Y (кластеризация),
+  // и приводим их к общему значению. Так Г-, П-, Т-формы становятся
+  // строго прямоугольными за один клик.
+  const snapOrthogonal = () => {
+      triggerHaptic('heavy');
+      if (!pts || pts.length < 3) return;
+
+      const TOL = 0.4; // м: точки в этом радиусе считаем «одной линией»
+
+      const cluster = (values) => {
+          const sorted = values.map((v, i) => ({ v, i })).sort((a, b) => a.v - b.v);
+          const groups = [[sorted[0]]];
+          for (let k = 1; k < sorted.length; k++) {
+              const last = groups[groups.length - 1];
+              if (sorted[k].v - last[last.length - 1].v < TOL) last.push(sorted[k]);
+              else groups.push([sorted[k]]);
+          }
+          const map = new Map();
+          for (const g of groups) {
+              const avg = g.reduce((s, x) => s + x.v, 0) / g.length;
+              for (const x of g) map.set(x.i, Number(avg.toFixed(3)));
+          }
+          return map;
+      };
+
+      const xMap = cluster(pts.map(p => p.x));
+      const yMap = cluster(pts.map(p => p.y));
+
+      const newPts = pts.map((p, i) => ({
+          x: xMap.get(i) ?? p.x,
+          y: yMap.get(i) ?? p.y,
+      }));
+
+      // Сбрасываем ручные значения стен — они уже неактуальны после выравнивания
+      updateRoom(room.id, 'manualWalls', {});
+      setPts(newPts);
+      updateAreaPerimAndSave(centerShape(newPts));
+  };
+
   // Имя стены ВСЕГДА в алфавитном порядке (используется в JSX-блоке инпутов)
   const sortedWallName = (i, n) => {
       const a = String.fromCharCode(65 + i);
@@ -541,6 +576,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
                     <button onClick={() => handleModeSwitch('add')} style={{ flex: 1, padding: '10px 4px', background: mode === 'add' ? t.success : t.inputBg, color: mode === 'add' ? '#fff' : t.accent, borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '12px', transition: '0.2s' }}>{mode === 'add' ? 'Отмена' : '➕ Угол'}</button>
                     <button onClick={() => handleModeSwitch('remove')} style={{ flex: 1, padding: '10px 4px', background: mode === 'remove' ? t.danger : t.inputBg, color: mode === 'remove' ? '#fff' : t.danger, borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '12px', transition: '0.2s' }}>{mode === 'remove' ? 'Отмена' : '➖ Ластик'}</button>
                     <button onClick={() => handleModeSwitch('add_diag')} style={{ flex: 1, padding: '10px 4px', background: mode === 'add_diag' ? t.warning : t.inputBg, color: mode === 'add_diag' ? '#fff' : t.warning, borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '12px', transition: '0.2s' }}>{mode === 'add_diag' ? 'Отмена' : '📏 Диагональ'}</button>
+                    <button onClick={snapOrthogonal} style={{ flex: 1, padding: '10px 4px', background: t.inputBg, color: t.accent, borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '12px', transition: '0.2s' }}>📐 Прямые</button>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                     <button onClick={() => handleModeSwitch('spot')} style={{ flex: 1, padding: '10px 2px', background: mode === 'spot' ? '#FFD60A' : t.inputBg, color: mode === 'spot' ? '#1C1C1E' : t.text, borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '12px', transition: '0.2s' }}>💡 Точка</button>
@@ -593,6 +629,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     </div>
   );
 };
+
 
 
 
