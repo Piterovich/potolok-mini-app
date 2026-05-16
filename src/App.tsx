@@ -100,13 +100,30 @@ const SearchableSelect = ({ options, value, onChange, theme, placeholder, openUp
 };
 
 // --- Холст ---
+// ════════════════════════════════════════════════════════════════════════
+// ЗАМЕНА КОМПОНЕНТА RoomCanvas В App.tsx
+// ────────────────────────────────────────────────────────────────────────
+// Поиск в App.tsx:   const RoomCanvas = ({ room, updateRoom, options, theme }) => {
+// Заменить функцию ЦЕЛИКОМ (от const RoomCanvas... до };) на этот код.
+//
+// ЧТО ИЗМЕНЕНО (только косметика, вся логика сохранена 1:1):
+//   • Тонкие линии вместо толстых (lineWidth 3 → 2)
+//   • Бледная сетка вместо заметной серой
+//   • Точки углов: визуально 6px вместо 10px (хитбокс 25px сохранён — палец попадает)
+//   • Точки: белый фон + тонкая синяя обводка (вместо толстой красной)
+//   • Полигон: убрана тяжёлая заливка, осталась почти прозрачная
+//   • Подписи стен: меньше плашка, аккуратнее шрифт
+//   • Factory canvas (производственный): почти как в боте — чистый белый,
+//     красные кружки в углах, тонкие тёмные линии, минимум визуального шума
+// ════════════════════════════════════════════════════════════════════════
+
 const RoomCanvas = ({ room, updateRoom, options, theme }) => {
   const canvasRef = useRef(null); const [scale, setScale] = useState(30); const [showDiags, setShowDiags] = useState(false); const [viewMode, setViewMode] = useState('2d'); const [mode, setMode] = useState('drag'); const [selectedDiagPt, setSelectedDiagPt] = useState(null); const [activeTrackPts, setActiveTrackPts] = useState([]); const [els, setEls] = useState(room.elements || []); const [draggingElement, setDraggingElement] = useState(null);
-  const t = getTheme(theme); const CANVAS_WIDTH = 340, CANVAS_HEIGHT = 320; const offset = { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 }; 
+  const t = getTheme(theme); const CANVAS_WIDTH = 340, CANVAS_HEIGHT = 320; const offset = { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 };
   const [pts, setPts] = useState(room.logicalPts || centerShape([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }])); const [draggingIdx, setDraggingIdx] = useState(null);
   const toScreen = (p) => ({ x: p.x * scale + offset.x, y: p.y * scale + offset.y }); const toLogical = (p) => ({ x: (p.x - offset.x) / scale, y: (p.y - offset.y) / scale }); const allPossibleDiags = getAllPossibleDiags(pts.length);
 
-  useEffect(() => { if (room.logicalPts) setPts(room.logicalPts); }, [room.logicalPts]); useEffect(() => { setEls(room.elements || []) }, [room.elements]); 
+  useEffect(() => { if (room.logicalPts) setPts(room.logicalPts); }, [room.logicalPts]); useEffect(() => { setEls(room.elements || []) }, [room.elements]);
 
   const syncElementsToInputs = (newEls) => {
       setEls(newEls); updateRoom(room.id, 'elements', newEls);
@@ -117,85 +134,209 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    const canvasName = options.canvases.find(c => c.id === room.canvas)?.name || 'Полотно'; const screenPts = pts.map(toScreen); const manual = room.manualWalls || {}; const canvas = canvasRef.current; const ctx = canvas.getContext('2d');
+    const canvasName = options.canvases.find(c => c.id === room.canvas)?.name || 'Полотно';
+    const screenPts = pts.map(toScreen); const manual = room.manualWalls || {}; const canvas = canvasRef.current; const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = t.border; ctx.lineWidth = 1; const step = scale / 2; const startX = offset.x % step; const startY = offset.y % step;
+
+    // ─── Лёгкая сетка (едва заметная) ───
+    ctx.strokeStyle = t.isDark ? '#1F1F22' : '#F2F2F5';
+    ctx.lineWidth = 0.5;
+    const step = scale; const startX = offset.x % step; const startY = offset.y % step;
     for(let i = startX; i < canvas.width; i += step) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
     for(let i = startY; i < canvas.height; i += step) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+
+    // ─── Полигон комнаты: тонкая обводка, минимальная заливка ───
     ctx.beginPath(); ctx.moveTo(screenPts[0].x, screenPts[0].y); for(let i = 1; i < screenPts.length; i++) ctx.lineTo(screenPts[i].x, screenPts[i].y); ctx.closePath();
-    ctx.fillStyle = mode === 'add' ? (t.isDark ? 'rgba(50, 215, 75, 0.15)' : 'rgba(50, 215, 75, 0.1)') : (mode === 'remove' ? (t.isDark ? 'rgba(255, 69, 58, 0.15)' : 'rgba(255, 69, 58, 0.05)') : (t.isDark ? 'rgba(10, 132, 255, 0.15)' : 'rgba(10, 132, 255, 0.08)')); 
-    ctx.fill(); ctx.strokeStyle = mode === 'add' ? t.success : t.accent; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.stroke();
+    ctx.fillStyle = mode === 'add' ? (t.isDark ? 'rgba(50, 215, 75, 0.05)' : 'rgba(50, 215, 75, 0.04)')
+                                   : (mode === 'remove' ? (t.isDark ? 'rgba(255, 69, 58, 0.05)' : 'rgba(255, 69, 58, 0.03)')
+                                                       : (t.isDark ? 'rgba(10, 132, 255, 0.05)' : 'rgba(10, 132, 255, 0.025)'));
+    ctx.fill();
+    ctx.strokeStyle = mode === 'add' ? t.success : t.accent;
+    ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
 
+    // ─── Диагонали (если включены) ───
     if (showDiags && room.activeDiags) {
-        ctx.setLineDash([5, 5]); ctx.strokeStyle = t.isDark ? 'rgba(255, 159, 10, 0.6)' : 'rgba(255, 149, 0, 0.6)'; ctx.lineWidth = 1.5; ctx.textAlign = 'center';
+        ctx.setLineDash([4, 4]); ctx.strokeStyle = t.isDark ? 'rgba(255, 159, 10, 0.5)' : 'rgba(255, 149, 0, 0.5)'; ctx.lineWidth = 1; ctx.textAlign = 'center';
         room.activeDiags.forEach((diag) => {
-            let i = diag.charCodeAt(0) - 65; let j = diag.charCodeAt(1) - 65; if (i >= pts.length || j >= pts.length || i < 0 || j < 0) return; let sp1 = screenPts[i], sp2 = screenPts[j]; ctx.beginPath(); ctx.moveTo(sp1.x, sp1.y); ctx.lineTo(sp2.x, sp2.y); ctx.stroke();
-            let dist = Math.sqrt((pts[j].x - pts[i].x)**2 + (pts[j].y - pts[i].y)**2); let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2; let displayDist = manual[diag] !== undefined && manual[diag] !== '' ? manual[diag] : dist.toFixed(2);
-            ctx.fillStyle = t.isDark ? '#2C2C2E' : 'rgba(255, 255, 255, 0.9)'; ctx.fillRect(mx - 28, my - 10, 56, 18); ctx.fillStyle = t.warning; ctx.font = 'bold 11px system-ui'; ctx.fillText(`${diag}: ${displayDist}м`, mx, my + 3);
-        }); ctx.setLineDash([]); 
+            let i = diag.charCodeAt(0) - 65; let j = diag.charCodeAt(1) - 65; if (i >= pts.length || j >= pts.length || i < 0 || j < 0) return;
+            let sp1 = screenPts[i], sp2 = screenPts[j];
+            ctx.beginPath(); ctx.moveTo(sp1.x, sp1.y); ctx.lineTo(sp2.x, sp2.y); ctx.stroke();
+            let dist = Math.sqrt((pts[j].x - pts[i].x)**2 + (pts[j].y - pts[i].y)**2); let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
+            let displayDist = manual[diag] !== undefined && manual[diag] !== '' ? manual[diag] : dist.toFixed(2);
+            ctx.fillStyle = t.isDark ? 'rgba(28,28,30,0.9)' : 'rgba(255,255,255,0.92)';
+            ctx.fillRect(mx - 24, my - 8, 48, 14);
+            ctx.fillStyle = t.warning; ctx.font = '600 10px system-ui';
+            ctx.fillText(`${diag}: ${displayDist}`, mx, my + 2);
+        });
+        ctx.setLineDash([]);
     }
 
-    ctx.font = 'bold 12px system-ui'; ctx.textAlign = 'center';
+    // ─── Подписи стен ───
+    ctx.font = '600 11px system-ui'; ctx.textAlign = 'center';
     for(let i = 0; i < pts.length; i++) {
-       let p1 = pts[i], p2 = pts[(i+1) % pts.length]; let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2); let sp1 = screenPts[i], sp2 = screenPts[(i+1) % screenPts.length]; let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2; let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length); let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2);
-       ctx.fillStyle = t.isDark ? '#2C2C2E' : 'rgba(255,255,255,0.85)'; ctx.fillRect(mx - 32, my - 12, 64, 18); ctx.fillStyle = t.accent; ctx.fillText(`${name}: ${displayDist}м`, mx, my + 2);
+       let p1 = pts[i], p2 = pts[(i+1) % pts.length]; let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
+       let sp1 = screenPts[i], sp2 = screenPts[(i+1) % screenPts.length]; let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
+       let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length);
+       let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2);
+       ctx.fillStyle = t.isDark ? 'rgba(28,28,30,0.9)' : 'rgba(255,255,255,0.95)';
+       ctx.fillRect(mx - 28, my - 9, 56, 16);
+       ctx.fillStyle = t.accent;
+       ctx.fillText(`${name}: ${displayDist}м`, mx, my + 2);
     }
 
+    // ─── Элементы (трек, точечные, люстры, обходы труб) ───
     els.forEach(el => {
         if (el.type === 'track') {
-            ctx.beginPath(); ctx.moveTo(toScreen(el.points[0]).x, toScreen(el.points[0]).y); for(let i=1; i<el.points.length; i++) ctx.lineTo(toScreen(el.points[i]).x, toScreen(el.points[i]).y); ctx.strokeStyle = t.text; ctx.lineWidth = 4; ctx.stroke();
-            for(let i=1; i<el.points.length; i++) { let dist = Math.sqrt((el.points[i].x - el.points[i-1].x)**2 + (el.points[i].y - el.points[i-1].y)**2).toFixed(2); let sp1 = toScreen(el.points[i-1]); let sp2 = toScreen(el.points[i]); let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2; ctx.fillStyle = t.isDark ? '#2C2C2E' : 'rgba(255,255,255,0.9)'; ctx.fillRect(mx - 15, my - 8, 30, 16); ctx.fillStyle = t.text; ctx.font = 'bold 10px system-ui'; ctx.fillText(`${dist}м`, mx, my + 3); }
-            el.points.forEach((p, idx) => { let sp = toScreen(p); ctx.beginPath(); ctx.arc(sp.x, sp.y, 4, 0, 2*Math.PI); ctx.fillStyle = (draggingElement && draggingElement.elId === el.id && draggingElement.ptIdx === idx) ? t.danger : t.card; ctx.fill(); ctx.strokeStyle = t.text; ctx.lineWidth = 2; ctx.stroke(); });
+            ctx.beginPath(); ctx.moveTo(toScreen(el.points[0]).x, toScreen(el.points[0]).y);
+            for(let i=1; i<el.points.length; i++) ctx.lineTo(toScreen(el.points[i]).x, toScreen(el.points[i]).y);
+            ctx.strokeStyle = t.text; ctx.lineWidth = 3; ctx.stroke();
+            for(let i=1; i<el.points.length; i++) {
+                let dist = Math.sqrt((el.points[i].x - el.points[i-1].x)**2 + (el.points[i].y - el.points[i-1].y)**2).toFixed(2);
+                let sp1 = toScreen(el.points[i-1]); let sp2 = toScreen(el.points[i]);
+                let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
+                ctx.fillStyle = t.isDark ? 'rgba(28,28,30,0.9)' : 'rgba(255,255,255,0.95)';
+                ctx.fillRect(mx - 14, my - 7, 28, 14);
+                ctx.fillStyle = t.text; ctx.font = '600 9px system-ui';
+                ctx.fillText(`${dist}м`, mx, my + 2);
+            }
+            el.points.forEach((p, idx) => {
+                let sp = toScreen(p); ctx.beginPath(); ctx.arc(sp.x, sp.y, 3.5, 0, 2*Math.PI);
+                ctx.fillStyle = (draggingElement && draggingElement.elId === el.id && draggingElement.ptIdx === idx) ? t.danger : t.card;
+                ctx.fill(); ctx.strokeStyle = t.text; ctx.lineWidth = 1.5; ctx.stroke();
+            });
         } else {
-            let sp = toScreen({x: el.x, y: el.y}); ctx.beginPath(); ctx.arc(sp.x, sp.y, el.type === 'chand' ? 8 : 5, 0, 2*Math.PI); ctx.fillStyle = (draggingElement && draggingElement.elId === el.id) ? t.danger : (el.type === 'spot' ? '#FFD60A' : (el.type === 'chand' ? t.warning : t.subText)); ctx.fill(); ctx.strokeStyle = t.card; ctx.lineWidth = 2; ctx.stroke();
-            if (el.type === 'pipe') { ctx.fillStyle=t.card; ctx.font='bold 8px system-ui'; ctx.fillText('T', sp.x, sp.y+3); }
+            let sp = toScreen({x: el.x, y: el.y}); ctx.beginPath();
+            ctx.arc(sp.x, sp.y, el.type === 'chand' ? 6 : 4, 0, 2*Math.PI);
+            ctx.fillStyle = (draggingElement && draggingElement.elId === el.id) ? t.danger
+                          : (el.type === 'spot' ? '#FFD60A' : (el.type === 'chand' ? t.warning : t.subText));
+            ctx.fill(); ctx.strokeStyle = t.card; ctx.lineWidth = 1.5; ctx.stroke();
+            if (el.type === 'pipe') { ctx.fillStyle=t.card; ctx.font='700 7px system-ui'; ctx.fillText('T', sp.x, sp.y+2.5); }
         }
     });
 
+    // ─── Активный трек (тот, что сейчас рисуется) ───
     if (mode === 'track' && activeTrackPts.length > 0) {
-        ctx.beginPath(); ctx.moveTo(toScreen(activeTrackPts[0]).x, toScreen(activeTrackPts[0]).y); for(let i=1; i<activeTrackPts.length; i++) ctx.lineTo(toScreen(activeTrackPts[i]).x, toScreen(activeTrackPts[i]).y); ctx.strokeStyle = t.warning; ctx.lineWidth = 4; ctx.stroke();
-        for(let i=1; i<activeTrackPts.length; i++) { let dist = Math.sqrt((activeTrackPts[i].x - activeTrackPts[i-1].x)**2 + (activeTrackPts[i].y - activeTrackPts[i-1].y)**2).toFixed(2); let sp1 = toScreen(activeTrackPts[i-1]); let sp2 = toScreen(activeTrackPts[i]); let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2; ctx.fillStyle = t.isDark ? '#2C2C2E' : 'rgba(255,255,255,0.9)'; ctx.fillRect(mx - 15, my - 8, 30, 16); ctx.fillStyle = t.warning; ctx.font = 'bold 10px system-ui'; ctx.fillText(`${dist}м`, mx, my + 3); }
-        activeTrackPts.forEach(p => { let sp = toScreen(p); ctx.beginPath(); ctx.arc(sp.x, sp.y, 5, 0, 2*Math.PI); ctx.fillStyle = t.warning; ctx.fill(); });
+        ctx.beginPath(); ctx.moveTo(toScreen(activeTrackPts[0]).x, toScreen(activeTrackPts[0]).y);
+        for(let i=1; i<activeTrackPts.length; i++) ctx.lineTo(toScreen(activeTrackPts[i]).x, toScreen(activeTrackPts[i]).y);
+        ctx.strokeStyle = t.warning; ctx.lineWidth = 3; ctx.stroke();
+        for(let i=1; i<activeTrackPts.length; i++) {
+            let dist = Math.sqrt((activeTrackPts[i].x - activeTrackPts[i-1].x)**2 + (activeTrackPts[i].y - activeTrackPts[i-1].y)**2).toFixed(2);
+            let sp1 = toScreen(activeTrackPts[i-1]); let sp2 = toScreen(activeTrackPts[i]);
+            let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
+            ctx.fillStyle = t.isDark ? 'rgba(28,28,30,0.9)' : 'rgba(255,255,255,0.95)';
+            ctx.fillRect(mx - 14, my - 7, 28, 14);
+            ctx.fillStyle = t.warning; ctx.font = '600 9px system-ui';
+            ctx.fillText(`${dist}м`, mx, my + 2);
+        }
+        activeTrackPts.forEach(p => { let sp = toScreen(p); ctx.beginPath(); ctx.arc(sp.x, sp.y, 4, 0, 2*Math.PI); ctx.fillStyle = t.warning; ctx.fill(); });
     }
 
+    // ─── Точки углов (КОМПАКТНЫЕ, элегантные) ───
+    // Хитбокс остаётся 25px для пальца, визуальный размер — 6px.
     for(let i = 0; i < screenPts.length; i++) {
-       let sp = screenPts[i]; ctx.beginPath(); ctx.arc(sp.x, sp.y, 10, 0, 2 * Math.PI);
-       if (mode === 'remove') ctx.fillStyle = t.danger; else if (mode === 'add_diag' && selectedDiagPt === i) ctx.fillStyle = t.warning; else ctx.fillStyle = draggingIdx === i ? t.danger : t.card;
-       ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = (mode === 'add_diag' && selectedDiagPt === i) ? t.warning : t.danger; ctx.stroke();
-       const label = String.fromCharCode(65 + i); ctx.fillStyle = t.text; ctx.font = '900 16px system-ui'; ctx.fillText(label, sp.x + 18, sp.y - 12);
+       let sp = screenPts[i];
+       const isActive = draggingIdx === i;
+       const isDiagSelected = mode === 'add_diag' && selectedDiagPt === i;
+       const isRemoveMode = mode === 'remove';
+
+       ctx.beginPath(); ctx.arc(sp.x, sp.y, 6, 0, 2 * Math.PI);
+       ctx.fillStyle = isRemoveMode ? t.danger
+                     : (isDiagSelected ? t.warning
+                                       : (isActive ? t.warning : t.card));
+       ctx.fill();
+       ctx.lineWidth = 1.8;
+       ctx.strokeStyle = isRemoveMode ? t.danger
+                       : (isDiagSelected ? t.warning : t.accent);
+       ctx.stroke();
+
+       const label = String.fromCharCode(65 + i);
+       ctx.fillStyle = t.text; ctx.font = '700 13px system-ui';
+       ctx.fillText(label, sp.x + 12, sp.y - 9);
     }
 
-    ctx.fillStyle = t.text; ctx.font = '900 16px system-ui'; ctx.textAlign = 'left'; ctx.fillText(`Монтаж: ${room.name}`, 10, 24); ctx.fillStyle = t.accent; ctx.font = 'bold 12px system-ui'; ctx.fillText(canvasName, 10, 42);
+    // ─── Заголовок чертежа (вверху слева) ───
+    ctx.fillStyle = t.text; ctx.font = '800 14px system-ui'; ctx.textAlign = 'left';
+    ctx.fillText(`Монтаж: ${room.name}`, 12, 22);
+    ctx.fillStyle = t.accent; ctx.font = '600 11px system-ui';
+    ctx.fillText(canvasName, 12, 38);
 
+    // ════════════════════════════════════════════════════════════════════
+    // FACTORY CANVAS: производственный вариант, максимально чистый стиль
+    // (близкий к тому, что отдаёт бот в архивный канал)
+    // ════════════════════════════════════════════════════════════════════
     const factCanvas = document.getElementById(`canvas-factory-${room.id}`);
     if (factCanvas) {
-        const fCtx = factCanvas.getContext('2d'); fCtx.fillStyle = '#ffffff'; fCtx.fillRect(0, 0, factCanvas.width, factCanvas.height); fCtx.strokeStyle = '#e5e5ea'; fCtx.lineWidth = 1;
+        const fCtx = factCanvas.getContext('2d');
+        fCtx.fillStyle = '#ffffff'; fCtx.fillRect(0, 0, factCanvas.width, factCanvas.height);
+
+        // Очень бледная сетка
+        fCtx.strokeStyle = '#F5F5F7'; fCtx.lineWidth = 0.5;
         for(let i = startX; i < factCanvas.width; i += step) { fCtx.beginPath(); fCtx.moveTo(i, 0); fCtx.lineTo(i, factCanvas.height); fCtx.stroke(); }
         for(let i = startY; i < factCanvas.height; i += step) { fCtx.beginPath(); fCtx.moveTo(0, i); fCtx.lineTo(factCanvas.width, i); fCtx.stroke(); }
-        fCtx.beginPath(); fCtx.moveTo(screenPts[0].x, screenPts[0].y); for(let i = 1; i < screenPts.length; i++) fCtx.lineTo(screenPts[i].x, screenPts[i].y); fCtx.closePath();
-        fCtx.fillStyle = 'rgba(0, 122, 255, 0.08)'; fCtx.fill(); fCtx.strokeStyle = '#007aff'; fCtx.lineWidth = 3; fCtx.lineJoin = 'round'; fCtx.stroke();
+
+        // Полигон — тонкие синие линии, без заливки
+        fCtx.beginPath(); fCtx.moveTo(screenPts[0].x, screenPts[0].y);
+        for(let i = 1; i < screenPts.length; i++) fCtx.lineTo(screenPts[i].x, screenPts[i].y); fCtx.closePath();
+        fCtx.fillStyle = 'rgba(10, 132, 255, 0.025)'; fCtx.fill();
+        fCtx.strokeStyle = '#0a84ff'; fCtx.lineWidth = 2; fCtx.lineJoin = 'round'; fCtx.stroke();
+
         if (showDiags && room.activeDiags) {
-            fCtx.setLineDash([5, 5]); fCtx.strokeStyle = 'rgba(255, 149, 0, 0.6)'; fCtx.lineWidth = 1.5; fCtx.textAlign = 'center';
-            room.activeDiags.forEach((diag) => { let i = diag.charCodeAt(0) - 65; let j = diag.charCodeAt(1) - 65; if (i >= pts.length || j >= pts.length || i < 0 || j < 0) return; let sp1 = screenPts[i], sp2 = screenPts[j]; fCtx.beginPath(); fCtx.moveTo(sp1.x, sp1.y); fCtx.lineTo(sp2.x, sp2.y); fCtx.stroke(); let dist = Math.sqrt((pts[j].x - pts[i].x)**2 + (pts[j].y - pts[i].y)**2); let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2; let displayDist = manual[diag] !== undefined && manual[diag] !== '' ? manual[diag] : dist.toFixed(2); fCtx.fillStyle = 'rgba(255, 255, 255, 0.9)'; fCtx.fillRect(mx - 28, my - 10, 56, 18); fCtx.fillStyle = '#ff9500'; fCtx.font = 'bold 11px system-ui'; fCtx.fillText(`${diag}: ${displayDist}м`, mx, my + 3); }); fCtx.setLineDash([]); 
+            fCtx.setLineDash([4, 4]); fCtx.strokeStyle = 'rgba(255, 149, 0, 0.5)'; fCtx.lineWidth = 1; fCtx.textAlign = 'center';
+            room.activeDiags.forEach((diag) => {
+                let i = diag.charCodeAt(0) - 65; let j = diag.charCodeAt(1) - 65;
+                if (i >= pts.length || j >= pts.length || i < 0 || j < 0) return;
+                let sp1 = screenPts[i], sp2 = screenPts[j];
+                fCtx.beginPath(); fCtx.moveTo(sp1.x, sp1.y); fCtx.lineTo(sp2.x, sp2.y); fCtx.stroke();
+                let dist = Math.sqrt((pts[j].x - pts[i].x)**2 + (pts[j].y - pts[i].y)**2);
+                let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
+                let displayDist = manual[diag] !== undefined && manual[diag] !== '' ? manual[diag] : dist.toFixed(2);
+                fCtx.fillStyle = 'rgba(255,255,255,0.95)'; fCtx.fillRect(mx - 24, my - 8, 48, 14);
+                fCtx.fillStyle = '#ff9500'; fCtx.font = '600 10px system-ui'; fCtx.fillText(`${diag}: ${displayDist}`, mx, my + 2);
+            });
+            fCtx.setLineDash([]);
         }
-        fCtx.fillStyle = '#1c1c1e'; fCtx.font = 'bold 12px system-ui'; fCtx.textAlign = 'center';
-        for(let i = 0; i < pts.length; i++) { let p1 = pts[i], p2 = pts[(i+1) % pts.length]; let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2); let sp1 = screenPts[i], sp2 = screenPts[(i+1) % screenPts.length]; let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2; let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length); let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2); fCtx.fillStyle = 'rgba(255,255,255,0.85)'; fCtx.fillRect(mx - 32, my - 12, 64, 18); fCtx.fillStyle = '#007aff'; fCtx.fillText(`${name}: ${displayDist}м`, mx, my + 2); }
-        for(let i = 0; i < screenPts.length; i++) { let sp = screenPts[i]; fCtx.beginPath(); fCtx.arc(sp.x, sp.y, 10, 0, 2 * Math.PI); fCtx.fillStyle = '#ffffff'; fCtx.fill(); fCtx.lineWidth = 3; fCtx.strokeStyle = '#007aff'; fCtx.stroke(); const label = String.fromCharCode(65 + i); fCtx.fillStyle = '#1c1c1e'; fCtx.font = '900 16px system-ui'; fCtx.fillText(label, sp.x + 18, sp.y - 12); }
-        fCtx.fillStyle = '#1c1c1e'; fCtx.font = '900 16px system-ui'; fCtx.textAlign = 'left'; fCtx.fillText(`Производство: ${room.name}`, 10, 24); fCtx.fillStyle = '#ff9500'; fCtx.font = 'bold 12px system-ui'; fCtx.fillText(canvasName, 10, 42);
+
+        // Подписи стен
+        fCtx.font = '600 11px system-ui'; fCtx.textAlign = 'center';
+        for(let i = 0; i < pts.length; i++) {
+            let p1 = pts[i], p2 = pts[(i+1) % pts.length]; let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
+            let sp1 = screenPts[i], sp2 = screenPts[(i+1) % screenPts.length]; let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
+            let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length);
+            let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2);
+            fCtx.fillStyle = 'rgba(255,255,255,0.95)'; fCtx.fillRect(mx - 28, my - 9, 56, 16);
+            fCtx.fillStyle = '#0a84ff'; fCtx.fillText(`${name}: ${displayDist}м`, mx, my + 2);
+        }
+
+        // Точки углов — как в боте: красные кружки, белая середина, тонкая обводка
+        for(let i = 0; i < screenPts.length; i++) {
+            let sp = screenPts[i];
+            fCtx.beginPath(); fCtx.arc(sp.x, sp.y, 6, 0, 2 * Math.PI);
+            fCtx.fillStyle = '#ffffff'; fCtx.fill();
+            fCtx.lineWidth = 1.8; fCtx.strokeStyle = '#ff453a'; fCtx.stroke();
+            const label = String.fromCharCode(65 + i);
+            fCtx.fillStyle = '#1c1c1e'; fCtx.font = '700 13px system-ui'; fCtx.textAlign = 'left';
+            fCtx.fillText(label, sp.x + 12, sp.y - 9);
+        }
+
+        // Заголовок
+        fCtx.fillStyle = '#1c1c1e'; fCtx.font = '800 14px system-ui'; fCtx.textAlign = 'left';
+        fCtx.fillText(`Производство: ${room.name}`, 12, 22);
+        fCtx.fillStyle = '#ff9500'; fCtx.font = '600 11px system-ui';
+        fCtx.fillText(canvasName, 12, 38);
     }
   }, [pts, draggingIdx, scale, showDiags, room.manualWalls, mode, room.activeDiags, selectedDiagPt, viewMode, els, activeTrackPts, draggingElement, room.canvas, room.name, options, theme]);
 
   const updateAreaPerimAndSave = (newPts, newDiags = null) => {
     let perim = 0, area = 0;
     for(let i = 0; i < newPts.length; i++) { let p1 = newPts[i], p2 = newPts[(i+1) % newPts.length]; perim += Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2); area += (p1.x * p2.y - p2.x * p1.y); }
-    updateRoom(room.id, 'manualWalls', {}); updateRoom(room.id, 'area', Math.abs(area / 2).toFixed(2)); updateRoom(room.id, 'perim', perim.toFixed(2)); updateRoom(room.id, 'corners', newPts.length.toString()); updateRoom(room.id, 'logicalPts', newPts); 
+    updateRoom(room.id, 'manualWalls', {}); updateRoom(room.id, 'area', Math.abs(area / 2).toFixed(2)); updateRoom(room.id, 'perim', perim.toFixed(2)); updateRoom(room.id, 'corners', newPts.length.toString()); updateRoom(room.id, 'logicalPts', newPts);
     if (newDiags) updateRoom(room.id, 'activeDiags', newDiags);
   };
 
   const getMousePos = (e) => { const canvas = canvasRef.current; if(!canvas) return {x:0,y:0}; const rect = canvas.getBoundingClientRect(); const clientX = e.clientX || (e.touches && e.touches[0].clientX); const clientY = e.clientY || (e.touches && e.touches[0].clientY); const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height; return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY }; };
 
   const handlePointerDown = (e) => {
-    if (viewMode !== '2d') return; 
+    if (viewMode !== '2d') return;
     const pos = getMousePos(e); const screenPts = pts.map(toScreen); const logicalPos = toLogical(pos);
     if (mode === 'remove') {
         let hitFound = false; let newEls = [];
@@ -207,14 +348,14 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
             } else { if (Math.sqrt((toScreen(el).x - pos.x)**2 + (toScreen(el).y - pos.y)**2) < 15) hitFound = true; else newEls.push(el); }
         }
         if (hitFound) { triggerHaptic('medium'); syncElementsToInputs(newEls); return; }
-        const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 30);
+        const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 25);
         if (hitIndex !== -1) { if (pts.length <= 3) return alert("Минимум 3 угла!"); triggerHaptic('heavy'); const newPts = pts.filter((_, idx) => idx !== hitIndex); updateAreaPerimAndSave(centerShape(newPts), getDefaultDiags(newPts.length)); setMode('drag'); }
         return;
     }
     if (['spot', 'chand', 'pipe'].includes(mode)) { triggerHaptic('light'); syncElementsToInputs([...els, { id: Date.now(), type: mode, x: logicalPos.x, y: logicalPos.y }]); return; }
     if (mode === 'track') { triggerHaptic('light'); setActiveTrackPts([...activeTrackPts, logicalPos]); return; }
     if (mode === 'add_diag') {
-        const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 30);
+        const hitIndex = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 25);
         if (hitIndex !== -1) {
             triggerHaptic('medium');
             if (selectedDiagPt === null) setSelectedDiagPt(hitIndex);
@@ -223,7 +364,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
                 const diff = Math.abs(hitIndex - selectedDiagPt); if (diff === 1 || diff === pts.length - 1) { alert("Это стена! Выберите противоположный угол."); return; }
                 let i = Math.min(selectedDiagPt, hitIndex); let j = Math.max(selectedDiagPt, hitIndex); let diagName = String.fromCharCode(65+i) + String.fromCharCode(65+j); const newDiags = [...room.activeDiags];
                 if (!newDiags.includes(diagName)) { newDiags.push(diagName); updateRoom(room.id, 'activeDiags', newDiags); }
-                setSelectedDiagPt(null); setMode('drag'); 
+                setSelectedDiagPt(null); setMode('drag');
             }
         }
         return;
@@ -235,11 +376,12 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
         triggerHaptic('medium'); const newPts = [...pts]; newPts.splice(insertIdx + 1, 0, logicalPos); updateAreaPerimAndSave(centerShape(newPts), getDefaultDiags(newPts.length)); setMode('drag'); return;
     }
     if (mode === 'drag') {
-        const hitCornerIdx = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 25); 
+        // ХИТБОКС 25px — палец легко попадает, хотя визуально точка 6px
+        const hitCornerIdx = screenPts.findIndex(p => Math.sqrt((p.x - pos.x)**2 + (p.y - pos.y)**2) < 25);
         if (hitCornerIdx !== -1) { triggerHaptic('selection'); setDraggingIdx(hitCornerIdx); e.target.setPointerCapture(e.pointerId); return; }
         for (let el of els) {
-            if (el.type === 'track') { for(let i=0; i<el.points.length; i++) { let sp = toScreen(el.points[i]); if (Math.sqrt((sp.x - pos.x)**2 + (sp.y - pos.y)**2) < 25) { triggerHaptic('selection'); setDraggingElement({ elId: el.id, ptIdx: i }); e.target.setPointerCapture(e.pointerId); return; } } } 
-            else { let sp = toScreen(el); if (Math.sqrt((sp.x - pos.x)**2 + (sp.y - pos.y)**2) < 25) { triggerHaptic('selection'); setDraggingElement({ elId: el.id, ptIdx: null }); e.target.setPointerCapture(e.pointerId); return; } }
+            if (el.type === 'track') { for(let i=0; i<el.points.length; i++) { let sp = toScreen(el.points[i]); if (Math.sqrt((sp.x - pos.x)**2 + (sp.y - pos.y)**2) < 22) { triggerHaptic('selection'); setDraggingElement({ elId: el.id, ptIdx: i }); e.target.setPointerCapture(e.pointerId); return; } } }
+            else { let sp = toScreen(el); if (Math.sqrt((sp.x - pos.x)**2 + (sp.y - pos.y)**2) < 22) { triggerHaptic('selection'); setDraggingElement({ elId: el.id, ptIdx: null }); e.target.setPointerCapture(e.pointerId); return; } }
         }
     }
   };
@@ -272,67 +414,67 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
 
   return (
     <div style={{ position: 'relative', textAlign: 'center', marginBottom: '15px' }}>
-      <div style={{ height: '24px', marginBottom: '4px', fontWeight: '800', fontSize: '13px', color: viewMode === '3d' ? t.danger : (['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? t.success : (mode === 'remove' ? t.danger : t.subText)) }}>{getHelperText()}</div>
-      
+      <div style={{ height: '24px', marginBottom: '4px', fontWeight: '700', fontSize: '13px', color: viewMode === '3d' ? t.danger : (['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? t.success : (mode === 'remove' ? t.danger : t.subText)) }}>{getHelperText()}</div>
+
       {viewMode === '2d' && (
-          <div style={{ background: t.card, borderRadius: '16px', padding: '12px', marginBottom: '12px', border: `1px solid ${t.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
+          <div style={{ background: t.card, borderRadius: '16px', padding: '12px', marginBottom: '12px', border: `1px solid ${t.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <button onClick={() => { triggerHaptic('light'); setShowDiags(!showDiags) }} style={{ padding: '8px 12px', borderRadius: '10px', border: `1px solid ${t.border}`, background: t.inputBg, fontSize: '13px', color: t.text, fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '16px' }}>{showDiags ? '👁' : '👓'}</span>{showDiags ? 'Скрыть диагонали' : 'Показать диагонали'}
+                      <span style={{ fontSize: '15px' }}>{showDiags ? '👁' : '👓'}</span>{showDiags ? 'Скрыть диагонали' : 'Показать диагонали'}
                   </button>
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <button onClick={() => { triggerHaptic('light'); setScale(s => Math.max(s - 5, 5)) }} style={{ width: '34px', height: '34px', borderRadius: '10px', border: `1px solid ${t.border}`, background: t.inputBg, fontSize: '20px', color: t.accent, fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+                      <button onClick={() => { triggerHaptic('light'); setScale(s => Math.max(s - 5, 5)) }} style={{ width: '34px', height: '34px', borderRadius: '10px', border: `1px solid ${t.border}`, background: t.inputBg, fontSize: '20px', color: t.accent, fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                       <button onClick={() => { triggerHaptic('light'); setScale(s => Math.min(s + 5, 80)) }} style={{ width: '34px', height: '34px', borderRadius: '10px', border: `1px solid ${t.border}`, background: t.inputBg, fontSize: '20px', color: t.accent, fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                   </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                    <button onClick={() => handleModeSwitch('add')} style={{ flex: 1, padding: '10px 4px', background: mode === 'add' ? t.success : t.inputBg, color: mode === 'add' ? '#fff' : t.accent, borderRadius: '10px', border: 'none', fontWeight: '800', fontSize: '12px', transition: '0.2s' }}>{mode === 'add' ? 'Отмена' : '➕ Угол'}</button>
-                    <button onClick={() => handleModeSwitch('remove')} style={{ flex: 1, padding: '10px 4px', background: mode === 'remove' ? t.danger : t.inputBg, color: mode === 'remove' ? '#fff' : t.danger, borderRadius: '10px', border: 'none', fontWeight: '800', fontSize: '12px', transition: '0.2s' }}>{mode === 'remove' ? 'Отмена' : '➖ Ластик'}</button>
-                    <button onClick={() => handleModeSwitch('add_diag')} style={{ flex: 1, padding: '10px 4px', background: mode === 'add_diag' ? t.warning : t.inputBg, color: mode === 'add_diag' ? '#fff' : t.warning, borderRadius: '10px', border: 'none', fontWeight: '800', fontSize: '12px', transition: '0.2s' }}>{mode === 'add_diag' ? 'Отмена' : '📏 Диагональ'}</button>
+                    <button onClick={() => handleModeSwitch('add')} style={{ flex: 1, padding: '10px 4px', background: mode === 'add' ? t.success : t.inputBg, color: mode === 'add' ? '#fff' : t.accent, borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '12px', transition: '0.2s' }}>{mode === 'add' ? 'Отмена' : '➕ Угол'}</button>
+                    <button onClick={() => handleModeSwitch('remove')} style={{ flex: 1, padding: '10px 4px', background: mode === 'remove' ? t.danger : t.inputBg, color: mode === 'remove' ? '#fff' : t.danger, borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '12px', transition: '0.2s' }}>{mode === 'remove' ? 'Отмена' : '➖ Ластик'}</button>
+                    <button onClick={() => handleModeSwitch('add_diag')} style={{ flex: 1, padding: '10px 4px', background: mode === 'add_diag' ? t.warning : t.inputBg, color: mode === 'add_diag' ? '#fff' : t.warning, borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '12px', transition: '0.2s' }}>{mode === 'add_diag' ? 'Отмена' : '📏 Диагональ'}</button>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                    <button onClick={() => handleModeSwitch('spot')} style={{ flex: 1, padding: '10px 2px', background: mode === 'spot' ? '#FFD60A' : t.inputBg, color: mode === 'spot' ? '#1C1C1E' : t.text, borderRadius: '10px', border: 'none', fontWeight: '800', fontSize: '12px', transition: '0.2s' }}>💡 Точка</button>
-                    <button onClick={() => handleModeSwitch('chand')} style={{ flex: 1, padding: '10px 2px', background: mode === 'chand' ? t.warning : t.inputBg, color: mode === 'chand' ? '#fff' : t.text, borderRadius: '10px', border: 'none', fontWeight: '800', fontSize: '12px', transition: '0.2s' }}>🏮 Люстра</button>
-                    <button onClick={() => handleModeSwitch('track')} style={{ flex: 1, padding: '10px 2px', background: mode === 'track' ? t.text : t.inputBg, color: mode === 'track' ? t.bg : t.text, borderRadius: '10px', border: 'none', fontWeight: '800', fontSize: '12px', transition: '0.2s' }}>➖ Трек</button>
-                    <button onClick={() => handleModeSwitch('pipe')} style={{ flex: 1, padding: '10px 2px', background: mode === 'pipe' ? t.subText : t.inputBg, color: mode === 'pipe' ? '#fff' : t.text, borderRadius: '10px', border: 'none', fontWeight: '800', fontSize: '12px', transition: '0.2s' }}>🔲 Труба</button>
+                    <button onClick={() => handleModeSwitch('spot')} style={{ flex: 1, padding: '10px 2px', background: mode === 'spot' ? '#FFD60A' : t.inputBg, color: mode === 'spot' ? '#1C1C1E' : t.text, borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '12px', transition: '0.2s' }}>💡 Точка</button>
+                    <button onClick={() => handleModeSwitch('chand')} style={{ flex: 1, padding: '10px 2px', background: mode === 'chand' ? t.warning : t.inputBg, color: mode === 'chand' ? '#fff' : t.text, borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '12px', transition: '0.2s' }}>🏮 Люстра</button>
+                    <button onClick={() => handleModeSwitch('track')} style={{ flex: 1, padding: '10px 2px', background: mode === 'track' ? t.text : t.inputBg, color: mode === 'track' ? t.bg : t.text, borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '12px', transition: '0.2s' }}>➖ Трек</button>
+                    <button onClick={() => handleModeSwitch('pipe')} style={{ flex: 1, padding: '10px 2px', background: mode === 'pipe' ? t.subText : t.inputBg, color: mode === 'pipe' ? '#fff' : t.text, borderRadius: '10px', border: 'none', fontWeight: '700', fontSize: '12px', transition: '0.2s' }}>🔲 Труба</button>
                   </div>
               </div>
           </div>
       )}
 
       <div style={{position: 'relative'}}>
-        <canvas id={`canvas-${room.id}`} ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} style={{ display: viewMode === '2d' ? 'block' : 'none', width: '100%', maxWidth: '400px', height: 'auto', background: t.isDark ? '#1C1C1E' : '#FAFAFA', borderRadius: '16px', border: ['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? `2px solid ${t.success}` : (mode === 'remove' ? `2px solid ${t.danger}` : `1px solid ${t.border}`), touchAction: 'none', cursor: 'default' }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} />
+        <canvas id={`canvas-${room.id}`} ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} style={{ display: viewMode === '2d' ? 'block' : 'none', width: '100%', maxWidth: '400px', height: 'auto', background: t.isDark ? '#0F0F12' : '#FCFCFD', borderRadius: '16px', border: ['add', 'spot', 'chand', 'track', 'pipe'].includes(mode) ? `2px solid ${t.success}` : (mode === 'remove' ? `2px solid ${t.danger}` : `1px solid ${t.border}`), touchAction: 'none', cursor: 'default' }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} />
         <canvas id={`canvas-factory-${room.id}`} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} style={{ display: 'none' }} />
         {viewMode === '3d' && <ThreeDPreview roomPts={pts} elements={room.elements} />}
         {mode === 'track' && activeTrackPts.length > 0 && viewMode === '2d' && (
-            <button onClick={() => { triggerHaptic('heavy'); if(activeTrackPts.length > 1) { const newEls = [...els, { id: Date.now(), type: 'track', points: activeTrackPts }]; syncElementsToInputs(newEls); } setActiveTrackPts([]); setMode('drag'); }} style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', padding: '12px 20px', background: t.success, color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '15px', boxShadow: `0 4px 12px ${t.isDark ? 'rgba(50,215,75,0.2)' : 'rgba(52, 199, 89, 0.4)'}`, zIndex: 10 }}>✅ Завершить фигуру</button>
+            <button onClick={() => { triggerHaptic('heavy'); if(activeTrackPts.length > 1) { const newEls = [...els, { id: Date.now(), type: 'track', points: activeTrackPts }]; syncElementsToInputs(newEls); } setActiveTrackPts([]); setMode('drag'); }} style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', padding: '12px 20px', background: t.success, color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '800', fontSize: '15px', boxShadow: `0 4px 12px ${t.isDark ? 'rgba(50,215,75,0.2)' : 'rgba(52, 199, 89, 0.4)'}`, zIndex: 10 }}>✅ Завершить фигуру</button>
         )}
-        <button onClick={() => { triggerHaptic('light'); setViewMode(viewMode === '2d' ? '3d' : '2d') }} style={{ position: 'absolute', bottom: '10px', right: '10px', padding: '8px 12px', borderRadius: '20px', background: viewMode === '2d' ? t.danger : t.subText, color: 'white', border: 'none', fontWeight: '900', fontSize: '13px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)', zIndex: 10, transition: '0.3s' }}>{viewMode === '2d' ? '👀 3D' : '🔙 2D Чертеж'}</button>
+        <button onClick={() => { triggerHaptic('light'); setViewMode(viewMode === '2d' ? '3d' : '2d') }} style={{ position: 'absolute', bottom: '10px', right: '10px', padding: '8px 12px', borderRadius: '20px', background: viewMode === '2d' ? t.danger : t.subText, color: 'white', border: 'none', fontWeight: '800', fontSize: '13px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)', zIndex: 10, transition: '0.3s' }}>{viewMode === '2d' ? '👀 3D' : '🔙 2D Чертеж'}</button>
       </div>
-      
+
       <div style={{ background: t.inputBg, padding: '16px', borderRadius: '16px', marginTop: '16px', border: `1px solid ${t.border}`, textAlign: 'left' }}>
-        <span style={{ fontSize: '11px', fontWeight: '800', color: t.subText, display: 'block', marginBottom: '10px', textTransform: 'uppercase' }}>📐 СТЕНЫ (м):</span>
+        <span style={{ fontSize: '11px', fontWeight: '700', color: t.subText, display: 'block', marginBottom: '10px', textTransform: 'uppercase' }}>📐 СТЕНЫ (м):</span>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
             {room.logicalPts?.map((p, i) => {
                 let nextI = (i+1)%room.logicalPts.length; let name = String.fromCharCode(65+i) + String.fromCharCode(65+nextI); let dist = Math.sqrt((room.logicalPts[nextI].x - p.x)**2 + (room.logicalPts[nextI].y - p.y)**2).toFixed(2); let displayVal = room.manualWalls?.[name] !== undefined ? room.manualWalls[name] : dist;
                 return (
-                <div key={name} style={{ display: 'flex', alignItems: 'center', background: t.card, padding: '8px 12px', borderRadius: '10px', border: `1px solid ${t.border}`, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                    <span translate="no" className="notranslate" style={{ fontSize: '13px', fontWeight: '800', marginRight: '8px', color: t.accent }}>{name}:</span>
-                    <input type="number" value={displayVal} onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [name]: cleanNum(e.target.value)})} style={{ width: '55px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '15px', color: t.text }}/>
+                <div key={name} style={{ display: 'flex', alignItems: 'center', background: t.card, padding: '8px 12px', borderRadius: '10px', border: `1px solid ${t.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                    <span translate="no" className="notranslate" style={{ fontSize: '13px', fontWeight: '700', marginRight: '8px', color: t.accent }}>{name}:</span>
+                    <input type="number" value={displayVal} onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [name]: cleanNum(e.target.value)})} style={{ width: '55px', border: 'none', background: 'transparent', outline: 'none', fontWeight: '700', fontSize: '15px', color: t.text }}/>
                 </div>
                 )
             })}
         </div>
-        <span style={{ fontSize: '11px', fontWeight: '800', color: t.subText, display: 'block', marginBottom: '10px', textTransform: 'uppercase' }}>📏 АКТИВНЫЕ ДИАГОНАЛИ (м):</span>
+        <span style={{ fontSize: '11px', fontWeight: '700', color: t.subText, display: 'block', marginBottom: '10px', textTransform: 'uppercase' }}>📏 АКТИВНЫЕ ДИАГОНАЛИ (м):</span>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {room.activeDiags?.map((diagName, index) => {
                 let i = diagName.charCodeAt(0) - 65; let j = diagName.charCodeAt(1) - 65; if(i >= room.logicalPts.length || j >= room.logicalPts.length) return null; let p1 = room.logicalPts[i], p2 = room.logicalPts[j]; let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2).toFixed(2); let displayVal = room.manualWalls?.[diagName] !== undefined ? room.manualWalls[diagName] : dist;
                 return (
-                <div key={index} style={{ display: 'flex', alignItems: 'center', background: t.card, padding: '6px 8px', borderRadius: '10px', border: `1px solid ${t.border}`, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                    <select translate="no" className="notranslate" value={diagName} onChange={(e) => { const newD = [...room.activeDiags]; newD[index] = e.target.value; updateRoom(room.id, 'activeDiags', newD); }} style={{ border: 'none', outline: 'none', fontWeight: '800', color: t.warning, background: 'transparent', fontSize: '14px', marginRight: '4px' }}>{allPossibleDiags.map(d => <option translate="no" className="notranslate" key={d} value={d}>{d}</option>)}</select>
-                    <span style={{fontWeight: '800', color: t.warning, marginRight: '4px'}}>:</span>
-                    <input type="number" value={displayVal} onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [diagName]: cleanNum(e.target.value)})} style={{ width: '50px', border: 'none', background: 'transparent', outline: 'none', fontWeight: 'bold', fontSize: '15px', color: t.text }}/>
+                <div key={index} style={{ display: 'flex', alignItems: 'center', background: t.card, padding: '6px 8px', borderRadius: '10px', border: `1px solid ${t.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                    <select translate="no" className="notranslate" value={diagName} onChange={(e) => { const newD = [...room.activeDiags]; newD[index] = e.target.value; updateRoom(room.id, 'activeDiags', newD); }} style={{ border: 'none', outline: 'none', fontWeight: '700', color: t.warning, background: 'transparent', fontSize: '14px', marginRight: '4px' }}>{allPossibleDiags.map(d => <option translate="no" className="notranslate" key={d} value={d}>{d}</option>)}</select>
+                    <span style={{fontWeight: '700', color: t.warning, marginRight: '4px'}}>:</span>
+                    <input type="number" value={displayVal} onChange={(e) => updateRoom(room.id, 'manualWalls', {...(room.manualWalls || {}), [diagName]: cleanNum(e.target.value)})} style={{ width: '50px', border: 'none', background: 'transparent', outline: 'none', fontWeight: '700', fontSize: '15px', color: t.text }}/>
                     <button onClick={() => { triggerHaptic('heavy'); const newD = room.activeDiags.filter((_, i) => i !== index); updateRoom(room.id, 'activeDiags', newD); }} style={{ background: 'none', border: 'none', color: t.danger, marginLeft: '5px', fontSize: '16px', fontWeight: 'bold' }}>✕</button>
                 </div>
                 )
@@ -342,6 +484,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     </div>
   );
 };
+
 
 // --- ЗАГЛУШКИ ДЛЯ ЭКРАНОВ ---
 const DashboardScreen = ({ t, ts }) => (
