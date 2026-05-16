@@ -136,6 +136,13 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     const canvasName = options.canvases.find(c => c.id === room.canvas)?.name || 'Полотно';
     const screenPts = pts.map(toScreen); const manual = room.manualWalls || {}; const canvas = canvasRef.current; const ctx = canvas.getContext('2d');
 
+    // Имя стены ВСЕГДА в алфавитном порядке: AB, BC, CD, AD (а не DA)
+    const sortedName = (i, n) => {
+        const a = String.fromCharCode(65 + i);
+        const b = String.fromCharCode(65 + (i + 1) % n);
+        return a < b ? a + b : b + a;
+    };
+
     // ─── HD-РЕНДЕРИНГ: физический canvas в ×DPR раз больше, CSS-размер прежний ───
     const DPR_INSTALLER = Math.min(window.devicePixelRatio || 2, 3);
     if (canvas.width !== CANVAS_WIDTH * DPR_INSTALLER) {
@@ -186,7 +193,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     for(let i = 0; i < pts.length; i++) {
        let p1 = pts[i], p2 = pts[(i+1) % pts.length]; let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
        let sp1 = screenPts[i], sp2 = screenPts[(i+1) % screenPts.length]; let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
-       let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length);
+       let name = sortedName(i, pts.length);
        let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2);
        ctx.fillStyle = t.isDark ? 'rgba(28,28,30,0.9)' : 'rgba(255,255,255,0.95)';
        ctx.fillRect(mx - 28, my - 9, 56, 16);
@@ -273,78 +280,140 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     ctx.restore(); // ─── завершаем installer scope (закрываем ctx.scale)
 
     // ════════════════════════════════════════════════════════════════════
-    // FACTORY CANVAS: производственный вариант, максимально чистый стиль
-    // (близкий к тому, что отдаёт бот в архивный канал)
+    // FACTORY CANVAS: производственный чертёж (для PDF / архива / монтажа)
+    // Стиль: замеры текстом СВЕРХУ (стены + диагонали отдельно),
+    // ниже — чистый контур комнаты с буквами у углов, без подписей на стенах.
     // ════════════════════════════════════════════════════════════════════
     const factCanvas = document.getElementById(`canvas-factory-${room.id}`);
     if (factCanvas) {
         const fCtx = factCanvas.getContext('2d');
 
-        // ─── HD-РЕНДЕРИНГ FACTORY: всегда ×3 для чёткого PDF ───
+        // ─── Готовим списки замеров ───
+        const wallsList = [];
+        for (let i = 0; i < pts.length; i++) {
+            const p1 = pts[i], p2 = pts[(i + 1) % pts.length];
+            const dist = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
+            const wname = sortedName(i, pts.length);
+            const val = (manual[wname] !== undefined && manual[wname] !== '') ? manual[wname] : dist.toFixed(2);
+            wallsList.push(`${wname}=${val}`);
+        }
+
+        const diagsList = [];
+        if (room.activeDiags && room.activeDiags.length > 0) {
+            for (const diag of room.activeDiags) {
+                const i = diag.charCodeAt(0) - 65;
+                const j = diag.charCodeAt(1) - 65;
+                if (i >= pts.length || j >= pts.length || i < 0 || j < 0) continue;
+                const dist = Math.sqrt((pts[j].x - pts[i].x) ** 2 + (pts[j].y - pts[i].y) ** 2);
+                const val = (manual[diag] !== undefined && manual[diag] !== '') ? manual[diag] : dist.toFixed(2);
+                diagsList.push(`${diag}=${val}`);
+            }
+        }
+
+        // ─── Раскладываем замеры по строкам, чтобы вмещались в ширину 320px ───
+        const MEASURE_FONT = '600 11px monospace';
+        const LINE_H = 16;
+        fCtx.font = MEASURE_FONT;
+        // Виртуальный замер ширины строки в обычном масштабе (ctx ещё не масштабирован, но шрифт стандартный)
+
+        const WIDTH = CANVAS_WIDTH;
+        const PADDING = 12;
+        const MAX_LINE_WIDTH = WIDTH - 2 * PADDING;
+
+        const wrapItems = (items) => {
+            const lines = [];
+            let curr = '';
+            for (const item of items) {
+                const tryLine = curr ? `${curr}; ${item}` : item;
+                if (fCtx.measureText(tryLine).width > MAX_LINE_WIDTH && curr) {
+                    lines.push(curr + ';');
+                    curr = item;
+                } else {
+                    curr = tryLine;
+                }
+            }
+            if (curr) lines.push(curr + ';');
+            return lines;
+        };
+
+        const wallsLines = wrapItems(wallsList);
+        const diagsLines = wrapItems(diagsList);
+
+        // ─── Высота шапки с замерами ───
+        const HEADER_BASE = 28; // заголовок "Замеры[N]:"
+        const wallsBlockH = wallsLines.length * LINE_H + 4;
+        const diagsBlockH = diagsLines.length > 0 ? (diagsLines.length * LINE_H + 14) : 0;
+        const HEADER_HEIGHT = HEADER_BASE + wallsBlockH + diagsBlockH + 16;
+        const DRAW_HEIGHT = 320;
+        const FACTORY_HEIGHT = HEADER_HEIGHT + DRAW_HEIGHT;
+
+        // ─── HD-РЕНДЕРИНГ FACTORY: ×3 для чёткого PDF ───
         const DPR_FACTORY = 3;
-        if (factCanvas.width !== CANVAS_WIDTH * DPR_FACTORY) {
-            factCanvas.width = CANVAS_WIDTH * DPR_FACTORY;
-            factCanvas.height = CANVAS_HEIGHT * DPR_FACTORY;
+        if (factCanvas.width !== WIDTH * DPR_FACTORY || factCanvas.height !== FACTORY_HEIGHT * DPR_FACTORY) {
+            factCanvas.width = WIDTH * DPR_FACTORY;
+            factCanvas.height = FACTORY_HEIGHT * DPR_FACTORY;
         }
         fCtx.save();
         fCtx.scale(DPR_FACTORY, DPR_FACTORY);
+        fCtx.fillStyle = '#ffffff'; fCtx.fillRect(0, 0, WIDTH, FACTORY_HEIGHT);
 
-        fCtx.fillStyle = '#ffffff'; fCtx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        // ─── ШАПКА: замеры ───
+        fCtx.textAlign = 'left'; fCtx.textBaseline = 'top';
 
-        // Очень бледная сетка
-        fCtx.strokeStyle = '#F5F5F7'; fCtx.lineWidth = 0.5;
-        for(let i = startX; i < factCanvas.width; i += step) { fCtx.beginPath(); fCtx.moveTo(i, 0); fCtx.lineTo(i, factCanvas.height); fCtx.stroke(); }
-        for(let i = startY; i < factCanvas.height; i += step) { fCtx.beginPath(); fCtx.moveTo(0, i); fCtx.lineTo(factCanvas.width, i); fCtx.stroke(); }
+        // Заголовок "Замеры[N][L]: Помещение N"
+        const totalMeasures = wallsList.length + diagsList.length;
+        fCtx.fillStyle = '#1c1c1e'; fCtx.font = '700 13px monospace';
+        fCtx.fillText(`Замеры[${totalMeasures}][L]: ${room.name}`, PADDING, 8);
 
-        // Полигон — тонкие синие линии, без заливки
-        fCtx.beginPath(); fCtx.moveTo(screenPts[0].x, screenPts[0].y);
-        for(let i = 1; i < screenPts.length; i++) fCtx.lineTo(screenPts[i].x, screenPts[i].y); fCtx.closePath();
-        fCtx.fillStyle = 'rgba(10, 132, 255, 0.025)'; fCtx.fill();
-        fCtx.strokeStyle = '#0a84ff'; fCtx.lineWidth = 2; fCtx.lineJoin = 'round'; fCtx.stroke();
-
-        if (showDiags && room.activeDiags) {
-            fCtx.setLineDash([4, 4]); fCtx.strokeStyle = 'rgba(255, 149, 0, 0.5)'; fCtx.lineWidth = 1; fCtx.textAlign = 'center';
-            room.activeDiags.forEach((diag) => {
-                let i = diag.charCodeAt(0) - 65; let j = diag.charCodeAt(1) - 65;
-                if (i >= pts.length || j >= pts.length || i < 0 || j < 0) return;
-                let sp1 = screenPts[i], sp2 = screenPts[j];
-                fCtx.beginPath(); fCtx.moveTo(sp1.x, sp1.y); fCtx.lineTo(sp2.x, sp2.y); fCtx.stroke();
-                let dist = Math.sqrt((pts[j].x - pts[i].x)**2 + (pts[j].y - pts[i].y)**2);
-                let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
-                let displayDist = manual[diag] !== undefined && manual[diag] !== '' ? manual[diag] : dist.toFixed(2);
-                fCtx.fillStyle = 'rgba(255,255,255,0.95)'; fCtx.fillRect(mx - 24, my - 8, 48, 14);
-                fCtx.fillStyle = '#ff9500'; fCtx.font = '600 10px system-ui'; fCtx.fillText(`${diag}: ${displayDist}`, mx, my + 2);
-            });
-            fCtx.setLineDash([]);
+        let y = HEADER_BASE;
+        fCtx.font = MEASURE_FONT; fCtx.fillStyle = '#1c1c1e';
+        for (const line of wallsLines) {
+            fCtx.fillText(line, PADDING, y);
+            y += LINE_H;
         }
 
-        // Подписи стен
-        fCtx.font = '600 11px system-ui'; fCtx.textAlign = 'center';
-        for(let i = 0; i < pts.length; i++) {
-            let p1 = pts[i], p2 = pts[(i+1) % pts.length]; let dist = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2);
-            let sp1 = screenPts[i], sp2 = screenPts[(i+1) % screenPts.length]; let mx = (sp1.x + sp2.x)/2, my = (sp1.y + sp2.y)/2;
-            let name = String.fromCharCode(65+i) + String.fromCharCode(65+(i+1)%pts.length);
-            let displayDist = manual[name] !== undefined && manual[name] !== '' ? manual[name] : dist.toFixed(2);
-            fCtx.fillStyle = 'rgba(255,255,255,0.95)'; fCtx.fillRect(mx - 28, my - 9, 56, 16);
-            fCtx.fillStyle = '#0a84ff'; fCtx.fillText(`${name}: ${displayDist}м`, mx, my + 2);
+        if (diagsLines.length > 0) {
+            y += 8;
+            for (const line of diagsLines) {
+                fCtx.fillText(line, PADDING, y);
+                y += LINE_H;
+            }
         }
 
-        // Точки углов — как в боте: красные кружки, белая середина, тонкая обводка
-        for(let i = 0; i < screenPts.length; i++) {
-            let sp = screenPts[i];
-            fCtx.beginPath(); fCtx.arc(sp.x, sp.y, 6, 0, 2 * Math.PI);
-            fCtx.fillStyle = '#ffffff'; fCtx.fill();
-            fCtx.lineWidth = 1.8; fCtx.strokeStyle = '#ff453a'; fCtx.stroke();
+        // ─── ЧЕРТЁЖ: контур комнаты внизу ───
+        // Свой offset для чертежа (центр в нижней части canvas)
+        const drawCenterY = HEADER_HEIGHT + DRAW_HEIGHT / 2;
+        const factScreenPts = pts.map(p => ({
+            x: p.x * scale + WIDTH / 2,
+            y: p.y * scale + drawCenterY
+        }));
+
+        // Тонкий контур комнаты без заливки
+        fCtx.beginPath(); fCtx.moveTo(factScreenPts[0].x, factScreenPts[0].y);
+        for (let i = 1; i < factScreenPts.length; i++) fCtx.lineTo(factScreenPts[i].x, factScreenPts[i].y);
+        fCtx.closePath();
+        fCtx.strokeStyle = '#1c1c1e'; fCtx.lineWidth = 1.2; fCtx.lineJoin = 'round'; fCtx.stroke();
+
+        // Название материала в центре комнаты
+        const cx = factScreenPts.reduce((s, p) => s + p.x, 0) / factScreenPts.length;
+        const cy = factScreenPts.reduce((s, p) => s + p.y, 0) / factScreenPts.length;
+        fCtx.fillStyle = '#1c1c1e'; fCtx.font = '700 14px system-ui';
+        fCtx.textAlign = 'center'; fCtx.textBaseline = 'middle';
+        fCtx.fillText(canvasName, cx, cy);
+
+        // Точки углов и буквы — минималистично, как в примере
+        fCtx.textAlign = 'left'; fCtx.textBaseline = 'top';
+        for (let i = 0; i < factScreenPts.length; i++) {
+            const sp = factScreenPts[i];
+            fCtx.beginPath(); fCtx.arc(sp.x, sp.y, 2.5, 0, 2 * Math.PI);
+            fCtx.fillStyle = '#1c1c1e'; fCtx.fill();
             const label = String.fromCharCode(65 + i);
-            fCtx.fillStyle = '#1c1c1e'; fCtx.font = '700 13px system-ui'; fCtx.textAlign = 'left';
-            fCtx.fillText(label, sp.x + 12, sp.y - 9);
+            fCtx.fillStyle = '#1c1c1e'; fCtx.font = '600 12px monospace';
+            // Сдвиг буквы — наружу от центра полигона, чтобы не закрывать контур
+            const dx = sp.x < cx ? -14 : 6;
+            const dy = sp.y < cy ? -16 : 4;
+            fCtx.fillText(label, sp.x + dx, sp.y + dy);
         }
-
-        // Заголовок
-        fCtx.fillStyle = '#1c1c1e'; fCtx.font = '800 14px system-ui'; fCtx.textAlign = 'left';
-        fCtx.fillText(`Производство: ${room.name}`, 12, 22);
-        fCtx.fillStyle = '#ff9500'; fCtx.font = '600 11px system-ui';
-        fCtx.fillText(canvasName, 12, 38);
 
         fCtx.restore(); // ─── завершаем factory scope
     }
@@ -436,6 +505,13 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
 
   const handleModeSwitch = (newMode) => { triggerHaptic('light'); setMode(mode === newMode ? 'drag' : newMode); setSelectedDiagPt(null); setActiveTrackPts([]); setDraggingElement(null); };
 
+  // Имя стены ВСЕГДА в алфавитном порядке (используется в JSX-блоке инпутов)
+  const sortedWallName = (i, n) => {
+      const a = String.fromCharCode(65 + i);
+      const b = String.fromCharCode(65 + (i + 1) % n);
+      return a < b ? a + b : b + a;
+  };
+
   const getHelperText = () => {
       if (viewMode === '3d') return '👀 3D Режим. Стены: 2.7м. Можно крутить пальцем.';
       if (mode === 'add') return '👆 Кликните на линию стены для создания угла'; if (mode === 'remove') return '👆 Кликните на объект (угол, точку, трек), чтобы удалить';
@@ -490,7 +566,7 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
         <span style={{ fontSize: '11px', fontWeight: '700', color: t.subText, display: 'block', marginBottom: '10px', textTransform: 'uppercase' }}>📐 СТЕНЫ (м):</span>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
             {room.logicalPts?.map((p, i) => {
-                let nextI = (i+1)%room.logicalPts.length; let name = String.fromCharCode(65+i) + String.fromCharCode(65+nextI); let dist = Math.sqrt((room.logicalPts[nextI].x - p.x)**2 + (room.logicalPts[nextI].y - p.y)**2).toFixed(2); let displayVal = room.manualWalls?.[name] !== undefined ? room.manualWalls[name] : dist;
+                let nextI = (i+1)%room.logicalPts.length; let name = sortedWallName(i, room.logicalPts.length); let dist = Math.sqrt((room.logicalPts[nextI].x - p.x)**2 + (room.logicalPts[nextI].y - p.y)**2).toFixed(2); let displayVal = room.manualWalls?.[name] !== undefined ? room.manualWalls[name] : dist;
                 return (
                 <div key={name} style={{ display: 'flex', alignItems: 'center', background: t.card, padding: '8px 12px', borderRadius: '10px', border: `1px solid ${t.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
                     <span translate="no" className="notranslate" style={{ fontSize: '13px', fontWeight: '700', marginRight: '8px', color: t.accent }}>{name}:</span>
@@ -517,7 +593,8 @@ const RoomCanvas = ({ room, updateRoom, options, theme }) => {
     </div>
   );
 };
-;
+
+
 
 
 // --- ЗАГЛУШКИ ДЛЯ ЭКРАНОВ ---
